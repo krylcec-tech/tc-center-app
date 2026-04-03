@@ -8,205 +8,130 @@ import {
 import Link from 'next/link';
 
 export default function TeachingLogsPage() {
+  const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalHours, setTotalHours] = useState(0);
-
-  // ✨ State สำหรับการแก้ไข
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editNote, setEditNote] = useState("");
+  
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [tutorNote, setTutorNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLogs();
+    fetchData();
   }, []);
 
-  const fetchLogs = async () => {
+  const fetchData = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      const { data: tutor } = await supabase
-        .from('tutors')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (tutor) {
-        const { data, error } = await supabase
-          .from('teaching_logs')
-          .select('*')
-          .eq('tutor_id', tutor.id)
-          .order('teaching_date', { ascending: false });
+    if (!user) return;
 
-        if (!error && data) {
-          setLogs(data);
-          const hours = data.reduce((sum, item) => sum + Number(item.duration_hours), 0);
-          setTotalHours(hours);
-        }
-      }
-    }
+    const { data: tutor } = await supabase.from('tutors').select('id').eq('user_id', user.id).maybeSingle();
+    if (!tutor) return;
+
+    // 1. ดึงคิวจองที่ "ยังไม่ได้เช็คอิน" (is_completed: false)
+    const { data: pending } = await supabase
+      .from('bookings')
+      .select(`*, student_wallets:student_id (student_name)`)
+      .eq('tutor_id', tutor.id)
+      .eq('is_completed', false)
+      .order('created_at', { ascending: false });
+
+    // 2. ดึงประวัติที่สอนเสร็จแล้ว (Teaching Logs)
+    const { data: history } = await supabase
+      .from('teaching_logs')
+      .select('*')
+      .eq('tutor_id', tutor.id)
+      .order('teaching_date', { ascending: false });
+
+    setPendingBookings(pending || []);
+    setLogs(history || []);
     setLoading(false);
   };
 
-  // ✨ ฟังก์ชันจัดการการแก้ไข
-  const startEditing = (log: any) => {
-    setEditingId(log.id);
-    setEditNote(log.notes || "");
-  };
-
-  const handleUpdate = async (id: string) => {
-    setIsSaving(true);
-    const { error } = await supabase
-      .from('teaching_logs')
-      .update({ notes: editNote })
-      .eq('id', id);
-
-    if (!error) {
-      setLogs(logs.map(log => log.id === id ? { ...log, notes: editNote } : log));
-      setEditingId(null);
-    } else {
-      alert("เกิดข้อผิดพลาด: " + error.message);
-    }
-    setIsSaving(false);
-  };
-
-  // ✨ ฟังก์ชันคัดลอกข้อความไปส่ง LINE
-  const copyToClipboard = (log: any) => {
-    const dateStr = new Date(log.teaching_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
-    const text = `📊 รายงานการสอน [TC Center]\n📅 วันที่: ${dateStr}\n👤 นักเรียน: ${log.student_name}\n📚 วิชา: ${log.subject || 'วิชาสอน'}\n⏰ เวลา: ${log.duration_hours} ชม.\n📝 สรุปการเรียน: ${log.notes || '-'}`;
+  const handleConfirmTeaching = async (booking: any) => {
+    if (!tutorNote) return alert("กรุณากรอกสรุปการสอนสั้นๆ ก่อนยืนยันครับ");
     
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedId(log.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    });
+    setIsSaving(true);
+    try {
+      // เรียก RPC ที่เราสร้างไว้ใน SQL (หักชม.ไปแล้วตอนจอง ตรงนี้แค่ยืนยันและสร้าง Log)
+      const { error } = await supabase.rpc('confirm_teaching_session', {
+        booking_id: booking.id,
+        tutor_notes: tutorNote
+      });
+
+      if (error) throw error;
+
+      alert("✅ ยืนยันการสอนสำเร็จ!");
+      setTutorNote("");
+      setConfirmingId(null);
+      fetchData();
+    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-        <Loader2 className="animate-spin text-blue-600" size={48} />
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
 
   return (
-    <div className="p-6 md:p-12 max-w-5xl mx-auto bg-[#F8FAFC] min-h-screen font-sans">
-      {/* Header */}
+    <div className="p-6 md:p-12 max-w-5xl mx-auto bg-[#F8FAFC] min-h-screen font-sans text-gray-900">
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
         <div>
-          <Link href="/tutor" className="text-blue-600 font-black text-sm uppercase tracking-widest flex items-center gap-2 mb-2 group">
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> 
-            กลับหน้าหลัก Dashboard
+          <Link href="/tutor" className="text-blue-600 font-black text-sm uppercase mb-2 flex items-center gap-2 group transition-all">
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> กลับหน้าหลัก
           </Link>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight">Teaching Logs</h1>
-          <p className="text-gray-500 font-bold">ประวัติการสอนและรายงานถึงผู้ปกครอง</p>
-        </div>
-
-        <div className="bg-white px-8 py-5 rounded-[2rem] shadow-sm border border-gray-100 flex items-center gap-5 transition-transform hover:scale-105">
-          <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
-            <TrendingUp size={32} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ชั่วโมงสอนทั้งหมด</p>
-            <h3 className="text-3xl font-black text-gray-900">{totalHours} <span className="text-sm text-gray-400">ชม.</span></h3>
-          </div>
+          <h1 className="text-4xl font-black tracking-tight">Teaching & Check-in</h1>
+          <p className="text-gray-500 font-bold">ยืนยันคิวสอนและบันทึกรายงาน</p>
         </div>
       </div>
 
-      {/* Logs List Section */}
-      <div className="grid grid-cols-1 gap-6">
-        {logs.length === 0 ? (
-          <div className="bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-gray-200 shadow-inner">
-            <Clock className="mx-auto text-gray-200 mb-6" size={80} />
-            <p className="text-gray-500 font-black text-2xl">ยังไม่มีประวัติการสอน</p>
-            <Link href="/admin/calendar-slots" className="inline-block mt-8 bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
-              ไปหน้าปฏิทินเพื่อบันทึกการสอน
-            </Link>
-          </div>
-        ) : (
-          logs.map((log) => (
-            <div key={log.id} className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col gap-6 hover:shadow-xl transition-all group">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-center gap-6">
-                  <div className="w-16 h-16 bg-blue-50 rounded-3xl flex items-center justify-center text-blue-600">
-                    <BookOpen size={32} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                        {log.subject || 'วิชาสอน'}
-                      </span>
-                      <span className="text-gray-400 text-xs font-bold flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
-                        <CalendarIcon size={12} /> 
-                        {new Date(log.teaching_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </span>
-                    </div>
-                    <h3 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-                      <User size={20} className="text-gray-400" />
-                      {log.student_name}
-                    </h3>
-                  </div>
+      {/* 🟠 ส่วนที่ 1: รายการรอเช็คอิน (ที่นักเรียนจองมา) */}
+      <section className="mb-12">
+        <h2 className="text-xl font-black mb-4 flex items-center gap-2 text-orange-600"><Clock size={20} /> คิวที่ต้องสอนวันนี้</h2>
+        <div className="grid gap-4">
+          {pendingBookings.map((booking) => (
+            <div key={booking.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-orange-100 shadow-sm">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="font-black text-lg">น้อง{booking.student_wallets?.student_name}</p>
+                  <p className="text-sm text-gray-500 italic">"โน้ตจากนักเรียน: {booking.student_note || '-'}"</p>
                 </div>
-
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">ระยะเวลาสอน</p>
-                  <p className="text-3xl font-black text-blue-600">{log.duration_hours} <span className="text-sm font-bold">ชม.</span></p>
-                </div>
+                <span className="bg-orange-50 text-orange-600 px-4 py-1 rounded-full text-xs font-black tracking-widest uppercase">1 HOUR</span>
               </div>
 
-              {/* ✨ รายงานการสอน (Edit & Copy Mode) */}
-              <div className="relative p-6 bg-gray-50 rounded-[2rem] border-2 border-gray-100 group-hover:border-blue-100 transition-all">
-                <div className="flex justify-between items-center mb-4">
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
-                    <Edit3 size={14} /> รายงานผลการสอนสำหรับผู้ปกครอง
-                  </p>
+              {confirmingId === booking.id ? (
+                <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+                  <textarea className="w-full p-4 rounded-2xl border-2 border-blue-200 focus:border-blue-500 outline-none font-medium h-24" placeholder="สรุปบทเรียนวันนี้และฟีดแบ็กน้อง..." value={tutorNote} onChange={(e) => setTutorNote(e.target.value)} />
                   <div className="flex gap-2">
-                    {/* ปุ่มคัดลอกไปส่ง LINE */}
-                    <button 
-                      onClick={() => copyToClipboard(log)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${copiedId === log.id ? 'bg-green-500 text-white shadow-green-100' : 'bg-white text-gray-600 border border-gray-200 hover:bg-blue-50 hover:text-blue-600'}`}
-                    >
-                      {copiedId === log.id ? <><Check size={14} /> คัดลอกแล้ว</> : <><Copy size={14} /> ก๊อปปี้ส่ง LINE</>}
-                    </button>
-
-                    {/* ปุ่มจัดการแก้ไข */}
-                    {editingId !== log.id ? (
-                      <button 
-                        onClick={() => startEditing(log)}
-                        className="p-1.5 bg-white border border-gray-200 text-gray-400 hover:text-blue-600 rounded-xl transition-all"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                    ) : (
-                      <div className="flex gap-1">
-                        <button onClick={() => setEditingId(null)} className="p-1.5 bg-white border border-red-100 text-red-500 hover:bg-red-50 rounded-xl transition-all"><X size={18} /></button>
-                        <button onClick={() => handleUpdate(log.id)} disabled={isSaving} className="p-1.5 bg-white border border-green-100 text-green-600 hover:bg-green-50 rounded-xl transition-all">
-                          {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        </button>
-                      </div>
-                    )}
+                    <button onClick={() => handleConfirmTeaching(booking)} disabled={isSaving} className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black">ส่งรายงานและยืนยัน</button>
+                    <button onClick={() => setConfirmingId(null)} className="px-6 bg-gray-100 rounded-2xl font-bold">ยกเลิก</button>
                   </div>
                 </div>
+              ) : (
+                <button onClick={() => setConfirmingId(booking.id)} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700 transition-all">สอนจบแล้ว - กดยืนยันเช็คอิน</button>
+              )}
+            </div>
+          ))}
+          {pendingBookings.length === 0 && <p className="text-gray-400 italic py-10 text-center bg-white rounded-3xl border border-dashed">ไม่มีคิวที่ต้องสอนในขณะนี้</p>}
+        </div>
+      </section>
 
-                {editingId === log.id ? (
-                  <textarea 
-                    className="w-full p-4 rounded-2xl border-2 border-blue-200 outline-none focus:border-blue-400 font-medium text-gray-700 h-32 transition-all bg-white"
-                    value={editNote}
-                    onChange={(e) => setEditNote(e.target.value)}
-                    placeholder="วันนี้เรียนเรื่องอะไร น้องเป็นอย่างไรบ้าง..."
-                  />
-                ) : (
-                  <p className="text-gray-600 font-medium leading-relaxed italic">
-                    {log.notes ? `"${log.notes}"` : "ไม่ได้ระบุรายละเอียดรายงาน"}
-                  </p>
-                )}
+      {/* 🟢 ส่วนที่ 2: ประวัติที่สอนเสร็จแล้ว */}
+      <section>
+        <h2 className="text-xl font-black mb-4 flex items-center gap-2 text-green-600"><CheckCircle size={20} /> ประวัติการสอนสำเร็จ</h2>
+        <div className="grid gap-4">
+          {logs.map((log) => (
+            <div key={log.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm opacity-80 flex justify-between items-center group hover:opacity-100 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center font-black">1h</div>
+                <div>
+                  <p className="font-black text-gray-900">{log.student_name}</p>
+                  <p className="text-xs text-gray-400">{new Date(log.teaching_date).toLocaleDateString('th-TH')}</p>
+                  <p className="text-sm text-gray-600 mt-1 italic font-medium">"{log.notes}"</p>
+                </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

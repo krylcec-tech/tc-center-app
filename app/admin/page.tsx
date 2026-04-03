@@ -8,13 +8,17 @@ import {
   Users, 
   Calendar, 
   LogOut, 
-  ShieldCheck,
   Loader2,
   BookOpen,
   Clock,
   UserCheck,
   ChevronRight,
-  CalendarDays 
+  CalendarDays,
+  Store,
+  Menu,
+  X,
+  Receipt,
+  Wallet // ✨ เพิ่มไอคอน Wallet
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -22,6 +26,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [adminData, setAdminData] = useState({ name: '', email: '' });
   const [stats, setStats] = useState({ tutors: 0, hours: 0, students: 0 });
+  
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchAdminAndStats = async () => {
@@ -38,9 +44,8 @@ export default function AdminDashboard() {
         .eq('user_id', session.user.id)
         .maybeSingle();
 
-      // 🛡️ เช็คสิทธิ์ Admin: ยึดจาก role ในฐานข้อมูลเป็นหลักเท่านั้น (ปลอดภัยกว่า)
       if (profile?.role?.toLowerCase() !== 'admin') {
-        router.replace('/admin/calendar-slots'); // หรือเปลี่ยนเป็น '/tutor' ถ้ามี Dashboard แยก
+        router.replace('/tutor'); 
         return;
       }
 
@@ -49,15 +54,12 @@ export default function AdminDashboard() {
         email: session.user.email || '' 
       });
 
-      // ดึงจำนวนติวเตอร์
       const { count: tutorCount } = await supabase.from('tutors').select('*', { count: 'exact', head: true });
-      
-      // ดึงจำนวนนักเรียน (สมมติว่าคุณมีตารางชื่อ 'students')
-      const { count: studentCount } = await supabase.from('students').select('*', { count: 'exact', head: true });
+      const { count: studentCount } = await supabase.from('student_wallets').select('*', { count: 'exact', head: true });
 
       setStats({
         tutors: tutorCount || 0,
-        hours: 24.5, // ส่วนนี้เดี๋ยวค่อยมาแก้ตอนทำระบบ Teaching Logs
+        hours: 0, 
         students: studentCount || 0
       });
 
@@ -74,123 +76,156 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin text-blue-600" size={48} />
-          <p className="text-gray-500 font-bold">กำลังเข้าสู่ระบบแอดมิน...</p>
+          <p className="text-gray-500 font-bold tracking-widest uppercase text-xs">Admin Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col lg:flex-row font-sans text-gray-900">
+      
+      {/* --- Mobile Header --- */}
+      <div className="lg:hidden bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 z-40 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg">TC</div>
+          <span className="font-black">Admin Panel</span>
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-gray-50 text-gray-600 rounded-xl"><Menu size={24} /></button>
+      </div>
+
+      {/* --- Mobile Overlay --- */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
+
       {/* --- Sidebar Menu --- */}
-      <aside className="w-72 bg-white border-r border-gray-100 flex flex-col hidden lg:flex">
-        <div className="p-8">
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-100 flex flex-col transition-transform duration-300
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden absolute top-4 right-4 p-2 text-gray-400"><X size={20} /></button>
+
+        <div className="p-8 pt-12 lg:pt-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-200">
-              TC
-            </div>
-            <span className="text-xl font-black text-gray-900 tracking-tight">TC Center</span>
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-200">TC</div>
+            <span className="text-xl font-black tracking-tight">TC Center</span>
           </div>
-          <p className="text-[10px] text-blue-600 font-black uppercase tracking-[0.2em]">The Convergence Portal</p>
+          <p className="text-[10px] text-blue-600 font-black uppercase tracking-[0.2em]">Management System</p>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1">
-          <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">เมนูหลัก</p>
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+          <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Core Menu</p>
           
-          <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 bg-blue-50 text-blue-600 rounded-2xl font-bold transition-all shadow-sm shadow-blue-50">
-            <LayoutDashboard size={20} /> แผงควบคุม
-          </Link>
-
-          <Link href="/admin/manage-tutors" className="flex items-center gap-3 px-4 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-2xl font-bold transition-all group">
-            <Users size={20} className="group-hover:text-blue-500" /> จัดการติวเตอร์
-          </Link>
-
-          <Link href="/admin/calendar-slots" className="flex items-center gap-3 px-4 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-2xl font-bold transition-all group">
-            <CalendarDays size={20} className="group-hover:text-blue-500" /> ตารางสอน (ปฏิทิน)
-          </Link>
-
-          <Link href="/admin/manage-courses" className="flex items-center gap-3 px-4 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-2xl font-bold transition-all group">
-            <BookOpen size={20} className="group-hover:text-blue-500" /> จัดการคอร์สเรียน
-          </Link>
+          <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 bg-blue-50 text-blue-600 rounded-2xl font-bold"><LayoutDashboard size={20} /> แผงควบคุม</Link>
+          
+          {/* ✨ เพิ่มเมนู จัดการกระเป๋าเงิน ใน Sidebar */}
+          <Link href="/admin/wallets" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 rounded-2xl font-bold transition-all"><Wallet size={20} /> จัดการกระเป๋าเงิน (6-Tier)</Link>
+          
+          <Link href="/admin/orders" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-gray-500 hover:bg-green-50 hover:text-green-600 rounded-2xl font-bold transition-all"><Receipt size={20} /> ตรวจสอบการแจ้งโอน</Link>
+          <Link href="/admin/manage-tutors" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-gray-500 hover:bg-gray-50 rounded-2xl font-bold"><Users size={20} /> จัดการติวเตอร์</Link>
+          <Link href="/admin/calendar-slots" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-gray-500 hover:bg-gray-50 rounded-2xl font-bold"><CalendarDays size={20} /> ตารางสอน</Link>
+          <Link href="/admin/manage-courses" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-gray-500 hover:bg-gray-50 rounded-2xl font-bold"><BookOpen size={20} /> จัดการคอร์สเรียน</Link>
+          <Link href="/admin/shop" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-2xl font-black border border-purple-100"><Store size={20} /> จัดการร้านค้ารางวัล</Link>
         </nav>
 
         <div className="p-6 border-t border-gray-50">
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-all border border-red-100">
-            <LogOut size={20} /> ออกจากระบบ
-          </button>
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 border border-red-100 transition-all"><LogOut size={20} /> Logout</button>
         </div>
       </aside>
 
       {/* --- Main Content --- */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-6 md:p-12 max-w-7xl mx-auto">
-          <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md uppercase">Online</span>
-                <span className="text-gray-400 text-xs">/ แผงควบคุมหลัก</span>
-              </div>
-              <h1 className="text-4xl font-black text-gray-900 leading-tight">
-                ยินดีต้อนรับคุณ {adminData.name} <span className="text-blue-600">👋</span>
-              </h1>
-            </div>
+      <main className="flex-1 overflow-y-auto w-full">
+        <div className="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
+          <header className="mb-8 md:mb-12">
+            <h1 className="text-3xl md:text-4xl font-black leading-tight">
+              สวัสดีครับ <span className="text-blue-600">แอดมิน{adminData.name}</span>
+            </h1>
+            <p className="text-gray-400 font-bold mt-2 text-sm">ระบบบริหารจัดการชั่วโมงเรียนและนักเรียนแบบแยก Tier</p>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+          {/* สถิติหลัก */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-12">
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
               <UserCheck className="text-orange-500 mb-4" size={28} />
-              <p className="text-gray-400 font-bold text-sm uppercase">ติวเตอร์</p>
-              <h3 className="text-4xl font-black mt-2">{stats.tutors} คน</h3>
+              <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">ติวเตอร์ในระบบ</p>
+              <h3 className="text-3xl font-black mt-1">{stats.tutors} <span className="text-sm font-bold text-gray-400">ท่าน</span></h3>
             </div>
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-              <Clock className="text-blue-600 mb-4" size={28} />
-              <p className="text-gray-400 font-bold text-sm uppercase">ชั่วโมงสอน</p>
-              <h3 className="text-4xl font-black mt-2 text-blue-600">{stats.hours} ชม.</h3>
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 border-b-green-400 border-b-4">
+              <Receipt className="text-green-500 mb-4" size={28} />
+              <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">รายการรออนุมัติ</p>
+              <Link href="/admin/orders" className="text-2xl font-black mt-1 text-green-600 flex items-center gap-2 hover:translate-x-2 transition-transform">ตรวจสอบออเดอร์ <ChevronRight size={20} /></Link>
             </div>
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
               <Users className="text-purple-600 mb-4" size={28} />
-              <p className="text-gray-400 font-bold text-sm uppercase">นักเรียน</p>
-              <h3 className="text-4xl font-black mt-2">{stats.students} คน</h3>
+              <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">นักเรียนทั้งหมด</p>
+              <h3 className="text-3xl font-black mt-1">{stats.students} <span className="text-sm font-bold text-gray-400">คน</span></h3>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-blue-600 rounded-[3rem] p-10 text-white shadow-2xl shadow-blue-200 relative overflow-hidden">
+          {/* Quick Links Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
+            
+            {/* ✨ กล่องใหญ่ใหม่: จัดการกระเป๋าเงินรายบุคคล (Manual Adjustment) */}
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[3rem] p-8 md:p-10 text-white shadow-2xl shadow-blue-100 relative overflow-hidden flex flex-col justify-between group">
                <div className="relative z-10">
-                  <h2 className="text-3xl font-black mb-4">ระบบจัดการเวลาสอน</h2>
-                  <p className="text-blue-100 font-medium mb-8 leading-relaxed max-w-xs">
-                    เปิด Slot เวลาในรูปแบบปฏิทิน และตรวจสอบคิวสอนของ Shiriu ได้ทันที
+                  <h2 className="text-2xl md:text-3xl font-black mb-4">จัดการกระเป๋าเงิน 6 Tier</h2>
+                  <p className="text-blue-500 bg-white/90 px-3 py-1 rounded-lg text-[10px] font-black inline-block mb-4 uppercase tracking-tighter">Manual Hour Adjustment</p>
+                  <p className="text-blue-100 font-medium mb-8 leading-relaxed max-w-xs text-sm">
+                    ใช้สำหรับแก้ไขยอดชั่วโมงเรียนให้นักเรียนรายบุคคล (กรณีฉุกเฉิน/เสกชั่วโมง/ปรับลด) ครบทั้ง 6 รูปแบบ
                   </p>
-                  <Link href="/admin/calendar-slots" className="inline-flex items-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-2xl font-black hover:bg-blue-50 transition-all group">
-                    ไปหน้าปฏิทิน <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                  </Link>
                </div>
-               <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-blue-500 rounded-full opacity-50"></div>
+               <Link href="/admin/wallets" className="relative z-10 inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-2xl font-black hover:bg-blue-50 transition-all w-max shadow-lg active:scale-95">
+                  ไปที่หน้าจัดการ Wallet <ChevronRight size={20} />
+               </Link>
+               <Wallet className="absolute -bottom-10 -right-10 text-white/10 group-hover:scale-110 transition-transform duration-500" size={240} />
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-               <Link href="/admin/manage-tutors" className="bg-white p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between hover:border-blue-400 transition-all group">
+                {/* ระบบอนุมัติการขาย */}
+                <Link href="/admin/orders" className="bg-white p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between hover:border-green-400 hover:shadow-md transition-all group">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600">
-                      <Users size={24} />
+                    <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors">
+                      <Receipt size={24} />
                     </div>
-                    <h4 className="font-black text-gray-900 text-lg">จัดการติวเตอร์</h4>
+                    <div>
+                      <h4 className="font-black text-gray-900 text-lg">ตรวจสอบการแจ้งโอน</h4>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">เติมชั่วโมงอัตโนมัติตามคอร์ส</p>
+                    </div>
                   </div>
-                  <ChevronRight />
-               </Link>
+                  <ChevronRight className="text-gray-300 group-hover:text-green-600" />
+                </Link>
 
-               <Link href="/admin/manage-slots" className="bg-white p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between hover:border-blue-400 transition-all group">
+                {/* ทางลัดจัดการคอร์ส */}
+                <Link href="/admin/manage-courses" className="bg-white p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between hover:border-orange-400 hover:shadow-md transition-all group">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600">
-                      <Calendar size={24} />
+                    <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                      <BookOpen size={24} />
                     </div>
-                    <h4 className="font-black text-gray-900 text-lg">ดูตารางสอน (แบบตาราง)</h4>
+                    <div>
+                      <h4 className="font-black text-gray-900 text-lg">ตั้งค่าคอร์ส & Tier</h4>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">กำหนดราคาและกระเป๋าเงินเป้าหมาย</p>
+                    </div>
                   </div>
-                  <ChevronRight />
-               </Link>
+                  <ChevronRight className="text-gray-300 group-hover:text-orange-600" />
+                </Link>
+
+                {/* จัดการร้านค้า */}
+                <Link href="/admin/shop" className="bg-white p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between hover:border-purple-400 hover:shadow-md transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                      <Store size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-gray-900 text-lg">ร้านค้ารางวัล</h4>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">จัดการการแลกพอยท์นักเรียน</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="text-gray-300 group-hover:text-purple-600" />
+                </Link>
             </div>
           </div>
 

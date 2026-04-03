@@ -1,0 +1,184 @@
+'use client'
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { 
+  User, Phone, MapPin, Save, ArrowLeft, 
+  Loader2, Camera, GraduationCap, Building2, Heart 
+} from 'lucide-react';
+import Link from 'next/link';
+
+export default function StudentProfilePage() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // Profile States
+  const [studentName, setStudentName] = useState('');
+  const [parentName, setParentName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [school, setSchool] = useState('');
+  const [address, setAddress] = useState('');
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: wallet } = await supabase
+        .from('student_wallets')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (wallet) {
+        setStudentName(wallet.student_name || '');
+        setParentName(wallet.parent_name || '');
+        setPhone(wallet.phone || '');
+        setAddress(wallet.address || ''); // อย่าลืมรัน SQL เพิ่ม Column นี้ด้านล่างนะครับ
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('school_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profile) {
+        setSchool(profile.school_name || '');
+      }
+
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. อัปเดตข้อมูลใน student_wallets
+      const { error: walletError } = await supabase
+        .from('student_wallets')
+        .update({
+          student_name: studentName,
+          parent_name: parentName,
+          phone: phone,
+          address: address
+        })
+        .eq('user_id', user.id);
+
+      if (walletError) throw walletError;
+
+      // 2. อัปเดตข้อมูลใน profiles (ชื่อโรงเรียน)
+      await supabase
+        .from('profiles')
+        .update({ school_name: school })
+        .eq('id', user.id);
+
+      alert('อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้วครับ! ✨');
+    } catch (error: any) {
+      alert('เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 font-sans text-gray-900">
+      <div className="max-w-3xl mx-auto space-y-6">
+        
+        <header>
+          <Link href="/student" className="text-gray-400 font-black text-xs uppercase mb-4 flex items-center gap-2 hover:text-blue-600 w-max transition-all">
+            <ArrowLeft size={16}/> กลับหน้าหลัก
+          </Link>
+          <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+            <Settings className="text-blue-600" size={32} /> ตั้งค่าโปรไฟล์
+          </h1>
+          <p className="text-gray-500 font-bold mt-1">จัดการข้อมูลส่วนตัวและที่อยู่สำหรับจัดส่งของรางวัล</p>
+        </header>
+
+        <form onSubmit={handleUpdateProfile} className="space-y-6">
+          {/* ส่วนข้อมูลนักเรียน */}
+          <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-gray-100">
+            <h2 className="text-xl font-black mb-8 flex items-center gap-2 text-blue-600">
+              <GraduationCap size={24}/> ข้อมูลนักเรียนและผู้ปกครอง
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2">ชื่อเล่นนักเรียน</label>
+                <div className="relative">
+                  <Heart className="absolute left-4 top-4 text-orange-400" size={18} />
+                  <input required type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 font-bold border-none" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2">ชื่อผู้ปกครอง</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-4 text-gray-400" size={18} />
+                  <input required type="text" value={parentName} onChange={(e) => setParentName(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 font-bold border-none" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2">เบอร์โทรศัพท์ติดต่อ</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-4 text-gray-400" size={18} />
+                  <input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 font-bold border-none" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2">โรงเรียน</label>
+                <div className="relative">
+                  <Building2 className="absolute left-4 top-4 text-gray-400" size={18} />
+                  <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 font-bold border-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ส่วนที่อยู่จัดส่ง */}
+          <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-gray-100">
+            <h2 className="text-xl font-black mb-8 flex items-center gap-2 text-orange-500">
+              <MapPin size={24}/> ที่อยู่จัดส่งของรางวัล / หนังสือ
+            </h2>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase ml-2">ที่อยู่โดยละเอียด (บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์)</label>
+              <textarea 
+                value={address} 
+                onChange={(e) => setAddress(e.target.value)} 
+                rows={4}
+                placeholder="กรุณาระบุที่อยู่ให้ชัดเจน เพื่อความถูกต้องในการส่งของรางวัลครับ"
+                className="w-full p-6 bg-gray-50 rounded-[2rem] outline-none focus:ring-2 focus:ring-orange-400 font-bold border-none resize-none"
+              />
+            </div>
+          </div>
+
+          <button 
+            disabled={saving}
+            className="w-full bg-blue-600 text-white py-5 rounded-[2.5rem] font-black text-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:bg-gray-400"
+          >
+            {saving ? <Loader2 className="animate-spin" /> : <Save size={24} />}
+            {saving ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลง'}
+          </button>
+        </form>
+
+      </div>
+    </div>
+  );
+}
+
+// ไอคอน Settings ที่ลืม Import ในตอนแรก
+import { Settings } from 'lucide-react';

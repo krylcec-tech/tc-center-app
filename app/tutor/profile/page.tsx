@@ -1,146 +1,213 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
-  User, Camera, Save, ArrowLeft, Loader2, CheckCircle 
+  User, Phone, Save, ArrowLeft, Loader2, 
+  BadgeCheck, FileText, Video, Upload, ExternalLink, X
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TutorProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
-  const [name, setName] = useState('');
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Profile States
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [bio, setBio] = useState('');
+  
+  // New States: PDF & Video
+  const [resumeUrl, setResumeUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
+    fetchTutorProfile();
   }, []);
 
-  const fetchProfile = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase
+  const fetchTutorProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: tutor } = await supabase
         .from('tutors')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
-      
-      if (data) {
-        setProfile(data);
-        setName(data.name);
-        setPreviewUrl(data.image_url);
+
+      if (tutor) {
+        setName(tutor.name || '');
+        setPhone(tutor.phone || '');
+        setBio(tutor.bio || '');
+        setResumeUrl(tutor.resume_url || '');
+        setVideoUrl(tutor.video_url || '');
       }
-    }
-    setLoading(false);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setPreviewUrl(URL.createObjectURL(selectedFile));
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSave = async () => {
+  // --- ฟังก์ชันอัปโหลด PDF ---
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') return alert('กรุณาอัปโหลดไฟล์เป็น PDF เท่านั้นครับ');
+
+    setUploadingFile(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const fileName = `resume_${user?.id}_${Date.now()}.pdf`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('tutor-assets') // อย่าลืมสร้าง Bucket ชื่อ tutor-assets ใน Storage
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('tutor-assets').getPublicUrl(fileName);
+      setResumeUrl(publicUrl);
+      alert('อัปโหลด Resume สำเร็จ!');
+    } catch (error: any) {
+      alert('อัปโหลดพลาด: ' + error.message);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSaving(true);
     try {
-      let finalImageUrl = profile.image_url;
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('tutors').update({
+        name, phone, bio,
+        resume_url: resumeUrl,
+        video_url: videoUrl,
+        updated_at: new Date()
+      }).eq('user_id', user?.id);
 
-      // 1. ถ้ามีการเลือกรูปใหม่ ให้ Upload ขึ้น Storage ก่อน
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
-        const filePath = `avatar/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('tutor-images')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from('tutor-images')
-          .getPublicUrl(filePath);
-        
-        finalImageUrl = urlData.publicUrl;
-      }
-
-      // 2. อัปเดตข้อมูลลงตาราง tutors
-      const { error: updateError } = await supabase
-        .from('tutors')
-        .update({ name, image_url: finalImageUrl })
-        .eq('id', profile.id);
-
-      if (updateError) throw updateError;
-      
-      alert("บันทึกข้อมูลเรียบร้อยครับ!");
-      fetchProfile();
+      alert('บันทึกโปรไฟล์เรียบร้อยแล้วครับ! ✨');
     } catch (error: any) {
-      alert("Error: " + error.message);
+      alert('Error: ' + error.message);
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
+  // --- ฟังก์ชันแปลงลิงก์ Drive ให้เป็น Embed (สำหรับพรีวิว) ---
+  const getEmbedUrl = (url: string) => {
+    if (url.includes('drive.google.com')) {
+      return url.replace('/view?usp=sharing', '/preview').replace('/view', '/preview');
+    }
+    if (url.includes('youtube.com/watch?v=')) {
+      return url.replace('watch?v=', 'embed/');
+    }
+    return url;
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-purple-600" size={48} /></div>;
 
   return (
-    <div className="p-6 md:p-12 max-w-3xl mx-auto bg-[#F8FAFC] min-h-screen">
-      <Link href="/tutor" className="text-blue-600 font-black text-sm uppercase tracking-widest flex items-center gap-2 mb-8 group">
-        <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> กลับหน้าหลัก
-      </Link>
-
-      <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
-        <div className="bg-blue-600 h-32 relative"></div>
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 font-sans text-gray-900">
+      <div className="max-w-3xl mx-auto space-y-6">
         
-        <div className="px-8 pb-10 -mt-16 relative">
-          {/* Avatar Upload */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="relative group">
-              <div className="w-32 h-32 bg-gray-200 rounded-[2.5rem] border-4 border-white shadow-xl overflow-hidden">
-                {previewUrl ? (
-                  <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <User size={64} className="text-gray-400 m-auto mt-6" />
-                )}
+        <header>
+          <Link href="/tutor" className="text-gray-400 font-black text-xs uppercase mb-4 flex items-center gap-2 hover:text-purple-600 w-max transition-all">
+            <ArrowLeft size={16}/> กลับหน้าหลัก
+          </Link>
+          <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+            <BadgeCheck className="text-purple-600" size={32} /> แก้ไขข้อมูลโปรไฟล์
+          </h1>
+        </header>
+
+        <form onSubmit={handleUpdateProfile} className="space-y-6 pb-20">
+          
+          {/* ข้อมูลพื้นฐาน */}
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
+             {/* ... (เหมือนเดิม: name, phone, bio) ... */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="space-y-2">
+                 <label className="text-[10px] font-black text-gray-400 uppercase ml-2">ชื่อติวเตอร์</label>
+                 <input required type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-purple-400 font-bold" />
+               </div>
+               <div className="space-y-2">
+                 <label className="text-[10px] font-black text-gray-400 uppercase ml-2">เบอร์โทรศัพท์</label>
+                 <input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-purple-400 font-bold" />
+               </div>
+             </div>
+          </div>
+
+          {/* 📄 ส่วน Resume PDF */}
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-blue-600">
+              <FileText size={24}/> Resume / ผลงาน (PDF)
+            </h2>
+            
+            {resumeUrl ? (
+              <div className="flex items-center justify-between bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-lg text-blue-600 shadow-sm"><FileText size={20}/></div>
+                  <span className="text-sm font-black text-blue-900 truncate max-w-[200px]">Resume_Uploaded.pdf</span>
+                </div>
+                <div className="flex gap-2">
+                  <a href={resumeUrl} target="_blank" className="text-blue-600 hover:underline text-xs font-bold">ดูไฟล์</a>
+                  <button type="button" onClick={() => setResumeUrl('')} className="text-red-500 hover:text-red-700"><X size={18}/></button>
+                </div>
               </div>
-              <button 
+            ) : (
+              <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 bg-blue-600 text-white p-2.5 rounded-2xl shadow-lg hover:bg-blue-700 transition-all active:scale-95"
+                className="border-2 border-dashed border-gray-200 rounded-[2rem] p-10 text-center hover:bg-gray-50 cursor-pointer transition-all group"
               >
-                <Camera size={20} />
-              </button>
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+                {uploadingFile ? <Loader2 className="animate-spin mx-auto text-blue-600" /> : <Upload className="mx-auto text-gray-300 group-hover:text-blue-500 mb-2" />}
+                <p className="text-sm font-bold text-gray-400 group-hover:text-blue-600">คลิกเพื่ออัปโหลดไฟล์ Resume (PDF)</p>
+                <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
+              </div>
+            )}
+          </div>
+
+          {/* 🎬 ส่วนวิดีโอแนะนำตัว */}
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-red-500">
+              <Video size={24}/> วิดีโอแนะนำตัว (Link)
+            </h2>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2 text-gray-900">Link จาก Google Drive หรือ YouTube</label>
+                <input 
+                  type="text" 
+                  value={videoUrl} 
+                  onChange={(e) => setVideoUrl(e.target.value)} 
+                  placeholder="วางลิงก์ที่นี่ เช่น https://drive.google.com/file/d/..."
+                  className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-red-400 font-bold"
+                />
+              </div>
+
+              {videoUrl && (
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-lg">
+                  <iframe 
+                    src={getEmbedUrl(videoUrl)} 
+                    className="w-full h-full" 
+                    allow="autoplay"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">ชื่อติวเตอร์</label>
-              <input 
-                className="w-full border-2 p-4 rounded-2xl bg-gray-50 font-bold text-lg focus:border-blue-400 outline-none transition-all mt-1"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-
-            <div className="pt-4">
-              <button 
-                disabled={saving}
-                onClick={handleSave}
-                className="w-full bg-blue-600 text-white p-5 rounded-[2rem] font-black text-lg flex items-center justify-center gap-3 hover:bg-blue-700 shadow-xl shadow-blue-100 disabled:bg-gray-400 transition-all active:scale-95"
-              >
-                {saving ? <Loader2 className="animate-spin" /> : <Save size={24} />}
-                {saving ? 'กำลังบันทึก...' : 'บันทึกข้อมูลโปรไฟล์'}
-              </button>
-            </div>
-          </div>
-        </div>
+          <button 
+            disabled={saving || uploadingFile}
+            className="w-full bg-purple-600 text-white py-5 rounded-[2.5rem] font-black text-xl shadow-xl hover:bg-purple-700 transition-all active:scale-95 flex items-center justify-center gap-3"
+          >
+            {saving ? <Loader2 className="animate-spin" /> : <Save size={24} />}
+            {saving ? 'กำลังบันทึก...' : 'บันทึกโปรไฟล์ทั้งหมด'}
+          </button>
+        </form>
       </div>
     </div>
   );
