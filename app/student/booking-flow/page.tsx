@@ -1,14 +1,17 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react'; // ✨ เพิ่ม Suspense
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Globe, MapPin, Navigation, ChevronRight, MessageCircle, 
   Clock, CheckCircle2, User, Loader2, PlayCircle, Calendar, Search, Filter, BookOpen, Sparkles, ChevronLeft
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // ✨ เพิ่ม useSearchParams
 
-export default function BookingFlowPage() {
+// 🛡️ เปลี่ยนชื่อฟังก์ชันหลักเป็น BookingContent เพื่อให้ Suspense ครอบได้
+function BookingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // ✨ ดึงค่าพารามิเตอร์จาก URL
+  
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -33,6 +36,18 @@ export default function BookingFlowPage() {
     { id: 'tier2', title: 'สอบเข้า ม.4', desc: 'ติวเข้มเพื่อเตรียมสอบเข้า ม.4 โรงเรียนดัง', priceTag: 'ราคาระดับกลาง' },
     { id: 'tier3', title: 'ม.ปลาย / เข้ามหาวิทยาลัย', desc: 'เนื้อหา ม.4-ม.6 และ TGAT/TPAT/A-Level', priceTag: 'ราคาระดับสูง' },
   ];
+
+  // ✨ Logic: ถ้ามีการส่งค่ามาจากหน้า Dashboard ให้ข้ามไป Step 3 ทันที
+  useEffect(() => {
+    const urlTier = searchParams.get('tier');
+    const urlType = searchParams.get('type');
+
+    if (urlTier && urlType) {
+      setGradeLevel(urlTier);
+      setLocationType(urlType);
+      setStep(3); // 🚀 วิ่งไปหน้าเลือกติวเตอร์เลย
+    }
+  }, [searchParams]);
 
   // ✨ ฟังก์ชันหาชื่อ Column ใน Database ตามเงื่อนไขที่เลือก
   const getWalletColumnName = () => {
@@ -142,7 +157,14 @@ export default function BookingFlowPage() {
         
         {/* Step Indicator */}
         <div className="mb-10">
-          <button onClick={() => step > 1 ? setStep(step === 4 ? 3 : step - 1) : router.back()} className="text-blue-600 font-black text-sm uppercase mb-4 flex items-center gap-2 group transition-all">
+          {/* ✨ อัปเดตปุ่มย้อนกลับ: ถ้าข้าม Step มาจาก Dashboard แล้วกดย้อนกลับ ให้เด้งกลับหน้า Dashboard เลย */}
+          <button 
+            onClick={() => {
+              if (searchParams.get('tier') && step === 3) return router.back();
+              step > 1 ? setStep(step === 4 ? 3 : step - 1) : router.back();
+            }} 
+            className="text-blue-600 font-black text-sm uppercase mb-4 flex items-center gap-2 group transition-all"
+          >
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> ย้อนกลับ
           </button>
           <div className="flex gap-2">
@@ -152,8 +174,8 @@ export default function BookingFlowPage() {
           </div>
         </div>
 
-        {/* STEP 1: Location Type */}
-        {step === 1 && (
+        {/* STEP 1: Location Type (ซ่อนถ้าข้าม Step มา) */}
+        {step === 1 && !searchParams.get('type') && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <button onClick={() => { setLocationType('Online'); setStep(2); }} className="bg-white p-10 rounded-[3rem] border-2 border-transparent hover:border-blue-500 shadow-sm transition-all group text-center">
                     <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center text-blue-600 mx-auto mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all"><Globe size={40} /></div>
@@ -175,8 +197,8 @@ export default function BookingFlowPage() {
             </div>
         )}
 
-        {/* STEP 2: Grade Level */}
-        {step === 2 && (
+        {/* STEP 2: Grade Level (ซ่อนถ้าข้าม Step มา) */}
+        {step === 2 && !searchParams.get('tier') && (
              <div className="grid grid-cols-1 gap-4 max-w-2xl mx-auto">
              <h2 className="text-2xl font-black mb-4 text-gray-900 text-center">เลือกระดับชั้นเรียน</h2>
              {tiers.map(tier => (
@@ -233,7 +255,7 @@ export default function BookingFlowPage() {
           </div>
         )}
 
-        {/* STEP 4: Detailed Calendar with Month Selector & Tier Balance */}
+        {/* STEP 4: Detailed Calendar */}
         {step === 4 && selectedTutor && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in zoom-in-95 duration-500">
             {/* Sidebar Profile */}
@@ -331,5 +353,14 @@ export default function BookingFlowPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// 📦 Main Export (หุ้มด้วย Suspense เพื่อกัน Error ตอน Build Next.js)
+export default function BookingFlowPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>}>
+      <BookingContent />
+    </Suspense>
   );
 }

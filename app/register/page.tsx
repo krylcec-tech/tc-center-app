@@ -1,12 +1,13 @@
 'use client'
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation'; // ✅ สำหรับจัดการเปลี่ยนหน้า (router.push)
+import { useRouter } from 'next/navigation';
 import { 
   UserPlus, Mail, Lock, User, Phone, Loader2, 
-  ArrowLeft, GraduationCap, Building2, Gift, CheckCircle2 
+  ArrowLeft, GraduationCap, Building2, Gift, CheckCircle2, 
+  MessageCircle, ChevronRight // ✨ เพิ่ม 2 ตัวนี้เข้ามาแล้วครับ!
 } from 'lucide-react';
-import Link from 'next/link'; // ✅ แก้ไขตรงนี้! ต้องเป็น next/link เท่านั้น
+import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -68,14 +69,15 @@ export default function RegisterPage() {
 
         if (profileError) throw profileError;
 
-        // 3. สร้าง Wallet (แจก 1 ชม. ให้เด็กใหม่คนเดียว)
+        // 3. สร้าง Wallet (แจก 1 ชม. ให้เด็กใหม่คนเดียว พร้อมเก็บ Email และ Phone)
         const { error: walletError } = await supabase
           .from('student_wallets')
           .insert([{
             user_id: authData.user.id,
             student_name: studentNickname,
             parent_name: parentName,
-            phone: phone,
+            phone: phone, // ✨ บันทึกเบอร์โทร
+            email: email, // ✨ บันทึกอีเมล
             total_hours_balance: initialHours,
             marketing_points: 0
           }]);
@@ -98,9 +100,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4 md:p-6 font-sans text-gray-900">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 md:p-6 font-sans text-gray-900">
+      
+      {/* --- Main Registration Card --- */}
       <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-8 md:p-10 border border-gray-100 my-8 relative overflow-hidden">
-        
         <div className="relative z-10">
           <Link href="/login" className="text-gray-400 font-bold text-xs uppercase mb-6 flex items-center gap-2 hover:text-blue-600 transition-colors w-max">
             <ArrowLeft size={16}/> กลับไปหน้าล็อคอิน
@@ -110,7 +113,6 @@ export default function RegisterPage() {
           <p className="text-gray-500 font-bold mb-8">เพื่อเข้าสู่ระบบการเรียนระดับพรีเมียม</p>
 
           <form onSubmit={handleRegister} className="space-y-4">
-            
             <div className="space-y-1">
               <label className="text-[10px] font-black text-gray-400 uppercase ml-4">ชื่อจริงผู้ปกครอง / นักเรียน</label>
               <div className="relative">
@@ -191,6 +193,45 @@ export default function RegisterPage() {
           </p>
         </div>
       </div>
+
+      {/* --- ✨ Footer Options (ทางเลือกเพิ่มเติมด้านล่าง) --- */}
+      <div className="w-full max-w-md space-y-3 mb-8">
+        <Link 
+          href="/register/tutor" 
+          className="w-full flex items-center justify-between p-5 bg-white border border-gray-200 rounded-3xl hover:border-purple-400 hover:shadow-md transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
+              <GraduationCap size={20} />
+            </div>
+            <div className="text-left">
+              <h3 className="font-black text-gray-900 text-sm">สมัครเป็นติวเตอร์</h3>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Join our team</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-gray-300 group-hover:text-purple-600" />
+        </Link>
+
+        {/* 🟢 ปุ่มติดต่อ LINE */}
+        <a 
+          href="https://lin.ee/ZSDR4B3" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-between p-5 bg-[#00B900]/10 border border-[#00B900]/20 rounded-3xl hover:bg-[#00B900] hover:shadow-lg hover:shadow-[#00B900]/30 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-white text-[#00B900] rounded-xl flex items-center justify-center shadow-sm">
+              <MessageCircle size={20} className="fill-current" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-black text-gray-900 group-hover:text-white text-sm transition-colors">ติดต่อฝ่ายขาย / สอบถามคอร์ส</h3>
+              <p className="text-[10px] font-bold text-[#00B900] group-hover:text-white/80 uppercase tracking-widest transition-colors">LINE Official Account</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-[#00B900] group-hover:text-white" />
+        </a>
+      </div>
+
     </div>
   );
 }
