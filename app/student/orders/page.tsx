@@ -2,37 +2,53 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
-  Receipt, Clock, CheckCircle2, XCircle, 
-  ArrowLeft, Loader2, ExternalLink, ShoppingBag 
+  ArrowLeft, Receipt, Wallet, Clock, CheckCircle2, 
+  XCircle, Loader2, Package, Gift, ChevronRight 
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'orders' | 'points'>('orders');
 
   useEffect(() => {
-    fetchMyOrders();
+    fetchHistory();
   }, []);
 
-  const fetchMyOrders = async () => {
+  const fetchHistory = async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
+      // 1. ดึงประวัติการสั่งซื้อคอร์ส
+      const { data: ordersData } = await supabase
         .from('course_orders')
-        .select(`
-          *,
-          courses ( title, hours_count, image_url )
-        `)
+        .select('*, courses(title, price)')
         .eq('student_id', user.id)
         .order('created_at', { ascending: false });
-      
-      setOrders(data || []);
+
+      // 2. ดึงประวัติแต้ม Affiliate
+      const { data: wallet } = await supabase
+        .from('affiliate_wallets')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (wallet) {
+        const { data: txData } = await supabase
+          .from('affiliate_transactions')
+          .select('*')
+          .eq('wallet_id', wallet.id)
+          .order('created_at', { ascending: false });
+        setTransactions(txData || []);
+      }
+
+      setOrders(ordersData || []);
     } catch (error) {
-      console.error('Error:', error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -42,76 +58,94 @@ export default function StudentOrdersPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 font-sans text-gray-900">
-      <div className="max-w-4xl mx-auto space-y-6">
-        
-        <header>
-          <Link href="/student" className="text-gray-400 font-black text-xs uppercase mb-4 flex items-center gap-2 hover:text-blue-600 w-max transition-all">
+      <div className="max-w-4xl mx-auto">
+        <header className="mb-10">
+          <Link href="/student" className="text-gray-400 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 mb-4 hover:text-blue-600 transition-all w-max">
             <ArrowLeft size={16}/> กลับหน้าหลัก
           </Link>
-          <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-            <Receipt className="text-blue-600" size={32} /> ประวัติการสั่งซื้อ
-          </h1>
-          <p className="text-gray-500 font-bold mt-1">ติดตามสถานะการเติมชั่วโมงเรียนของคุณ</p>
+          <h1 className="text-4xl font-black tracking-tight">ประวัติการทำรายการ</h1>
         </header>
 
-        <div className="space-y-4">
-          {orders.length > 0 ? orders.map((order) => (
-            <div key={order.id} className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-              
-              <div className="flex items-center gap-5">
-                <div className="w-16 h-16 bg-gray-50 rounded-2xl overflow-hidden flex-shrink-0 border border-gray-100">
-                  {order.courses?.image_url?.[0] ? (
-                    <img src={order.courses.image_url[0]} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24}/></div>
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-black text-gray-900 text-lg leading-tight">{order.courses?.title}</h3>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-blue-600 font-black text-sm">฿{order.amount_paid.toLocaleString()}</span>
-                    <span className="text-gray-300 text-xs font-bold">|</span>
-                    <span className="text-gray-400 text-xs font-bold">{new Date(order.created_at).toLocaleDateString('th-TH')}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between md:justify-end gap-4 border-t md:border-t-0 pt-4 md:pt-0">
-                <div className="flex flex-col md:items-end">
-                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">สถานะรายการ</p>
-                  {order.status === 'PENDING' && (
-                    <div className="flex items-center gap-1.5 text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-xs font-black">
-                      <Clock size={14} /> รอตรวจสอบสลิป
-                    </div>
-                  )}
-                  {order.status === 'COMPLETED' && (
-                    <div className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1 rounded-full text-xs font-black">
-                      <CheckCircle2 size={14} /> เติมชั่วโมงสำเร็จ
-                    </div>
-                  )}
-                  {order.status === 'REJECTED' && (
-                    <div className="flex items-center gap-1.5 text-red-600 bg-red-50 px-3 py-1 rounded-full text-xs font-black">
-                      <XCircle size={14} /> ข้อมูลไม่ถูกต้อง
-                    </div>
-                  )}
-                </div>
-                
-                {order.slip_url && (
-                  <a href={order.slip_url} target="_blank" className="p-3 bg-gray-50 text-gray-400 rounded-2xl hover:bg-blue-50 hover:text-blue-600 transition-all shadow-sm">
-                    <ExternalLink size={20} />
-                  </a>
-                )}
-              </div>
-            </div>
-          )) : (
-            <div className="bg-white rounded-[3rem] p-20 text-center border-2 border-dashed border-gray-100">
-              <ShoppingBag className="mx-auto text-gray-200 mb-4" size={64} />
-              <p className="text-gray-400 font-black text-xl">คุณยังไม่มีประวัติการสั่งซื้อ</p>
-              <Link href="/student/courses" className="mt-4 inline-block text-blue-600 font-black hover:underline">ไปเลือกซื้อคอร์สแรกกันเลย!</Link>
-            </div>
-          )}
+        {/* Tab Switcher */}
+        <div className="flex gap-2 mb-8 bg-gray-100 p-1.5 rounded-2xl w-max border border-gray-200">
+          <button 
+            onClick={() => setActiveTab('orders')}
+            className={`px-8 py-3 rounded-xl font-black text-xs transition-all ${activeTab === 'orders' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}
+          >
+            การสั่งซื้อคอร์ส
+          </button>
+          <button 
+            onClick={() => setActiveTab('points')}
+            className={`px-8 py-3 rounded-xl font-black text-xs transition-all ${activeTab === 'points' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400'}`}
+          >
+            แต้มสะสม & รางวัล
+          </button>
         </div>
 
+        {activeTab === 'orders' ? (
+          <div className="space-y-4">
+            {orders.length === 0 ? (
+              <div className="bg-white p-20 rounded-[3rem] text-center border border-gray-100 shadow-sm">
+                <Package size={48} className="text-gray-200 mx-auto mb-4"/>
+                <p className="text-gray-400 font-bold">ยังไม่เคยมีประวัติการสั่งซื้อครับ</p>
+              </div>
+            ) : (
+              orders.map((order) => (
+                <div key={order.id} className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+                      <Receipt size={28}/>
+                    </div>
+                    <div>
+                      <h3 className="font-black text-lg text-gray-900 leading-tight">{order.courses?.title}</h3>
+                      <p className="text-xs font-bold text-gray-400 mt-1 uppercase">
+                        {new Date(order.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-4">
+                    <p className="text-2xl font-black text-gray-900">฿{order.amount_paid?.toLocaleString()}</p>
+                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border ${
+                      order.status === 'SUCCESS' ? 'bg-green-50 text-green-600 border-green-100' : 
+                      order.status === 'PENDING' ? 'bg-orange-50 text-orange-500 border-orange-100' : 'bg-red-50 text-red-500 border-red-100'
+                    }`}>
+                      {order.status === 'SUCCESS' ? 'ชำระเงินสำเร็จ' : order.status === 'PENDING' ? 'รอตรวจสอบสลิป' : 'ถูกปฏิเสธ'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {transactions.length === 0 ? (
+              <div className="bg-white p-20 rounded-[3rem] text-center border border-gray-100 shadow-sm">
+                <Gift size={48} className="text-gray-200 mx-auto mb-4"/>
+                <p className="text-gray-400 font-bold">ยังไม่มีความเคลื่อนไหวของแต้มครับ</p>
+              </div>
+            ) : (
+              transactions.map((tx) => (
+                <div key={tx.id} className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex justify-between items-center">
+                  <div className="flex items-center gap-5">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${tx.type === 'EARN' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                      {tx.type === 'EARN' ? <Gift size={24}/> : <Clock size={24}/>}
+                    </div>
+                    <div>
+                      <p className="font-black text-gray-900 leading-tight">{tx.description}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{new Date(tx.created_at).toLocaleDateString('th-TH')}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-2xl font-black ${tx.type === 'EARN' ? 'text-green-600' : 'text-red-500'}`}>
+                      {tx.type === 'EARN' ? '+' : '-'}{tx.amount}
+                    </p>
+                    <p className="text-[10px] font-black text-gray-300 uppercase">Points</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -20,18 +20,17 @@ export default function TutorRegisterPage() {
   const [phone, setPhone] = useState('');
   const [university, setUniversity] = useState('');
   const [experience, setExperience] = useState('');
-  const [additionalDetails, setAdditionalDetails] = useState(''); // ✨ State รายละเอียดเพิ่มเติม
-  const [resumeFile, setResumeFile] = useState<File | null>(null); // ✨ State สำหรับไฟล์ Resume
+  const [additionalDetails, setAdditionalDetails] = useState(''); 
+  const [resumeFile, setResumeFile] = useState<File | null>(null); 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // ตรวจสอบประเภทไฟล์เบื้องต้น
       if (file.type === 'application/pdf' || file.type === 'image/jpeg' || file.type === 'image/jpg') {
         setResumeFile(file);
       } else {
         alert('กรุณาอัปโหลดไฟล์ PDF หรือ JPG เท่านั้นครับ');
-        e.target.value = ''; // เคลียร์ค่าทิ้ง
+        e.target.value = ''; 
       }
     }
   };
@@ -53,7 +52,7 @@ export default function TutorRegisterPage() {
         
         let uploadedResumeUrl = null;
 
-        // ✨ 2. ถ้ามีการแนบไฟล์ ให้ทำการอัปโหลดขึ้น Supabase Storage ก่อน
+        // 2. อัปโหลดไฟล์ Resume ขึ้น Supabase Storage
         if (resumeFile) {
           const fileExt = resumeFile.name.split('.').pop();
           const fileName = `${authData.user.id}-${Date.now()}.${fileExt}`;
@@ -66,7 +65,6 @@ export default function TutorRegisterPage() {
             console.error('Upload Error:', uploadError);
             alert('อัปโหลดไฟล์ Resume ไม่สำเร็จ แต่กำลังดำเนินการสมัครในขั้นตอนถัดไป');
           } else if (uploadData) {
-            // ดึง Public URL ของไฟล์ที่เพิ่งอัปโหลด
             const { data: publicUrlData } = supabase.storage.from('resumes').getPublicUrl(`public/${fileName}`);
             uploadedResumeUrl = publicUrlData.publicUrl;
           }
@@ -82,7 +80,19 @@ export default function TutorRegisterPage() {
 
         if (profileError) throw profileError;
 
-        // 4. เพิ่มข้อมูลลงในตาราง Tutors (ซ่อนตัวจนกว่าแอดมินจะยืนยัน)
+        // ✨ 4. สร้าง Wallet ให้ติวเตอร์ (ยอดเงิน 0) เพื่อป้องกัน Error ระบบการเงิน
+        const { error: walletError } = await supabase
+          .from('student_wallets')
+          .insert([{
+            user_id: authData.user.id,
+            student_name: `ครู${nickname}`, 
+            balance: 0,
+            point_balance: 0
+          }]);
+
+        if (walletError) throw walletError;
+
+        // ✨ 5. เพิ่มข้อมูลลงในตาราง Tutors (เก็บ Email/Phone ด้วย)
         const combinedBio = `การศึกษา: ${university} | ประสบการณ์/วิชาที่ถนัด: ${experience} ${additionalDetails ? `| เพิ่มเติม: ${additionalDetails}` : ''}`;
 
         const { error: tutorError } = await supabase
@@ -90,11 +100,13 @@ export default function TutorRegisterPage() {
           .insert([{
             id: authData.user.id,
             name: `${fullName} (ครู${nickname})`,
+            email: email, // เก็บอีเมลไว้แสดงให้แอดมินดู
+            phone: phone, // เก็บเบอร์โทรไว้แสดงให้แอดมินดู
             bio: combinedBio,
             image_url: 'https://cdn-icons-png.flaticon.com/512/4042/4042171.png', 
-            tags: ['รอการอนุมัติ'], // ✨ แอดมินต้องเข้ามาแก้ Tag นี้เป็นชื่อวิชาทีหลัง
+            tags: ['รอการอนุมัติ'], // ล็อคสถานะไว้
             grade_levels: [],
-            resume_url: uploadedResumeUrl // ✨ บันทึกลิงก์ Resume ให้แอดมินกดดูได้
+            resume_url: uploadedResumeUrl 
           }]);
 
         if (tutorError) throw tutorError;
@@ -132,7 +144,6 @@ export default function TutorRegisterPage() {
 
           <form onSubmit={handleRegister} className="space-y-4">
             
-            {/* ข้อมูลส่วนตัว */}
             <div className="space-y-1">
               <label className="text-[10px] font-black text-purple-400 uppercase ml-4">ชื่อ-นามสกุล (จริง)</label>
               <div className="relative">
@@ -176,7 +187,6 @@ export default function TutorRegisterPage() {
               </div>
             </div>
 
-            {/* ✨ ส่วนใหม่: รายละเอียดเพิ่มเติม และอัปโหลดไฟล์ (ไม่บังคับกรอก) */}
             <div className="space-y-3 pt-4 border-t border-purple-50">
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-purple-400 uppercase ml-4 flex items-center justify-between">
@@ -215,7 +225,6 @@ export default function TutorRegisterPage() {
               </div>
             </div>
 
-            {/* ข้อมูลการเข้าระบบ */}
             <div className="space-y-1 pt-4 border-t border-purple-50">
               <label className="text-[10px] font-black text-purple-400 uppercase ml-4">อีเมลสำหรับเข้าสู่ระบบ</label>
               <div className="relative">
