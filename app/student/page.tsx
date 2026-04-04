@@ -23,23 +23,19 @@ export default function StudentDashboard() {
 
   const fetchStudentData = async () => {
     try {
-      // 1. ตรวจสอบ User ที่ Login อยู่
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.replace('/login');
         return;
       }
 
-      // 2. ดึงข้อมูลโปรไฟล์ (เพื่อเอา referral_code จริงจากเบส)
-      const { data: profile, error: profileError } = await supabase
+      // ดึงข้อมูลโปรไฟล์เพื่อเอารหัสผู้แนะนำล่าสุดจากฐานข้อมูล
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      if (profileError) throw profileError;
-
-      // 3. ดึงข้อมูลกระเป๋าเงินนักเรียน
       const { data: walletData } = await supabase
         .from('student_wallets')
         .select('*')
@@ -57,7 +53,7 @@ export default function StudentDashboard() {
   };
 
   const handleCopyRef = () => {
-    // ใช้ค่าจาก studentData.referral_code ที่ดึงมาจากเบสเท่านั้น
+    // แก้ไขให้ Copy รหัสที่ดึงมาจากฐานข้อมูล (เช่น TC-AYNOMQ)
     if (studentData?.referral_code) {
       navigator.clipboard.writeText(studentData.referral_code);
       setCopied(true);
@@ -71,11 +67,7 @@ export default function StudentDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-        <Loader2 className="animate-spin text-blue-600" size={48} />
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
   }
 
   return (
@@ -98,40 +90,24 @@ export default function StudentDashboard() {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto no-scrollbar">
-          <Link href="/student" className="flex items-center gap-3 px-5 py-3.5 bg-blue-50 text-blue-600 rounded-[1.5rem] font-black">
-            <LayoutDashboard size={20}/> แดชบอร์ด
-          </Link>
+          <Link href="/student" className="flex items-center gap-3 px-5 py-3.5 bg-blue-50 text-blue-600 rounded-[1.5rem] font-black"><LayoutDashboard size={20}/> แดชบอร์ด</Link>
           
           <p className="px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-6 mb-3">การเรียน</p>
-          <Link href="/student/booking-flow" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors">
-            <Calendar size={20}/> จองคิวเรียน
-          </Link>
-          <Link href="/student/my-schedule" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors">
-            <Clock size={20}/> ตารางเรียน
-          </Link>
-          <Link href="/student/tutors" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors">
-            <Users size={20}/> ทำเนียบติวเตอร์
-          </Link>
+          <Link href="/student/booking-flow" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Calendar size={20}/> จองคิวเรียน</Link>
+          <Link href="/student/my-schedule" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Clock size={20}/> ตารางเรียน</Link>
+          <Link href="/student/tutors" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Users size={20}/> ทำเนียบติวเตอร์</Link>
           
           <p className="px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-6 mb-3">ร้านค้า & โปรไฟล์</p>
           <Link href="/student/courses" className="flex items-center gap-3 px-5 py-3.5 bg-gray-900 text-white rounded-[1.5rem] font-black hover:bg-blue-600 transition-all shadow-md group">
             <ShoppingCart size={20} className="group-hover:scale-110 transition-transform"/> ซื้อคอร์ส / เพิ่มชั่วโมง
           </Link>
-          <Link href="/student/orders" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors mt-1">
-            <History size={20}/> ประวัติการสั่งซื้อ
-          </Link>
-          <Link href="/student/profile" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors">
-            <Settings size={20}/> ตั้งค่าโปรไฟล์
-          </Link>
-          <Link href="/student/affiliate/shop" className="flex items-center justify-between px-5 py-3.5 text-orange-500 hover:bg-orange-50 rounded-[1.5rem] font-black transition-colors">
-            <div className="flex items-center gap-3"><Gift size={20}/> ร้านค้าแลกของรางวัล</div>
-          </Link>
+          <Link href="/student/orders" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors mt-1"><History size={20}/> ประวัติการสั่งซื้อ</Link>
+          <Link href="/student/profile" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Settings size={20}/> ตั้งค่าโปรไฟล์</Link>
+          <Link href="/student/affiliate/shop" className="flex items-center justify-between px-5 py-3.5 text-orange-500 hover:bg-orange-50 rounded-[1.5rem] font-black transition-colors"><div className="flex items-center gap-3"><Gift size={20}/> ร้านค้าแลกของรางวัล</div></Link>
         </nav>
 
         <div className="p-6 border-t border-gray-50">
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 py-4 bg-red-50 text-red-500 rounded-[1.5rem] font-black hover:bg-red-500 hover:text-white transition-all active:scale-95">
-            <LogOut size={20}/> ออกจากระบบ
-          </button>
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 py-4 bg-red-50 text-red-500 rounded-[1.5rem] font-black hover:bg-red-500 hover:text-white transition-all active:scale-95"><LogOut size={20}/> ออกจากระบบ</button>
         </div>
       </aside>
 
@@ -155,7 +131,7 @@ export default function StudentDashboard() {
           </Link>
         </header>
 
-        {/* 1. ชั่วโมงคงเหลือ */}
+        {/* 1. Tier Hours */}
         <section className="mb-12">
           <div className="flex items-center gap-2 mb-6">
             <Wallet className="text-blue-600" size={24}/>
@@ -163,7 +139,6 @@ export default function StudentDashboard() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Tier 1 - 3 UI (โค้ดเดิมที่ถูกต้องแล้ว) */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="bg-blue-600 text-white p-5 text-center font-black text-lg">ประถม - ม.ต้น</div>
               <div className="p-6 flex-1 flex flex-col justify-between">
@@ -184,11 +159,90 @@ export default function StudentDashboard() {
                 </div>
               </div>
             </div>
-            {/* (ส่วนของ Tier 2 และ 3 ในไฟล์จริงจะอยู่ตรงนี้ ซึ่งเหมือนกับ Tier 1 ครับ) */}
+
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
+              <div className="bg-[#9333ea] text-white p-5 text-center font-black text-lg">สอบเข้า ม.4</div>
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <div className="flex justify-between items-center mb-6 px-4">
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-1"><Globe size={12}/> Online</p>
+                    <p className="text-4xl font-black text-blue-600">{wallet?.tier2_online_hours || 0} <span className="text-sm text-gray-300 font-bold">ชม.</span></p>
+                  </div>
+                  <div className="w-px h-12 bg-gray-100"></div>
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-1"><MapPin size={12}/> Onsite</p>
+                    <p className="text-4xl font-black text-green-500">{wallet?.tier2_onsite_hours || 0} <span className="text-sm text-gray-300 font-bold">ชม.</span></p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Link href="/student/booking-flow?tier=tier2&type=Online" className="flex-1 bg-blue-50 text-blue-600 py-3 rounded-2xl font-black text-xs text-center hover:bg-blue-100 transition-colors">จอง ONLINE</Link>
+                  <Link href="/student/booking-flow?tier=tier2&type=Onsite" className="flex-1 bg-green-50 text-green-600 py-3 rounded-2xl font-black text-xs text-center hover:bg-green-100 transition-colors">จอง ONSITE</Link>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
+              <div className="bg-[#ea580c] text-white p-5 text-center font-black text-lg">ม.ปลาย / มหาลัย</div>
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <div className="flex justify-between items-center mb-6 px-4">
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-1"><Globe size={12}/> Online</p>
+                    <p className="text-4xl font-black text-blue-600">{wallet?.tier3_online_hours || 0} <span className="text-sm text-gray-300 font-bold">ชม.</span></p>
+                  </div>
+                  <div className="w-px h-12 bg-gray-100"></div>
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-1"><MapPin size={12}/> Onsite</p>
+                    <p className="text-4xl font-black text-green-500">{wallet?.tier3_onsite_hours || 0} <span className="text-sm text-gray-300 font-bold">ชม.</span></p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Link href="/student/booking-flow?tier=tier3&type=Online" className="flex-1 bg-blue-50 text-blue-600 py-3 rounded-2xl font-black text-xs text-center hover:bg-blue-100 transition-colors">จอง ONLINE</Link>
+                  <Link href="/student/booking-flow?tier=tier3&type=Onsite" className="flex-1 bg-green-50 text-green-600 py-3 rounded-2xl font-black text-xs text-center hover:bg-green-100 transition-colors">จอง ONSITE</Link>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* 3. ชวนเพื่อนรับแต้ม (จุดที่แก้ไข!) */}
+        {/* 2. เมนูทางลัด */}
+        <section className="mb-12">
+          <h2 className="text-xl font-black mb-6">เมนูทางลัด</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link href="/student/courses" className="bg-gray-900 text-white p-6 rounded-[2rem] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group flex flex-col justify-between h-36 border border-gray-800">
+              <ShoppingCart size={32} className="text-blue-400 group-hover:scale-110 transition-transform"/>
+              <div>
+                <h3 className="font-black text-lg leading-tight">ซื้อคอร์ส / ชม.</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Shop Courses</p>
+              </div>
+            </Link>
+
+            <Link href="/student/booking-flow" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36">
+              <Calendar size={32} className="text-blue-600 group-hover:scale-110 transition-transform"/>
+              <div>
+                <h3 className="font-black text-gray-900 text-lg leading-tight">จองคิวเรียน</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Book a Class</p>
+              </div>
+            </Link>
+
+            <Link href="/student/my-schedule" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36">
+              <Clock size={32} className="text-purple-600 group-hover:scale-110 transition-transform"/>
+              <div>
+                <h3 className="font-black text-gray-900 text-lg leading-tight">ตารางเรียน</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">My Schedule</p>
+              </div>
+            </Link>
+
+            <Link href="/student/tutors" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36">
+              <Users size={32} className="text-green-600 group-hover:scale-110 transition-transform"/>
+              <div>
+                <h3 className="font-black text-gray-900 text-lg leading-tight">ทำเนียบติวเตอร์</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Tutors Catalog</p>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        {/* 3. ชวนเพื่อนรับแต้ม */}
         <div className="bg-white rounded-[3rem] p-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8 mb-6 relative overflow-hidden group">
           <div className="absolute -right-10 -top-10 opacity-5 group-hover:scale-110 transition-transform duration-700 pointer-events-none"><Share2 size={200}/></div>
           <div className="flex items-center gap-6 relative z-10">
@@ -202,17 +256,31 @@ export default function StudentDashboard() {
           </div>
           
           <div className="flex items-center gap-2 bg-gray-50 p-2 pl-6 rounded-3xl border border-gray-200 relative z-10 w-full md:w-auto">
-            {/* แก้ไขบรรทัดล่างนี้: ลบ 1B8A18 ออก แล้วดึงจากฐานข้อมูลจริงๆ */}
-            <span className="font-black text-blue-600 tracking-[0.2em] text-lg flex-1 text-center md:text-left">
-               {studentData?.referral_code || 'ไม่มีรหัส'}
-            </span>
+            {/* แสดงรหัสจากฐานข้อมูล (studentData.referral_code) แทนค่าคงที่เดิม */}
+            <span className="font-black text-blue-600 tracking-[0.2em] text-lg flex-1 text-center md:text-left">{studentData?.referral_code || 'กำลังดึงรหัส...'}</span>
             <button onClick={handleCopyRef} className="bg-blue-600 text-white p-4 rounded-2xl hover:bg-blue-700 transition-all active:scale-95 shadow-md">
               {copied ? <Check size={20}/> : <Copy size={20}/>}
             </button>
           </div>
         </div>
 
-        {/* ส่วนที่เหลือของโค้ด... */}
+        {/* 4. ร้านค้าแลกรางวัล */}
+        <Link href="/student/affiliate/shop" className="block bg-gradient-to-r from-orange-500 to-red-500 rounded-[3rem] p-8 md:p-10 text-white shadow-xl shadow-orange-200/50 hover:shadow-2xl transition-all group relative overflow-hidden">
+          <div className="absolute right-0 bottom-0 opacity-20 group-hover:scale-110 transition-transform duration-500"><Gift size={150} className="-mr-10 -mb-10"/></div>
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-inner shrink-0"><Gift size={32}/></div>
+              <div>
+                <h3 className="text-2xl font-black mb-1">ร้านค้าแลกรางวัล</h3>
+                <p className="text-orange-100 font-bold text-sm">ใช้แต้มสะสมแลกรับของรางวัลพิเศษมากมาย คุ้มสุดๆ!</p>
+              </div>
+            </div>
+            <div className="hidden md:flex items-center gap-2 font-black text-sm uppercase tracking-widest bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl">
+              ไปแลกรางวัลกันเลย <ArrowRight size={18}/>
+            </div>
+          </div>
+        </Link>
+
       </main>
     </div>
   );
