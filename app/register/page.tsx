@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { 
   UserPlus, Mail, Lock, User, Phone, Loader2, 
   ArrowLeft, GraduationCap, Building2, Gift, CheckCircle2, 
-  MessageCircle, ChevronRight // ✨ เพิ่ม 2 ตัวนี้เข้ามาแล้วครับ!
+  MessageCircle, ChevronRight 
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false); // ✨ State ใหม่สำหรับจัดการหน้าจอสำเร็จ
   
   // Form States
   const [email, setEmail] = useState('');
@@ -43,7 +44,7 @@ export default function RegisterPage() {
         }
         
         referredById = referrer.id;
-        initialHours = 1; // ✨ แถม 1 ชม. เฉพาะคนใหม่ที่กรอกรหัส
+        initialHours = 1; // แถม 1 ชม. เฉพาะคนใหม่ที่กรอกรหัส
       }
 
       // 1. สมัครใน Auth
@@ -69,28 +70,23 @@ export default function RegisterPage() {
 
         if (profileError) throw profileError;
 
-        // 3. สร้าง Wallet (แจก 1 ชม. ให้เด็กใหม่คนเดียว พร้อมเก็บ Email และ Phone)
+        // 3. สร้าง Wallet 
         const { error: walletError } = await supabase
           .from('student_wallets')
           .insert([{
             user_id: authData.user.id,
             student_name: studentNickname,
             parent_name: parentName,
-            phone: phone, // ✨ บันทึกเบอร์โทร
-            email: email, // ✨ บันทึกอีเมล
+            phone: phone, 
+            email: email, 
             total_hours_balance: initialHours,
             marketing_points: 0
           }]);
 
         if (walletError) throw walletError;
 
-        if (initialHours > 0) {
-          alert("สมัครสมาชิกสำเร็จ! 🎉 คุณได้รับ 1 ชม. ฟรีจากรหัสแนะนำ");
-        } else {
-          alert("สมัครสมาชิกสำเร็จ! 🎉 กรุณาเข้าสู่ระบบ");
-        }
-        
-        router.push('/login');
+        // ✨ เปลี่ยนให้แสดงหน้า Success แทนการ Alert แล้วเด้งไปหน้า Login ทันที
+        setIsSuccess(true);
       }
     } catch (error: any) {
       alert("เกิดข้อผิดพลาด: " + error.message);
@@ -99,6 +95,60 @@ export default function RegisterPage() {
     }
   };
 
+  // ✨ ฟังก์ชันใหม่สำหรับปุ่ม "ส่งอีเมลซ้ำ"
+  const handleResendEmail = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+    setLoading(false);
+
+    if (error) {
+      alert("ส่งอีเมลไม่สำเร็จ: " + error.message);
+    } else {
+      alert("📧 ส่งอีเมลยืนยันไปให้ใหม่แล้ว! กรุณาตรวจสอบในกล่องข้อความหรือกล่องจดหมายขยะ (Spam) ครับ");
+    }
+  };
+
+  // ✨ ถ้าสมัครสำเร็จ ให้แสดงหน้าจอนี้แทนฟอร์มสมัคร
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 md:p-6 font-sans text-gray-900">
+        <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-10 text-center border border-gray-100">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Mail size={40} className="text-blue-600 animate-bounce" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 mb-4">เช็กอีเมลของคุณ!</h2>
+          <p className="text-gray-500 font-medium mb-8 leading-relaxed">
+            เราได้ส่งลิงก์ยืนยันตัวตนไปที่ <br/>
+            <span className="font-black text-blue-600 block mt-2 text-lg">{email}</span>
+            <br/>
+            กรุณากดลิงก์ในอีเมลเพื่อเปิดใช้งานบัญชี <br/>ก่อนเข้าสู่ระบบครับ
+          </p>
+          
+          <div className="space-y-3">
+            <button 
+              onClick={() => router.push('/login')} 
+              className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
+            >
+              ไปหน้าเข้าสู่ระบบ
+            </button>
+            <button 
+              onClick={handleResendEmail} 
+              disabled={loading}
+              className="w-full bg-gray-50 text-gray-600 py-4 rounded-2xl font-bold hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : null}
+              ไม่ได้รับอีเมล? ส่งอีกครั้ง
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // หน้าจอ Form สมัครปกติ
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 md:p-6 font-sans text-gray-900">
       
@@ -194,7 +244,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* --- ✨ Footer Options (ทางเลือกเพิ่มเติมด้านล่าง) --- */}
+      {/* --- Footer Options --- */}
       <div className="w-full max-w-md space-y-3 mb-8">
         <Link 
           href="/register/tutor" 
