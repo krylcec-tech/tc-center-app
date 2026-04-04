@@ -12,7 +12,7 @@ import Link from 'next/link';
 export default function RegisterPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false); // ✨ State ใหม่สำหรับจัดการหน้าจอสำเร็จ
+  const [isSuccess, setIsSuccess] = useState(false); // ✨ จัดการหน้าจอสมัครสำเร็จ
   
   // Form States
   const [email, setEmail] = useState('');
@@ -44,7 +44,7 @@ export default function RegisterPage() {
         }
         
         referredById = referrer.id;
-        initialHours = 1; // แถม 1 ชม. เฉพาะคนใหม่ที่กรอกรหัส
+        initialHours = 1; 
       }
 
       // 1. สมัครใน Auth
@@ -58,22 +58,22 @@ export default function RegisterPage() {
       if (authData.user) {
         const newMyReferralCode = `TC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-        // 2. บันทึก Profile
+        // 2. บันทึก Profile (ใช้ upsert เพื่อป้องกันการสมัครซ้ำแล้ว Error)
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([{
+          .upsert([{
             id: authData.user.id,
             school_name: schoolName,
             referred_by_id: referredById,
             referral_code: newMyReferralCode
-          }]);
+          }], { onConflict: 'id' });
 
         if (profileError) throw profileError;
 
-        // 3. สร้าง Wallet 
+        // 3. สร้าง Wallet (ใช้ upsert ป้องกันข้อมูลซ้ำ)
         const { error: walletError } = await supabase
           .from('student_wallets')
-          .insert([{
+          .upsert([{
             user_id: authData.user.id,
             student_name: studentNickname,
             parent_name: parentName,
@@ -81,11 +81,10 @@ export default function RegisterPage() {
             email: email, 
             total_hours_balance: initialHours,
             marketing_points: 0
-          }]);
+          }], { onConflict: 'user_id' });
 
         if (walletError) throw walletError;
 
-        // ✨ เปลี่ยนให้แสดงหน้า Success แทนการ Alert แล้วเด้งไปหน้า Login ทันที
         setIsSuccess(true);
       }
     } catch (error: any) {
@@ -95,7 +94,7 @@ export default function RegisterPage() {
     }
   };
 
-  // ✨ ฟังก์ชันใหม่สำหรับปุ่ม "ส่งอีเมลซ้ำ"
+  // ✨ ฟังก์ชันสำหรับส่งอีเมลยืนยันซ้ำ
   const handleResendEmail = async () => {
     setLoading(true);
     const { error } = await supabase.auth.resend({
@@ -107,11 +106,11 @@ export default function RegisterPage() {
     if (error) {
       alert("ส่งอีเมลไม่สำเร็จ: " + error.message);
     } else {
-      alert("📧 ส่งอีเมลยืนยันไปให้ใหม่แล้ว! กรุณาตรวจสอบในกล่องข้อความหรือกล่องจดหมายขยะ (Spam) ครับ");
+      alert("📧 ส่งอีเมลยืนยันไปให้ใหม่แล้ว! กรุณาตรวจสอบใน Inbox หรือ Junk Mail ครับ");
     }
   };
 
-  // ✨ ถ้าสมัครสำเร็จ ให้แสดงหน้าจอนี้แทนฟอร์มสมัคร
+  // --- หน้าจอเมื่อสมัครสำเร็จ (Success State) ---
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 md:p-6 font-sans text-gray-900">
@@ -148,11 +147,8 @@ export default function RegisterPage() {
     );
   }
 
-  // หน้าจอ Form สมัครปกติ
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 md:p-6 font-sans text-gray-900">
-      
-      {/* --- Main Registration Card --- */}
       <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-8 md:p-10 border border-gray-100 my-8 relative overflow-hidden">
         <div className="relative z-10">
           <Link href="/login" className="text-gray-400 font-bold text-xs uppercase mb-6 flex items-center gap-2 hover:text-blue-600 transition-colors w-max">
@@ -246,10 +242,7 @@ export default function RegisterPage() {
 
       {/* --- Footer Options --- */}
       <div className="w-full max-w-md space-y-3 mb-8">
-        <Link 
-          href="/register/tutor" 
-          className="w-full flex items-center justify-between p-5 bg-white border border-gray-200 rounded-3xl hover:border-purple-400 hover:shadow-md transition-all group"
-        >
+        <Link href="/register/tutor" className="w-full flex items-center justify-between p-5 bg-white border border-gray-200 rounded-3xl hover:border-purple-400 hover:shadow-md transition-all group">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
               <GraduationCap size={20} />
@@ -261,14 +254,7 @@ export default function RegisterPage() {
           </div>
           <ChevronRight size={20} className="text-gray-300 group-hover:text-purple-600" />
         </Link>
-
-        {/* 🟢 ปุ่มติดต่อ LINE */}
-        <a 
-          href="https://lin.ee/ZSDR4B3" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="w-full flex items-center justify-between p-5 bg-[#00B900]/10 border border-[#00B900]/20 rounded-3xl hover:bg-[#00B900] hover:shadow-lg hover:shadow-[#00B900]/30 transition-all group"
-        >
+        <a href="https://lin.ee/ZSDR4B3" target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-between p-5 bg-[#00B900]/10 border border-[#00B900]/20 rounded-3xl hover:bg-[#00B900] hover:shadow-lg transition-all group">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-white text-[#00B900] rounded-xl flex items-center justify-center shadow-sm">
               <MessageCircle size={20} className="fill-current" />
@@ -281,7 +267,6 @@ export default function RegisterPage() {
           <ChevronRight size={20} className="text-[#00B900] group-hover:text-white" />
         </a>
       </div>
-
     </div>
   );
 }
