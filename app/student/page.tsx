@@ -109,7 +109,7 @@ export default function StudentDashboard() {
         </div>
       </aside>
 
-      {/* --- Mobile Bottom Navigation (Visible on mobile only) --- */}
+      {/* --- Mobile Bottom Navigation --- */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-[100] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
         <Link href="/student" className="flex flex-col items-center gap-1 text-blue-600">
           <LayoutDashboard size={22} />
@@ -140,19 +140,29 @@ export default function StudentDashboard() {
         
         <header className="mb-10 flex items-center justify-between gap-4">
           <div className="text-left">
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">สวัสดี, <span className="text-blue-600">{wallet?.student_name || 'นักเรียน'}</span> 👋</h1>
-            <p className="text-gray-500 font-bold text-sm">ยินดีต้อนรับกลับสู่ห้องเรียนของคุณ</p>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 text-left">สวัสดี, <span className="text-blue-600">{wallet?.student_name || 'นักเรียน'}</span> 👋</h1>
+            <p className="text-gray-500 font-bold text-sm text-left">ยินดีต้อนรับกลับสู่ห้องเรียนของคุณ</p>
           </div>
           
-          <Link href="/student/profile" className="shrink-0 transition-transform hover:scale-105 active:scale-95">
-            {studentData?.avatar_url ? (
-              <img src={studentData.avatar_url} alt="Profile" className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-4 border-white" />
-            ) : (
-              <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black text-2xl shadow-lg border-4 border-white">
-                {wallet?.student_name?.charAt(0) || 'TC'}
-              </div>
-            )}
-          </Link>
+          <div className="flex items-center gap-3">
+            {/* ✨ เพิ่มปุ่ม Logout สำหรับมือถือตรงนี้ */}
+            <button 
+              onClick={handleLogout} 
+              className="lg:hidden p-3 bg-red-50 text-red-500 rounded-2xl active:scale-95 transition-all shadow-sm border border-red-100"
+            >
+              <LogOut size={20}/>
+            </button>
+
+            <Link href="/student/profile" className="shrink-0 transition-transform hover:scale-105 active:scale-95">
+              {studentData?.avatar_url ? (
+                <img src={studentData.avatar_url} alt="Profile" className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-4 border-white" />
+              ) : (
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black text-2xl shadow-lg border-4 border-white">
+                  {wallet?.student_name?.charAt(0) || 'TC'}
+                </div>
+              )}
+            </Link>
+          </div>
         </header>
 
         {/* 1. Tier Hours */}
@@ -166,7 +176,7 @@ export default function StudentDashboard() {
             {/* Tier 1 */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="bg-blue-600 text-white p-5 text-center font-black text-lg">ประถม - ม.ต้น</div>
-              <div className="p-6 flex-1 flex flex-col justify-between">
+              <div className="p-6 flex-1 flex flex-col justify-between text-left">
                 <div className="flex justify-between items-center mb-6 px-4">
                   <div className="text-center">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-1"><Globe size={12}/> Online</p>
@@ -188,7 +198,7 @@ export default function StudentDashboard() {
             {/* Tier 2 */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="bg-[#9333ea] text-white p-5 text-center font-black text-lg">สอบเข้า ม.4</div>
-              <div className="p-6 flex-1 flex flex-col justify-between">
+              <div className="p-6 flex-1 flex flex-col justify-between text-left">
                 <div className="flex justify-between items-center mb-6 px-4">
                   <div className="text-center">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-1"><Globe size={12}/> Online</p>
@@ -210,7 +220,7 @@ export default function StudentDashboard() {
             {/* Tier 3 */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="bg-[#ea580c] text-white p-5 text-center font-black text-lg">ม.ปลาย / มหาลัย</div>
-              <div className="p-6 flex-1 flex flex-col justify-between">
+              <div className="p-6 flex-1 flex flex-col justify-between text-left">
                 <div className="flex justify-between items-center mb-6 px-4">
                   <div className="text-center">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-1"><Globe size={12}/> Online</p>
@@ -231,55 +241,54 @@ export default function StudentDashboard() {
           </div>
         </section>
 
-        {/* 2. Shortcuts */}
+        {/* Shortcuts */}
         <section className="mb-12">
           <h2 className="text-xl font-black mb-6 text-left">เมนูทางลัด</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link href="/student/courses" className="bg-gray-900 text-white p-6 rounded-[2rem] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group flex flex-col justify-between h-36 border border-gray-800 text-left">
               <ShoppingCart size={32} className="text-blue-400 group-hover:scale-110 transition-transform"/>
-              <div>
-                <h3 className="font-black text-lg leading-tight">ซื้อคอร์ส / ชม.</h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Shop Courses</p>
+              <div className="text-left">
+                <h3 className="font-black text-lg leading-tight text-left">ซื้อคอร์ส / ชม.</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">Shop Courses</p>
               </div>
             </Link>
             <Link href="/student/booking-flow" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
               <Calendar size={32} className="text-blue-600 group-hover:scale-110 transition-transform"/>
-              <div>
-                <h3 className="font-black text-gray-900 text-lg leading-tight">จองคิวเรียน</h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Book a Class</p>
+              <div className="text-left">
+                <h3 className="font-black text-gray-900 text-lg leading-tight text-left">จองคิวเรียน</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">Book a Class</p>
               </div>
             </Link>
             <Link href="/student/my-schedule" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
               <Clock size={32} className="text-purple-600 group-hover:scale-110 transition-transform"/>
-              <div>
-                <h3 className="font-black text-gray-900 text-lg leading-tight">ตารางเรียน</h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">My Schedule</p>
+              <div className="text-left">
+                <h3 className="font-black text-gray-900 text-lg leading-tight text-left">ตารางเรียน</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">My Schedule</p>
               </div>
             </Link>
             <Link href="/student/tutors" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
               <Users size={32} className="text-green-600 group-hover:scale-110 transition-transform"/>
-              <div>
-                <h3 className="font-black text-gray-900 text-lg leading-tight">ทำเนียบติวเตอร์</h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Tutors Catalog</p>
+              <div className="text-left">
+                <h3 className="font-black text-gray-900 text-lg leading-tight text-left">ทำเนียบติวเตอร์</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">Tutors Catalog</p>
               </div>
             </Link>
           </div>
         </section>
 
-        {/* 3. Referral Section */}
+        {/* Referral */}
         <div className="bg-white rounded-[3rem] p-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8 mb-6 relative overflow-hidden group text-left">
-          <div className="absolute -right-10 -top-10 opacity-5 group-hover:scale-110 transition-transform duration-700 pointer-events-none"><Share2 size={200}/></div>
-          <div className="flex items-center gap-6 relative z-10">
+          <div className="absolute -right-10 -top-10 opacity-5 group-hover:scale-110 transition-transform duration-700 pointer-events-none text-left"><Share2 size={200}/></div>
+          <div className="flex items-center gap-6 relative z-10 text-left">
             <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center shadow-inner shrink-0">
               <Share2 size={28}/>
             </div>
             <div className="text-left">
-              <h3 className="text-xl font-black text-gray-900 mb-1">ชวนเพื่อนเรียน รับแต้มฟรี! 🎁</h3>
-              <p className="text-gray-500 font-bold text-sm">ให้เพื่อนกรอกรหัสของคุณตอนแจ้งโอน เพื่อรับแต้มสะสม</p>
+              <h3 className="text-xl font-black text-gray-900 mb-1 text-left">ชวนเพื่อนเรียน รับแต้มฟรี! 🎁</h3>
+              <p className="text-gray-500 font-bold text-sm text-left">ให้เพื่อนกรอกรหัสของคุณตอนแจ้งโอน เพื่อรับแต้มสะสม</p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2 bg-gray-50 p-2 pl-6 rounded-3xl border border-gray-200 relative z-10 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-gray-50 p-2 pl-6 rounded-3xl border border-gray-200 relative z-10 w-full md:w-auto text-left">
             <span className="font-black text-blue-600 tracking-[0.2em] text-lg flex-1 text-center md:text-left">{studentData?.referral_code || 'กำลังดึงรหัส...'}</span>
             <button onClick={handleCopyRef} className="bg-blue-600 text-white p-4 rounded-2xl hover:bg-blue-700 transition-all active:scale-95 shadow-md">
               {copied ? <Check size={20}/> : <Copy size={20}/>}
@@ -287,23 +296,22 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* 4. Affiliate Banner */}
+        {/* Affiliate Shop */}
         <Link href="/student/affiliate/shop" className="block bg-gradient-to-r from-orange-500 to-red-500 rounded-[3rem] p-8 md:p-10 text-white shadow-xl shadow-orange-200/50 hover:shadow-2xl transition-all group relative overflow-hidden text-left">
-          <div className="absolute right-0 bottom-0 opacity-20 group-hover:scale-110 transition-transform duration-500"><Gift size={150} className="-mr-10 -mb-10"/></div>
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-inner shrink-0"><Gift size={32}/></div>
+          <div className="absolute right-0 bottom-0 opacity-20 group-hover:scale-110 transition-transform duration-500 text-left"><Gift size={150} className="-mr-10 -mb-10"/></div>
+          <div className="flex items-center justify-between relative z-10 text-left">
+            <div className="flex items-center gap-6 text-left">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-inner shrink-0 text-left"><Gift size={32}/></div>
               <div className="text-left">
-                <h3 className="text-2xl font-black mb-1">ร้านค้าแลกรางวัล</h3>
-                <p className="text-orange-100 font-bold text-sm">ใช้แต้มสะสมแลกรับของรางวัลพิเศษมากมาย คุ้มสุดๆ!</p>
+                <h3 className="text-2xl font-black mb-1 text-left">ร้านค้าแลกรางวัล</h3>
+                <p className="text-orange-100 font-bold text-sm text-left">ใช้แต้มสะสมแลกรับของรางวัลพิเศษมากมาย คุ้มสุดๆ!</p>
               </div>
             </div>
-            <div className="hidden md:flex items-center gap-2 font-black text-sm uppercase tracking-widest bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl">
+            <div className="hidden md:flex items-center gap-2 font-black text-sm uppercase tracking-widest bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl text-left">
               ไปแลกรางวัลกันเลย <ArrowRight size={18}/>
             </div>
           </div>
         </Link>
-
       </main>
     </div>
   );
