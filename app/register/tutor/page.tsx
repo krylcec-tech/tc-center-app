@@ -26,7 +26,7 @@ export default function TutorRegisterPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.type === 'application/pdf' || file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png') {
+      if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
         setResumeFile(file);
       } else {
         alert('กรุณาอัปโหลดไฟล์ PDF, JPG หรือ PNG เท่านั้นครับ');
@@ -40,7 +40,7 @@ export default function TutorRegisterPage() {
     setLoading(true);
 
     try {
-      // 1. สมัครบัญชีผ่าน Supabase Auth
+      // 1. ✨ สร้างบัญชีใน Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -52,7 +52,7 @@ export default function TutorRegisterPage() {
         const userId = authData.user.id;
         let uploadedResumeUrl = null;
 
-        // 2. อัปโหลดไฟล์ Resume (ถ้ามี)
+        // 2. 📂 อัปโหลด Resume ไปยัง Storage
         if (resumeFile) {
           const fileExt = resumeFile.name.split('.').pop();
           const fileName = `${userId}-${Date.now()}.${fileExt}`;
@@ -67,53 +67,48 @@ export default function TutorRegisterPage() {
           }
         }
 
-        // ✨ 3. สร้าง/อัปเดต Profile
+        // 3. 👤 สร้าง Profile (ปรับชื่อคอลัมน์ให้ตรงกับ SQL ของคุณ)
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert({
+          .insert([{
             id: userId,
-            referral_code: `TUTOR-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-          }, { onConflict: 'id' });
+            full_name: fullName, // ตรงตาม SQL
+            email: email,        // ตรงตาม SQL
+            role: 'TUTOR',       // ตรงตาม SQL
+            referral_code: `TUTOR-${Math.random().toString(36).substring(2, 8).toUpperCase()}` // ตรงตาม SQL
+          }]);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error("Profile Insert Error:", profileError);
+          throw new Error("ไม่สามารถสร้างโปรไฟล์ได้: " + profileError.message);
+        }
 
-        // 🛠️ 4. ข้ามการสร้าง Wallet ไปก่อน (เพื่อเลี่ยง Error: Could not find 'balance' column)
-        // ติวเตอร์ส่วนใหญ่อาจจะไม่ต้องการกระเป๋าเงินนักเรียนในจังหวะสมัคร
-        /*
-        const { error: walletError } = await supabase
-          .from('student_wallets')
-          .upsert({
-            user_id: userId,
-            student_name: `ครู${nickname}`, 
-            balance: 0,
-            point_balance: 0
-          }, { onConflict: 'user_id' });
-        */
-
-        // ✨ 5. เพิ่มข้อมูลลงในตาราง Tutors
-        const combinedBio = `การศึกษา: ${university} | ประสบการณ์/วิชาที่ถนัด: ${experience} ${additionalDetails ? `| เพิ่มเติม: ${additionalDetails}` : ''}`;
+        // 4. 🎓 สร้างข้อมูลในตาราง Tutors
+        const combinedBio = `การศึกษา: ${university} | ประสบการณ์: ${experience} ${additionalDetails ? `| เพิ่มเติม: ${additionalDetails}` : ''}`;
 
         const { error: tutorError } = await supabase
           .from('tutors')
-          .upsert({
+          .insert([{
             id: userId,
             name: `${fullName} (ครู${nickname})`,
             email: email,
             phone: phone,
             bio: combinedBio,
             image_url: 'https://cdn-icons-png.flaticon.com/512/4042/4042171.png', 
-            tags: ['รอการอนุมัติ'],
-            grade_levels: [],
-            resume_url: uploadedResumeUrl 
-          }, { onConflict: 'id' });
+            resume_url: uploadedResumeUrl,
+            tags: ['รอการอนุมัติ']
+          }]);
 
-        if (tutorError) throw tutorError;
+        if (tutorError) {
+          console.error("Tutor Insert Error:", tutorError);
+          throw new Error("ไม่สามารถบันทึกข้อมูลติวเตอร์ได้: " + tutorError.message);
+        }
 
-        alert("🎉 ส่งใบสมัครสำเร็จ! ข้อมูลของคุณอยู่ในระบบแล้ว กรุณารอทีมงานติดต่อกลับครับ");
+        alert("🎉 ส่งใบสมัครสำเร็จ! กรุณารอทีมงานตรวจสอบและติดต่อกลับครับ");
         router.push('/login');
       }
     } catch (error: any) {
-      console.error("Registration Error Details:", error);
+      console.error("Registration Error:", error);
       alert("เกิดข้อผิดพลาด: " + error.message);
     } finally {
       setLoading(false);
@@ -140,6 +135,7 @@ export default function TutorRegisterPage() {
           <p className="text-gray-500 font-bold mb-8">กรอกประวัติเบื้องต้น เพื่อให้ทีมงานติดต่อสัมภาษณ์</p>
 
           <form onSubmit={handleRegister} className="space-y-4">
+            {/* ชื่อ-นามสกุล */}
             <div className="space-y-1">
               <label className="text-[10px] font-black text-purple-400 uppercase ml-4">ชื่อ-นามสกุล (จริง)</label>
               <div className="relative">
@@ -149,6 +145,7 @@ export default function TutorRegisterPage() {
               </div>
             </div>
 
+            {/* ชื่อเล่น & เบอร์โทร */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-purple-400 uppercase ml-4">ชื่อเล่น</label>
@@ -165,6 +162,7 @@ export default function TutorRegisterPage() {
               </div>
             </div>
 
+            {/* มหาวิทยาลัย */}
             <div className="space-y-1 pt-2">
               <label className="text-[10px] font-black text-purple-400 uppercase ml-4">มหาวิทยาลัย / คณะ</label>
               <div className="relative">
@@ -174,15 +172,17 @@ export default function TutorRegisterPage() {
               </div>
             </div>
 
+            {/* วิชาที่ถนัด */}
             <div className="space-y-1">
               <label className="text-[10px] font-black text-purple-400 uppercase ml-4">วิชาที่ถนัด / ประสบการณ์</label>
               <div className="relative">
                 <BookOpen className="absolute left-4 top-4 text-purple-300" size={18} />
-                <input required type="text" placeholder="เช่น ถนัดคณิต ม.ปลาย, ฟิสิกส์" className="w-full pl-12 pr-4 py-4 bg-purple-50/50 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-purple-400 border border-transparent transition-all font-bold" 
+                <input required type="text" placeholder="เช่น ถนัดคณิต ม.ปลาย" className="w-full pl-12 pr-4 py-4 bg-purple-50/50 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-purple-400 border border-transparent transition-all font-bold" 
                   value={experience} onChange={(e) => setExperience(e.target.value)} />
               </div>
             </div>
 
+            {/* รายละเอียดเพิ่มเติม & Resume */}
             <div className="space-y-3 pt-4 border-t border-purple-50">
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-purple-400 uppercase ml-4 flex items-center justify-between">
@@ -192,7 +192,7 @@ export default function TutorRegisterPage() {
                 <div className="relative">
                   <FileText className="absolute left-4 top-4 text-purple-300" size={18} />
                   <textarea 
-                    placeholder="เล่าเรื่องราวความสามารถพิเศษ หรือผลงานที่ผ่านมา..." 
+                    placeholder="เล่าเรื่องราวความสามารถ..." 
                     className="w-full pl-12 pr-4 py-4 bg-purple-50/50 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-purple-400 border border-transparent transition-all font-bold min-h-[100px]" 
                     value={additionalDetails} onChange={(e) => setAdditionalDetails(e.target.value)} 
                   />
@@ -201,8 +201,7 @@ export default function TutorRegisterPage() {
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-purple-400 uppercase ml-4 flex items-center justify-between">
-                  <span>อัปโหลด Resume / Portfolio (PDF, JPG, PNG)</span>
-                  <span className="text-gray-300 text-[9px]">*ไม่บังคับ</span>
+                  <span>อัปโหลด Resume (PDF, JPG, PNG)</span>
                 </label>
                 <label className="flex items-center gap-4 w-full px-4 py-4 bg-purple-50/50 border-2 border-dashed border-purple-200 rounded-2xl cursor-pointer hover:bg-purple-100/50 transition-all group">
                   <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-purple-500 shadow-sm group-hover:scale-110 transition-transform">
@@ -212,15 +211,13 @@ export default function TutorRegisterPage() {
                     <p className="font-bold text-sm text-purple-900 truncate">
                       {resumeFile ? resumeFile.name : "คลิกเพื่อเลือกไฟล์..."}
                     </p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                      {resumeFile ? "ไฟล์พร้อมอัปโหลด" : "รองรับ .PDF, .JPG, .PNG (ไม่เกิน 5MB)"}
-                    </p>
                   </div>
                   <input type="file" accept=".pdf, .jpg, .jpeg, .png" className="hidden" onChange={handleFileChange} />
                 </label>
               </div>
             </div>
 
+            {/* อีเมล & รหัสผ่าน */}
             <div className="space-y-1 pt-4 border-t border-purple-50">
               <label className="text-[10px] font-black text-purple-400 uppercase ml-4">อีเมลสำหรับเข้าสู่ระบบ</label>
               <div className="relative">

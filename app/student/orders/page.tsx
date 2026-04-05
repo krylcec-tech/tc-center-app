@@ -23,12 +23,15 @@ export default function StudentOrdersPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. ดึงประวัติการสั่งซื้อคอร์ส
-      const { data: ordersData } = await supabase
+      // 1. ดึงประวัติการสั่งซื้อคอร์ส 
+      // ✨ ใส่ !course_id เพื่อป้องกัน Error เรื่องความสัมพันธ์ของตาราง
+      const { data: ordersData, error: orderErr } = await supabase
         .from('course_orders')
-        .select('*, courses(title, price)')
+        .select('*, courses!course_id(title, price)')
         .eq('student_id', user.id)
         .order('created_at', { ascending: false });
+
+      if (orderErr) console.error("Order Fetch Error:", orderErr);
 
       // 2. ดึงประวัติแต้ม Affiliate
       const { data: wallet } = await supabase
@@ -38,17 +41,19 @@ export default function StudentOrdersPage() {
         .maybeSingle();
 
       if (wallet) {
-        const { data: txData } = await supabase
+        const { data: txData, error: txErr } = await supabase
           .from('affiliate_transactions')
           .select('*')
           .eq('wallet_id', wallet.id)
           .order('created_at', { ascending: false });
+        
+        if (txErr) console.error("TX Fetch Error:", txErr);
         setTransactions(txData || []);
       }
 
       setOrders(ordersData || []);
     } catch (error) {
-      console.error(error);
+      console.error("General Error:", error);
     } finally {
       setLoading(false);
     }
@@ -97,7 +102,7 @@ export default function StudentOrdersPage() {
                       <Receipt size={28}/>
                     </div>
                     <div>
-                      <h3 className="font-black text-lg text-gray-900 leading-tight">{order.courses?.title}</h3>
+                      <h3 className="font-black text-lg text-gray-900 leading-tight">{order.courses?.title || 'ไม่พบข้อมูลคอร์ส'}</h3>
                       <p className="text-xs font-bold text-gray-400 mt-1 uppercase">
                         {new Date(order.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>

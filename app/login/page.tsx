@@ -1,8 +1,7 @@
 'use client'
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-// ลบ useRouter ออกถ้าไม่ได้ใช้จุดอื่น แต่ในที่นี้เปลี่ยนวิธี redirect เป็น window.location
-import { Mail, Lock, Loader2, AlertCircle, MessageCircle, User, GraduationCap, ArrowLeft, UserPlus } from 'lucide-react';
+import { Mail, Lock, Loader2, AlertCircle, MessageCircle, User, GraduationCap, ArrowLeft, UserPlus, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -11,11 +10,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState(''); // ✨ เพิ่มไว้แจ้งเตือนตอนส่งเมลสำเร็จ
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
 
     try {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -27,38 +28,49 @@ export default function LoginPage() {
 
       if (authData?.user) {
         const userEmail = authData.user.email;
-        
-        // 🚨 ไม้ตาย: ใช้ window.location.href แทน router.push 
-        // เพื่อให้บราวเซอร์รีเฟรชคุกกี้ใหม่ทั้งหมด ป้องกัน Middleware ดีดกลับ
-        
-        if (userEmail === 'admin01@gmail.com') {
+        if (userEmail === 'admin01@gmail.com') { 
           window.location.href = '/admin';
-          return;
+          return; 
         }
 
-        const { data: profile } = await supabase
+        const { data: tutorProfile } = await supabase
           .from('tutors')
           .select('role')
           .eq('user_id', authData.user.id)
           .maybeSingle();
 
-        const rawRole = profile?.role || '';
-        const dbRole = rawRole.replace(/'/g, "").trim().toLowerCase(); 
-
-        if (dbRole === 'admin') {
-          window.location.href = '/admin';
-        } 
-        else if (dbRole === 'tutor' || role === 'tutor') {
-          window.location.href = '/tutor'; 
-        } 
-        else {
-          window.location.href = '/student'; 
+        if (tutorProfile) {
+          const dbRole = (tutorProfile.role || '').replace(/'/g, "").trim().toUpperCase();
+          if (dbRole === 'TUTOR') {
+            window.location.href = '/tutor'; 
+            return;
+          }
         }
+        window.location.href = '/student'; 
       }
     } catch (err: any) {
       setErrorMsg(err.message === 'Invalid login credentials' 
         ? 'อีเมลหรือรหัสผ่านไม่ถูกต้องครับ' 
         : err.message);
+      setLoading(false);
+    }
+  };
+
+  // ✨ ฟังก์ชันส่งลิงก์รีเซ็ตรหัสผ่าน
+  const handleForgotPassword = async () => {
+    if (!email) return alert('กรุณากรอกอีเมลที่ช่อง "อีเมลผู้ใช้งาน" ก่อนครับ');
+    
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setSuccessMsg('📧 ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลของคุณแล้วครับ! (อย่าลืมเช็กใน Junk Mail)');
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -74,8 +86,6 @@ export default function LoginPage() {
 
         <div className="flex flex-col items-center mb-6">
           <div className="w-24 h-24 mb-4 bg-blue-50 rounded-3xl flex items-center justify-center overflow-hidden"> 
-              <img src="/images/logo.jpg" alt="TC Logo" className="w-full h-full object-contain" 
-                  onError={(e) => (e.currentTarget.style.display = 'none')} />
               <span className="text-3xl font-black text-blue-600">TC</span>
           </div>
           <h1 className="text-3xl font-black text-center leading-tight">TC Center Portal</h1>
@@ -100,6 +110,14 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* ✨ แสดงข้อความเมื่อส่งอีเมลสำเร็จ */}
+        {successMsg && (
+          <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-xl flex items-center gap-3 text-green-700 text-sm font-bold">
+            <Loader2 className="animate-pulse" size={20} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
         <form onSubmit={handleLogin} className="space-y-5">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">อีเมลผู้ใช้งาน</label>
@@ -112,7 +130,13 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">รหัสผ่าน</label>
+            <div className="flex justify-between items-center px-1">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">รหัสผ่าน</label>
+              {/* ✨ ปุ่มลืมรหัสผ่านแบบแนบเนียน */}
+              <button type="button" onClick={handleForgotPassword} className="text-[10px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-widest">
+                ลืมรหัสผ่าน?
+              </button>
+            </div>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input type="password" placeholder="••••••••"

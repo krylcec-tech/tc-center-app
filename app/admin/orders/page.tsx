@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   CheckCircle, XCircle, Clock, Loader2, 
   ArrowLeft, Receipt, User, BookOpen, ExternalLink, Wallet, Eye, X,
-  TrendingUp, AlertCircle, Calendar // ✨ เพิ่มไอคอน Calendar
+  TrendingUp, AlertCircle, Calendar 
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,36 +14,38 @@ export default function AdminOrdersPage() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [selectedSlip, setSelectedSlip] = useState<string | null>(null);
 
-  // ✨ State สำหรับการกรองวันที่ (ค่าเริ่มต้นคือวันนี้)
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const [stats, setStats] = useState({ selectedDayTotal: 0, pendingCount: 0 });
 
   useEffect(() => {
     fetchOrders();
-  }, [filterDate]); // 🔄 เมื่อเปลี่ยนวันที่ ให้ดึงข้อมูลใหม่ทันที
+  }, [filterDate]);
 
   const fetchOrders = async () => {
     setLoading(true);
     
-    // กรองข้อมูลตามวันที่เลือก (Start of day - End of day)
-    const startOfDay = `${filterDate}T00:00:00.000Z`;
-    const endOfDay = `${filterDate}T23:59:59.999Z`;
+    const startOfDay = `${filterDate}T00:00:00+07:00`;
+    const endOfDay = `${filterDate}T23:59:59+07:00`;
 
     const { data, error } = await supabase
       .from('course_orders')
       .select(`
         *,
-        student_wallets ( student_name ),
-        courses ( title, hours_count, referral_points, target_wallet_type )
+        student_wallets:student_id ( student_name ),
+        courses!course_id ( title, hours_count, referral_points, target_wallet_type )
       `)
-      .gte('created_at', startOfDay) // ตั้งแต่เริ่มวัน
-      .lte('created_at', endOfDay)   // จนถึงจบวัน
+      .gte('created_at', startOfDay) 
+      .lte('created_at', endOfDay)  
       .order('created_at', { ascending: false });
     
+    if (error) {
+      console.error("Supabase Error:", error);
+      alert("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
+    }
+
     if (data) {
       setOrders(data);
       
-      // คำนวณยอดเงินของวันที่เลือก
       const total = data
         .filter(o => o.status === 'SUCCESS')
         .reduce((sum, o) => sum + Number(o.amount_paid), 0);
@@ -55,12 +57,13 @@ export default function AdminOrdersPage() {
   };
 
   const handleApprove = async (order: any) => {
-    const walletLabel = order.courses?.target_wallet_type?.replace('_', ' ').toUpperCase() || 'N/A';
-    if (!confirm(`ยืนยันการโอนเงิน?\nคอร์ส: ${order.courses?.title}\nจะเติมเข้ากระเป๋า: ${walletLabel}\nจำนวน: ${order.courses?.hours_count} ชม.`)) return;
+    if (!confirm(`ยืนยันการอนุมัติออเดอร์คอร์ส: ${order.courses?.title || 'นี้'}?`)) return;
 
     setProcessing(order.id);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      
+      // 1. อนุมัติออเดอร์
       const { error: approveError } = await supabase.rpc('approve_course_order_v2', { 
         target_order_id: order.id,
         admin_user_id: user?.id
@@ -68,14 +71,64 @@ export default function AdminOrdersPage() {
 
       if (approveError) throw approveError;
 
-      if (order.courses.referral_points > 0) {
-        await supabase.rpc('distribute_points_upline', { 
-          buyer_id: order.student_id, 
-          base_points: order.courses.referral_points 
-        });
+      // ✨ 2. ระบบจ่ายแต้มอัตโนมัติ (สายงานลึกไร้ขีดจำกัด)
+      if (order.courses?.referral_points > 0) {
+        try {
+          // ฟังก์ชันตัวช่วยสำหรับจ่ายแต้มและบันทึกประวัติ
+          const payCommission = async (targetUserId: string, points: number, description: string) => {
+            if (points <= 0) return; // ถ้าคำนวณแล้วแต้มเป็น 0 ไม่ต้องจ่าย
+            const { data: wallet } = await supabase.from('affiliate_wallets').select('id, points_balance').eq('user_id', targetUserId).maybeSingle();
+            if (wallet) {
+              await supabase.from('affiliate_wallets').update({ points_balance: (wallet.points_balance || 0) + points }).eq('id', wallet.id);
+              await supabase.from('affiliate_transactions').insert([{
+                wallet_id: wallet.id, amount: points, type: 'EARN', description: description
+              }]);
+            }
+          };
+
+          let currentStudentId = order.student_id;
+          let currentTier = 1;
+          const MAX_DEPTH = 50; // ตัวล็อกความปลอดภัย กันเซิร์ฟเวอร์ค้าง (แจกสูงสุด 50 ชั้น)
+
+          // วนลูปเช็คสายงานขึ้นไปเรื่อยๆ
+          while (currentStudentId && currentTier <= MAX_DEPTH) {
+            // ค้นหาว่าคนนี้ ใครเป็นคนชวนมา?
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('referred_by_id')
+              .eq('id', currentStudentId)
+              .maybeSingle();
+
+            const referrerId = profile?.referred_by_id;
+
+            if (!referrerId) break; // ถ้าสุดสายงาน (ไม่มีคนชวนแล้ว) ให้หยุดแจกแต้มทันที
+
+            let pointsToGive = 0;
+            let description = '';
+
+            if (currentTier === 1) {
+              // ชั้นที่ 1 (คนชวนโดยตรง) ได้ 100%
+              pointsToGive = order.courses.referral_points;
+              description = `ค่าแนะนำโดยตรง: คอร์ส ${order.courses.title}`;
+            } else {
+              // ชั้นที่ 2 เป็นต้นไป ได้ 10%
+              pointsToGive = Math.floor(order.courses.referral_points * 0.10);
+              description = `โบนัสสายงาน (ระดับที่ ${currentTier}): คอร์ส ${order.courses.title}`;
+            }
+
+            // จ่ายแต้มเข้ากระเป๋าคนแนะนำ
+            await payCommission(referrerId, pointsToGive, description);
+
+            // ขยับตัวแปรเพื่อไปค้นหาคนชวนในชั้นถัดไป
+            currentStudentId = referrerId;
+            currentTier++;
+          }
+        } catch (pointError) {
+          console.error("ระบบจ่ายแต้มขัดข้อง:", pointError);
+        }
       }
 
-      alert('อนุมัติสำเร็จ! 🎉');
+      alert('อนุมัติสำเร็จ! จ่ายแต้มให้สายงานเรียบร้อย 🎉');
       fetchOrders();
     } catch (error: any) {
       alert('เกิดข้อผิดพลาด: ' + error.message);
@@ -105,7 +158,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 font-sans text-gray-900">
@@ -132,7 +185,6 @@ export default function AdminOrdersPage() {
           </div>
 
           <div className="flex flex-wrap gap-3 w-full lg:w-auto">
-            {/* ✨ ตัวเลือกวันที่ (Date Picker) */}
             <div className="flex-1 lg:flex-none bg-white p-3 px-5 rounded-[2rem] border border-blue-100 shadow-sm flex items-center gap-3">
                <Calendar className="text-blue-500" size={18}/>
                <input 
@@ -160,7 +212,6 @@ export default function AdminOrdersPage() {
           </div>
         </header>
 
-        {/* Table Section (เหมือนเดิมแต่ดึงข้อมูลตาม Filter) */}
         <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -177,7 +228,9 @@ export default function AdminOrdersPage() {
                 {orders.map((order) => (
                   <tr key={order.id} className="group hover:bg-gray-50/30 transition-all">
                     <td className="p-8">
-                      <p className="font-black text-gray-900 text-lg leading-tight">น้อง{order.student_wallets?.student_name}</p>
+                      <p className="font-black text-gray-900 text-lg leading-tight">
+                        น้อง{order.student_wallets?.student_name || 'ไม่ทราบชื่อ'}
+                      </p>
                       <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-tighter">
                          {new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                       </p>
@@ -198,7 +251,7 @@ export default function AdminOrdersPage() {
                     <td className="p-8 text-center text-gray-900">
                       <span className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase border ${
                         order.status === 'PENDING' ? 'bg-orange-50 text-orange-500 border-orange-100' : 
-                        order.status === 'SUCCESS' ? 'bg-green-50 text-green-500 border-green-100' : 'bg-red-50 text-red-500 border-red-100'
+                        order.status === 'SUCCESS' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-500 border-red-100'
                       }`}>
                         {order.status === 'PENDING' ? 'รอตรวจ' : order.status === 'SUCCESS' ? 'สำเร็จ' : 'ปฏิเสธ'}
                       </span>

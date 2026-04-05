@@ -24,22 +24,43 @@ export default function TutorDashboard() {
   const fetchTutorData = async () => {
     setLoading(true);
     try {
+      // 1. ดึง Session ปัจจุบัน
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.replace('/login'); return; }
 
-      const { data: profile } = await supabase
+      // 2. ดึงข้อมูลติวเตอร์ทั้งหมดม้วนเดียวจบ จากตาราง "tutors" โดยใช้ user_id
+      const { data: profile, error: profileError } = await supabase
         .from('tutors')
-        .select('id, name, image_url, video_url')
+        .select('id, name, image_url, role') // ดึง role มาเช็คด้วย
         .eq('user_id', session.user.id)
         .maybeSingle();
 
-      if (!profile) { router.replace('/login'); return; }
+      if (profileError || !profile) { 
+        // ถ้าไม่มีข้อมูลในตาราง tutors ให้กลับไป login เพื่อป้องกัน error
+        router.replace('/login'); 
+        return; 
+      }
 
+      // 3. เช็ค Role ว่าเป็นติวเตอร์จริงๆ ใช่ไหม
+      const dbRole = (profile.role || '').replace(/'/g, "").trim().toUpperCase();
+      if (dbRole !== 'TUTOR') {
+        router.replace('/student'); // ถ้าไม่ใช่ เตะไปหน้านักเรียน
+        return;
+      }
+
+      // เซ็ตข้อมูลติวเตอร์เพื่อนำไปแสดงผลใน UI
       setTutorData({ id: profile.id, name: profile.name, avatar: profile.image_url });
 
-      const { count: upcomingCount } = await supabase.from('slots').select('*', { count: 'exact', head: true }).eq('tutor_id', profile.id).gte('start_time', new Date().toISOString());
+      // 4. ดึงสถิติและคิวสอน
+      const { count: upcomingCount } = await supabase
+        .from('slots')
+        .select('*', { count: 'exact', head: true })
+        .eq('tutor_id', profile.id)
+        .gte('start_time', new Date().toISOString());
+
       const todayStr = new Date().toISOString().split('T')[0];
 
+      // ดึง Bookings ของวันนี้
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select(`
@@ -53,8 +74,13 @@ export default function TutorDashboard() {
 
       let formattedBookings = [];
       if (bookingsData && bookingsData.length > 0) {
-        const { data: studentsData } = await supabase.from('student_wallets').select('user_id, student_name');
+        // ดึงชื่อนักเรียนจาก student_wallets มาแสดง
+        const { data: studentsData } = await supabase
+          .from('student_wallets')
+          .select('user_id, student_name');
+          
         const studentMap = new Map(studentsData?.map(s => [s.user_id, s.student_name]) || []);
+        
         formattedBookings = bookingsData.map((item: any) => ({
           ...item,
           student_name: studentMap.get(item.student_id) || 'ไม่ระบุชื่อ'
@@ -64,11 +90,12 @@ export default function TutorDashboard() {
       setTodayBookings(formattedBookings);
       setStats({
         upcomingSlots: upcomingCount || 0,
-        completedHours: 12, 
+        completedHours: 0, // ส่วนนี้สามารถเชื่อมกับตารางสรุปยอดในอนาคตได้
         todaySlots: formattedBookings.length
       });
+
     } catch (err) {
-      console.error(err);
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -79,7 +106,11 @@ export default function TutorDashboard() {
     router.replace('/login');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Loader2 className="animate-spin text-blue-600" size={48} />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row font-sans text-gray-900">
@@ -95,7 +126,7 @@ export default function TutorDashboard() {
         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-gray-50 text-gray-600 rounded-xl"><Menu size={24} /></button>
       </div>
 
-      {/* --- Sidebar (จัดเรียงใหม่ให้เป๊ะ) --- */}
+      {/* --- Sidebar --- */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-100 flex flex-col transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-8 text-center pt-12 lg:pt-8 relative border-b border-gray-50">
           <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden absolute top-4 right-4 p-2 text-gray-400 bg-gray-50 rounded-xl"><X size={20} /></button>
@@ -107,17 +138,14 @@ export default function TutorDashboard() {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          {/* Section 1: Dashboard */}
           <Link href="/tutor" className="flex items-center gap-3 px-5 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black shadow-lg shadow-blue-200/50">
             <LayoutDashboard size={20} /> แดชบอร์ดหลัก
           </Link>
           
           <div className="h-4"></div>
 
-          {/* Section 2: Teaching Tools (หัวใจสำคัญ) */}
           <p className="px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">จัดการเรียนการสอน</p>
           
-          {/* ✨ ปุ่มเชื่อมไป Calendar Slots ที่หายไปครับ */}
           <Link href="/admin/calendar-slots" className="flex items-center gap-3 px-5 py-3.5 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all group">
             <Calendar size={20} className="text-gray-400 group-hover:text-blue-600" /> จัดการเวลาว่าง
           </Link>
@@ -132,7 +160,6 @@ export default function TutorDashboard() {
 
           <div className="h-6"></div>
 
-          {/* Section 3: Revenue & Profile */}
           <p className="px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">รายได้และบัญชี</p>
           
           <Link href="/tutor/affiliate" className="flex items-center justify-between px-5 py-3.5 text-purple-600 bg-purple-50 rounded-[1.2rem] font-black hover:bg-purple-100 transition-all">
@@ -175,10 +202,8 @@ export default function TutorDashboard() {
           </div>
         </div>
 
-        {/* --- Layout Grid (Center + Right) --- */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           
-          {/* Today's Schedule */}
           <div className="xl:col-span-2">
             <div className="bg-white rounded-[3rem] p-8 md:p-10 border border-gray-100 shadow-sm h-full">
               <div className="flex items-center justify-between mb-8">
@@ -215,7 +240,6 @@ export default function TutorDashboard() {
             </div>
           </div>
 
-          {/* Right Column: Quick Setup & Affiliate */}
           <div className="xl:col-span-1 space-y-6">
             <div className="bg-blue-600 rounded-[3rem] p-10 text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform"></div>

@@ -23,42 +23,71 @@ export default function AffiliateCenterPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. ดึงข้อมูลโปรไฟล์ (เพื่อเอารหัสแนะนำ)
-      const { data: profileData } = await supabase
+      // 1. ดึงข้อมูลโปรไฟล์
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (profileError) console.error('Profile error:', profileError);
+
+      // ✨ ระบบซ่อมแซมอัตโนมัติ 1: ถ้าโปรไฟล์มีแต่รหัสเป็น NULL ให้สร้างใหม่เลย
+      if (profileData && !profileData.referral_code) {
+        const newCode = `TUTOR-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const { data: updatedProfile, error: updateErr } = await supabase
+          .from('profiles')
+          .update({ referral_code: newCode })
+          .eq('id', user.id)
+          .select()
+          .maybeSingle();
+        
+        if (!updateErr && updatedProfile) {
+          profileData = updatedProfile;
+        }
+      }
       
       setProfile(profileData);
 
-      // 2. ดึงจำนวนคนที่ชวนสำเร็จ (นับจากคนที่ใส่รหัสเรา)
+      // 2. ดึงจำนวนคนที่ชวนสำเร็จ
       if (profileData) {
         const { count } = await supabase
           .from('profiles')
-          .select('id', { count: 'exact' })
+          .select('*', { count: 'exact', head: true })
           .eq('referred_by_id', profileData.id);
         setReferralCount(count || 0);
       }
 
       // 3. ดึงกระเป๋าแต้ม
-      const { data: walletData } = await supabase
+      let { data: walletData } = await supabase
         .from('affiliate_wallets')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
-      setWallet(walletData || { points_balance: 0 }); // ถ้ายังไม่มีกระเป๋า ให้โชว์ 0 ไปก่อน
+      // ✨ ระบบซ่อมแซมอัตโนมัติ 2: ถ้ายังไม่มีกระเป๋า ให้เปิดกระเป๋าใบใหม่ให้เลย (0 แต้ม)
+      if (!walletData) {
+        const { data: newWallet } = await supabase
+          .from('affiliate_wallets')
+          .insert([{ user_id: user.id, points_balance: 0 }])
+          .select()
+          .maybeSingle();
+        if (newWallet) walletData = newWallet;
+      }
+
+      setWallet(walletData || { points_balance: 0 });
 
       // 4. ดึงประวัติ
-      const { data: txData } = await supabase
-        .from('affiliate_transactions')
-        .select('*')
-        .eq('wallet_id', walletData?.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-        
-      setTransactions(txData || []);
+      if (walletData) {
+        const { data: txData } = await supabase
+          .from('affiliate_transactions')
+          .select('*')
+          .eq('wallet_id', walletData.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+          
+        setTransactions(txData || []);
+      }
 
     } catch (error) {
       console.error('Error fetching affiliate data:', error);
@@ -147,7 +176,7 @@ export default function AffiliateCenterPage() {
           </div>
         </div>
 
-        {/* ✨ 3. ทางลัดเข้าคลังสินค้า (เพิ่มใหม่ สวยงามสะดุดตา) */}
+        {/* 3. ทางลัดเข้าคลังสินค้า */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl shadow-purple-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden group">
           <div className="absolute right-0 top-0 opacity-10 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
              <BookOpen size={200} className="-mt-10 -mr-10"/>

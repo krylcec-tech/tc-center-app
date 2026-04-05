@@ -11,14 +11,14 @@ export default function TutorProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null); // ✨ สำหรับอัปโหลดรูป
+  const imageInputRef = useRef<HTMLInputElement>(null); 
   
   // Profile States
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
-  const [imageUrl, setImageUrl] = useState(''); // ✨ รูปโปรไฟล์
-  const [meetingUrl, setMeetingUrl] = useState(''); // ✨ ลิงก์สอน Zoom/Meet
+  const [imageUrl, setImageUrl] = useState(''); 
+  const [meetingUrl, setMeetingUrl] = useState(''); 
   
   const [resumeUrl, setResumeUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
@@ -56,7 +56,6 @@ export default function TutorProfilePage() {
     }
   };
 
-  // --- ฟังก์ชันอัปโหลดรูปโปรไฟล์ ---
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -83,7 +82,6 @@ export default function TutorProfilePage() {
     }
   };
 
-  // --- ฟังก์ชันอัปโหลด PDF ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -115,7 +113,9 @@ export default function TutorProfilePage() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from('tutors').update({
+      
+      // 🚨 จุดที่แก้: รับค่า error กลับมาด้วย
+      const { error } = await supabase.from('tutors').update({
         name, phone, bio,
         image_url: imageUrl,
         meeting_url: meetingUrl,
@@ -124,9 +124,12 @@ export default function TutorProfilePage() {
         updated_at: new Date()
       }).eq('user_id', user?.id);
 
+      // 🚨 จุดที่แก้: ถ้ามี error ให้เตะไปเข้า catch block ทันที
+      if (error) throw error; 
+
       alert('บันทึกโปรไฟล์เรียบร้อยแล้วครับ! ✨');
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      alert('อัปเดตไม่สำเร็จ Error: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -190,7 +193,6 @@ export default function TutorProfilePage() {
                 </div>
               </div>
               
-              {/* ✨ เพิ่มช่องลิงก์ห้องเรียน */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-blue-600 uppercase ml-2 flex items-center gap-1"><LinkIcon size={12}/> ลิงก์ห้องเรียน (Zoom / Google Meet)</label>
                 <input type="url" value={meetingUrl} onChange={(e) => setMeetingUrl(e.target.value)} className="w-full px-5 py-4 bg-blue-50/50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-blue-400 font-bold text-blue-800" placeholder="https://meet.google.com/..." />
