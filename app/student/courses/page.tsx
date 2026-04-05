@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Search, ShoppingCart, BookOpen, Clock, 
@@ -7,9 +7,10 @@ import {
   Smartphone, Wallet 
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation'; // ✨ นำเข้า useSearchParams เพื่อรับค่า ref
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function StudentCatalogPage() {
+// ✨ 1. เปลี่ยนชื่อฟังก์ชันเดิมเป็น CatalogContent (เอา export default ออก)
+function CatalogContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [items, setItems] = useState<any[]>([]);
@@ -92,7 +93,7 @@ export default function StudentCatalogPage() {
         amount_paid: selectedItem.price,
         slip_url: publicUrl,
         status: 'PENDING',
-        referred_by: refTutorId || null // ✨ บันทึกรหัสติวเตอร์เข้าไปด้วยถ้ามี
+        referred_by: refTutorId || null 
       }]);
 
       if (orderError) throw orderError;
@@ -120,7 +121,6 @@ export default function StudentCatalogPage() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen font-sans text-gray-900">
       
-      {/* Modal สั่งซื้อ (ซ่อนไว้เมื่อไม่ได้เลือก) */}
       {selectedItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedItem(null)}>
           <div className="bg-white rounded-[3rem] w-full max-w-lg p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
@@ -215,5 +215,15 @@ export default function StudentCatalogPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+// ✨ 2. สร้าง component หลักมาครอบด้วย Suspense
+export default function StudentCatalogPage() {
+  return (
+    // ใส่ Loading Spinner ไว้ระหว่างที่รออ่านค่า URL
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>}>
+      <CatalogContent />
+    </Suspense>
   );
 }
