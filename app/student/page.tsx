@@ -93,6 +93,10 @@ export default function StudentDashboard() {
           <p className="px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-6 mb-3">การเรียน</p>
           <Link href="/student/booking-flow" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Calendar size={20}/> จองคิวเรียน</Link>
           <Link href="/student/my-schedule" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Clock size={20}/> ตารางเรียน</Link>
+          
+          {/* ✨ เพิ่มเมนูคลังหนังสือตรงนี้ */}
+          <Link href="/student/my-books" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><BookOpen size={20}/> คลังหนังสือและชีท</Link>
+          
           <Link href="/student/tutors" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Users size={20}/> ทำเนียบติวเตอร์</Link>
           
           <p className="px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-6 mb-3">ร้านค้า & โปรไฟล์</p>
@@ -145,7 +149,6 @@ export default function StudentDashboard() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* ✨ เพิ่มปุ่ม Logout สำหรับมือถือตรงนี้ */}
             <button 
               onClick={handleLogout} 
               className="lg:hidden p-3 bg-red-50 text-red-500 rounded-2xl active:scale-95 transition-all shadow-sm border border-red-100"
@@ -244,35 +247,50 @@ export default function StudentDashboard() {
         {/* Shortcuts */}
         <section className="mb-12">
           <h2 className="text-xl font-black mb-6 text-left">เมนูทางลัด</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link href="/student/courses" className="bg-gray-900 text-white p-6 rounded-[2rem] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group flex flex-col justify-between h-36 border border-gray-800 text-left">
+          {/* ✨ ปรับ Grid ให้รองรับ 5 กล่องได้สวยงาม */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            
+            <Link href="/student/courses" className="bg-gray-900 text-white p-5 md:p-6 rounded-[2rem] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group flex flex-col justify-between h-36 border border-gray-800 text-left">
               <ShoppingCart size={32} className="text-blue-400 group-hover:scale-110 transition-transform"/>
               <div className="text-left">
-                <h3 className="font-black text-lg leading-tight text-left">ซื้อคอร์ส / ชม.</h3>
+                <h3 className="font-black text-base md:text-lg leading-tight text-left">ซื้อคอร์ส / ชม.</h3>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">Shop Courses</p>
               </div>
             </Link>
-            <Link href="/student/booking-flow" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
+            
+            <Link href="/student/booking-flow" className="bg-white p-5 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
               <Calendar size={32} className="text-blue-600 group-hover:scale-110 transition-transform"/>
               <div className="text-left">
-                <h3 className="font-black text-gray-900 text-lg leading-tight text-left">จองคิวเรียน</h3>
+                <h3 className="font-black text-gray-900 text-base md:text-lg leading-tight text-left">จองคิวเรียน</h3>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">Book a Class</p>
               </div>
             </Link>
-            <Link href="/student/my-schedule" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
+            
+            <Link href="/student/my-schedule" className="bg-white p-5 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
               <Clock size={32} className="text-purple-600 group-hover:scale-110 transition-transform"/>
               <div className="text-left">
-                <h3 className="font-black text-gray-900 text-lg leading-tight text-left">ตารางเรียน</h3>
+                <h3 className="font-black text-gray-900 text-base md:text-lg leading-tight text-left">ตารางเรียน</h3>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">My Schedule</p>
               </div>
             </Link>
-            <Link href="/student/tutors" className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
+
+            {/* ✨ กล่องเมนูใหม่: คลังหนังสือและชีท */}
+            <Link href="/student/my-books" className="bg-white p-5 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
+              <BookOpen size={32} className="text-orange-500 group-hover:scale-110 transition-transform"/>
+              <div className="text-left">
+                <h3 className="font-black text-gray-900 text-base md:text-lg leading-tight text-left">คลังหนังสือ/ชีท</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">My Books</p>
+              </div>
+            </Link>
+
+            <Link href="/student/tutors" className="bg-white p-5 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
               <Users size={32} className="text-green-600 group-hover:scale-110 transition-transform"/>
               <div className="text-left">
-                <h3 className="font-black text-gray-900 text-lg leading-tight text-left">ทำเนียบติวเตอร์</h3>
+                <h3 className="font-black text-gray-900 text-base md:text-lg leading-tight text-left">ทำเนียบติวเตอร์</h3>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">Tutors Catalog</p>
               </div>
             </Link>
+
           </div>
         </section>
 

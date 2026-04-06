@@ -9,7 +9,6 @@ import {
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-// ✨ 1. เปลี่ยนชื่อฟังก์ชันเดิมเป็น CatalogContent (เอา export default ออก)
 function CatalogContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,7 +25,6 @@ function CatalogContent() {
   const [uploading, setUploading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // ✨ เก็บค่ารหัส Affiliate ทันทีที่มีคนกดลิงก์เข้ามา
   useEffect(() => {
     const refCode = searchParams.get('ref');
     if (refCode) {
@@ -51,7 +49,14 @@ function CatalogContent() {
 
   const fetchActiveItems = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('courses').select('*').eq('is_active', true).order('created_at', { ascending: false });
+    
+    // ✨ อัปเดต: ดึงมาเฉพาะคอลัมน์ที่จำเป็นต่อการขายเท่านั้น ห้ามดึง document_url เด็ดขาด!
+    const { data, error } = await supabase
+      .from('courses')
+      .select('id, title, description, price, hours_count, referral_points, type, category, image_url, target_wallet_type') 
+      .eq('is_active', true) // ดึงเฉพาะอันที่เปิดขายอยู่
+      .order('created_at', { ascending: false });
+      
     if (!error && data) {
       setItems(data.map(item => ({
         ...item,
@@ -84,7 +89,6 @@ function CatalogContent() {
 
       const { data: { publicUrl } } = supabase.storage.from('slips').getPublicUrl(`public/${fileName}`);
 
-      // ✨ ดึงรหัสติวเตอร์ที่แนะนำมาจาก localStorage
       const refTutorId = localStorage.getItem('affiliate_ref');
 
       const { error: orderError } = await supabase.from('course_orders').insert([{
@@ -101,7 +105,6 @@ function CatalogContent() {
       setShowSuccess(true);
       setSelectedItem(null);
       setFile(null);
-      // เคลียร์ ref ออกเมื่อใช้เสร็จแล้ว
       localStorage.removeItem('affiliate_ref');
     } catch (err: any) {
       alert("เกิดข้อผิดพลาด: " + err.message);
@@ -166,7 +169,7 @@ function CatalogContent() {
           <div className="text-center">
             <div className="w-24 h-24 bg-white text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl"><CheckCircle2 size={60} /></div>
             <h2 className="text-4xl font-black mb-2 tracking-tight">เรียบร้อยครับ!</h2>
-            <p className="text-blue-100 font-bold mb-8">แอดมินได้รับสลิปแล้ว กำลังตรวจสอบ<br/>ชั่วโมงจะเข้ากระเป๋าในไม่ช้านี้ครับ</p>
+            <p className="text-blue-100 font-bold mb-8">แอดมินได้รับสลิปแล้ว กำลังตรวจสอบ<br/>หนังสือและชั่วโมงเรียนจะถูกอัปเดตในไม่ช้านี้ครับ</p>
             <button onClick={() => setShowSuccess(false)} className="px-12 py-4 bg-white text-blue-600 rounded-2xl font-black shadow-lg hover:bg-gray-50 active:scale-95 transition-all">กลับหน้าร้านค้า</button>
           </div>
         </div>
@@ -218,10 +221,8 @@ function CatalogContent() {
   );
 }
 
-// ✨ 2. สร้าง component หลักมาครอบด้วย Suspense
 export default function StudentCatalogPage() {
   return (
-    // ใส่ Loading Spinner ไว้ระหว่างที่รออ่านค่า URL
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>}>
       <CatalogContent />
     </Suspense>

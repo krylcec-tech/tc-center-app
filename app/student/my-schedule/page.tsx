@@ -28,13 +28,14 @@ export default function MySchedulePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // ✨ ดึงคอลัมน์ `notes` จาก teaching_logs มาด้วย เพื่อเอามาโชว์ให้นักเรียนอ่าน
       const { data, error } = await supabase
         .from('bookings')
         .select(`
           id, status, is_completed, meeting_url, 
           slots!inner ( 
             id, start_time, location_type,
-            teaching_logs ( id, created_at )
+            teaching_logs ( id, created_at, notes ) 
           ),
           tutors!inner ( name, image_url ) 
         `)
@@ -124,7 +125,6 @@ export default function MySchedulePage() {
     setCurrentWeekStart(next);
   };
 
-  // ✨ ฟังก์ชันสำหรับเลือกเดือน/ปี จากปฏิทิน
   const handleMonthYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.value) {
       const newDate = new Date(e.target.value);
@@ -201,6 +201,7 @@ export default function MySchedulePage() {
               const canJoin = !verified; 
               
               const hasTeachingLog = item.slots.teaching_logs && item.slots.teaching_logs.length > 0;
+              const tutorNote = hasTeachingLog ? item.slots.teaching_logs[0].notes : null;
 
               return (
                 <div key={item.id} className={`p-5 md:p-6 rounded-[2.2rem] shadow-sm border transition-all flex flex-col gap-4 ${verified ? 'bg-green-50/20 border-green-50' : 'bg-white border-gray-50'}`}>
@@ -236,6 +237,7 @@ export default function MySchedulePage() {
                     </div>
                   </div>
 
+                  {/* ✨ ถ้านักเรียนยังไม่ได้กดยืนยัน (แสดงกล่องส้ม พร้อมสรุปการสอนให้อ่าน) */}
                   {!verified && tutorDone && (
                     <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -247,6 +249,17 @@ export default function MySchedulePage() {
                           เพื่อความถูกต้องของระบบการเรียน
                         </span>
                       </div>
+
+                      {/* ✨ แสดงสรุปการสอนจากติวเตอร์ตรงนี้เลย! */}
+                      {hasTeachingLog && tutorNote && (
+                        <div className="mb-4 p-4 bg-white/60 rounded-[1.2rem] border border-orange-100/50">
+                           <p className="text-[10px] font-black text-orange-600 mb-2">📝 สรุปการสอนจากติวเตอร์:</p>
+                           <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap leading-relaxed">"{tutorNote}"</p>
+                           <p className="text-[8px] text-gray-400 text-right mt-3 font-medium uppercase tracking-tighter">
+                             ส่งรายงานเมื่อ: {new Date(item.slots.teaching_logs[0].created_at).toLocaleString('th-TH')}
+                           </p>
+                        </div>
+                      )}
                       
                       <button 
                         onClick={() => handleVerifyLesson(item.id)}
@@ -256,18 +269,23 @@ export default function MySchedulePage() {
                         {verifyingId === item.id ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle2 size={16}/>}
                         ยืนยันว่าได้เข้าเรียนจริง (กดยืนยันเพื่อจบงาน)
                       </button>
-
-                      {hasTeachingLog && (
-                        <p className="text-[8px] text-gray-400 text-center mt-3 font-medium uppercase tracking-tighter">
-                          ติวเตอร์ส่งรายงานเมื่อ: {new Date(item.slots.teaching_logs[0].created_at).toLocaleString('th-TH')}
-                        </p>
-                      )}
                     </div>
                   )}
 
+                  {/* ✨ ถ้านักเรียนกดยืนยันแล้ว (ย้ายมาแท็บ Past) ให้แสดงกล่องเขียว พร้อมเก็บสรุปไว้อ่านย้อนหลัง */}
                   {verified && (
-                    <div className="flex items-center justify-center gap-2 text-green-600 font-black text-[10px] bg-green-50 py-3 rounded-xl border border-green-100 mt-2">
-                      <CheckCircle2 size={14}/> ยืนยันการเข้าเรียนสมบูรณ์แล้ว
+                    <div className="flex flex-col gap-2 mt-2">
+                      <div className="flex items-center justify-center gap-2 text-green-600 font-black text-[10px] bg-green-50 py-3 rounded-xl border border-green-100">
+                        <CheckCircle2 size={14}/> ยืนยันการเข้าเรียนสมบูรณ์แล้ว
+                      </div>
+                      
+                      {/* เก็บสรุปการสอนไว้อ่านในประวัติได้ตลอด */}
+                      {hasTeachingLog && tutorNote && (
+                        <div className="p-4 bg-gray-50 rounded-[1.2rem] border border-gray-100 mt-1">
+                           <p className="text-[10px] font-black text-gray-400 mb-1">📝 สรุปการสอน:</p>
+                           <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap leading-relaxed">"{tutorNote}"</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -276,7 +294,7 @@ export default function MySchedulePage() {
           )}
         </section>
 
-        {/* ✨ ปฏิทินรายสัปดาห์ (เพิ่มตัวเลือก เดือน/ปี) */}
+        {/* --- 📅 ตารางรายสัปดาห์ (คงเดิม) --- */}
         <section className="bg-white rounded-[3.5rem] p-6 md:p-10 border border-gray-50 shadow-xl overflow-hidden text-gray-900">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 px-2 gap-4">
              <div className="flex items-center gap-3">

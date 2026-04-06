@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { 
   ArrowLeft, Plus, Trash2, Edit3, Image as ImageIcon, 
-  Book, Clock, X, Loader2, Camera, Save, Hash, Gift, Wallet // ✨ เพิ่ม Wallet icon
+  Book, Clock, X, Loader2, Camera, Save, Gift, Wallet, Infinity, Eye, EyeOff, Box, Link as LinkIcon, ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -20,9 +20,13 @@ export default function ManageCoursesPage() {
   const [referralPoints, setReferralPoints] = useState('0');
   const [type, setType] = useState('course'); 
   const [category, setCategory] = useState('ชั่วโมงเรียน');
-  const [targetWalletType, setTargetWalletType] = useState(''); // ✨ State ใหม่สำหรับระบุกระเป๋า
+  const [targetWalletType, setTargetWalletType] = useState('');
+  const [stock, setStock] = useState('1');
+  const [isUnlimited, setIsUnlimited] = useState(true);
+  
+  // ✨ เพิ่ม State สำหรับเก็บลิงก์เอกสาร Google Drive
+  const [documentUrl, setDocumentUrl] = useState('');
 
-  // ตัวเลือกกระเป๋าเงิน 6 รูปแบบ
   const walletOptions = [
     { label: 'ประถม - ม.ต้น (Online)', value: 'tier1_online' },
     { label: 'ประถม - ม.ต้น (Onsite)', value: 'tier1_onsite' },
@@ -50,7 +54,8 @@ export default function ManageCoursesPage() {
       const formattedData = data.map(item => ({
         ...item,
         image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : []),
-        type: item.type || 'course' 
+        type: item.type || 'course',
+        is_active: item.is_active !== false 
       }));
       setItems(formattedData);
     }
@@ -101,10 +106,13 @@ export default function ManageCoursesPage() {
         type, 
         category, 
         image_url: finalUrls,
-        is_active: true,
         hours_count: parseInt(hoursCount) || 0,
         referral_points: parseInt(referralPoints) || 0,
-        target_wallet_type: type === 'course' ? targetWalletType : null // ✨ บันทึกประเภทกระเป๋า
+        target_wallet_type: type === 'course' ? targetWalletType : null,
+        stock: isUnlimited ? 0 : parseInt(stock) || 0, 
+        is_unlimited: isUnlimited, 
+        is_active: editingItem ? editingItem.is_active : true,
+        document_url: type === 'book' ? documentUrl : null // ✨ บันทึกลิงก์ (เฉพาะประเภทหนังสือ)
       };
 
       const { error: dbError } = editingItem 
@@ -132,7 +140,10 @@ export default function ManageCoursesPage() {
     setReferralPoints('0');
     setType('course');
     setCategory('ชั่วโมงเรียน');
-    setTargetWalletType(''); // ✨ รีเซ็ต
+    setTargetWalletType('');
+    setStock('1');
+    setIsUnlimited(true);
+    setDocumentUrl(''); // ✨ รีเซ็ตลิงก์
     setImageFiles([]);
     setPreviewUrls([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -147,7 +158,10 @@ export default function ManageCoursesPage() {
     setDescription(item.description || '');
     setType(item.type || 'course');
     setCategory(item.category || 'ชั่วโมงเรียน');
-    setTargetWalletType(item.target_wallet_type || ''); // ✨ ดึงค่ากระเป๋ามาโชว์
+    setTargetWalletType(item.target_wallet_type || '');
+    setStock(item.stock?.toString() || '0');
+    setIsUnlimited(item.is_unlimited !== false); 
+    setDocumentUrl(item.document_url || ''); // ✨ ดึงลิงก์เดิมมาแสดง
     setPreviewUrls(item.image_url || []);
     setImageFiles([]); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -161,52 +175,97 @@ export default function ManageCoursesPage() {
     }
   };
 
-  const ItemCard = ({ item }: { item: any }) => (
-    <div className="bg-white p-5 rounded-[32px] shadow-sm border border-gray-100 flex flex-col h-full group">
-      <div className="h-44 bg-gray-50 rounded-2xl mb-4 overflow-hidden relative">
-        {item.image_url?.[0] ? (
-          <img src={item.image_url[0]} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300">
-            <ImageIcon size={40}/>
-          </div>
-        )}
+  const handleToggleVisibility = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .update({ is_active: !currentStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+      fetchItems(); 
+    } catch (error: any) {
+      alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ: ' + error.message);
+    }
+  };
+
+  const ItemCard = ({ item }: { item: any }) => {
+    const isOutOfStock = !item.is_unlimited && item.stock <= 0;
+    
+    return (
+      <div className={`bg-white p-5 rounded-[32px] shadow-sm border flex flex-col h-full group transition-all relative ${!item.is_active ? 'opacity-60 border-gray-200 bg-gray-50' : isOutOfStock ? 'border-red-100 bg-red-50/30' : 'border-gray-100 hover:shadow-md'}`}>
         
-        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-blue-600 shadow-sm flex items-center gap-1">
-          {item.type === 'course' ? <Clock size={10}/> : <Book size={10}/>}
-          {item.category}
-        </div>
-
-        {item.referral_points > 0 && (
-          <div className="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 py-1 rounded-lg text-[10px] font-black shadow-md flex items-center gap-1">
-            <Gift size={10}/> {item.referral_points} แต้ม
-          </div>
-        )}
-
-        {item.type === 'course' && (
-          <div className="absolute bottom-2 right-2 bg-gray-900/80 backdrop-blur text-white px-3 py-1 rounded-lg text-[9px] font-black shadow-lg">
-             {item.target_wallet_type?.replace('_', ' ').toUpperCase()}
-          </div>
-        )}
-      </div>
-      
-      <h3 className="font-bold text-lg text-gray-800 line-clamp-1">{item.title}</h3>
-      <div className="mt-auto pt-4 flex justify-between items-center">
-        <div className="flex flex-col">
-            <span className="text-[10px] font-black text-blue-500 uppercase">{item.hours_count} ชม.</span>
-            <span className="text-xl font-black text-gray-900">฿{item.price}</span>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => handleEdit(item)} className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-colors">
-            <Edit3 size={18}/>
-          </button>
-          <button onClick={() => handleDelete(item.id)} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-colors">
-            <Trash2 size={18}/>
+        <div className="absolute top-4 right-4 z-10">
+          <button 
+            onClick={() => handleToggleVisibility(item.id, item.is_active)}
+            className={`p-2 rounded-xl backdrop-blur-md shadow-sm transition-colors ${item.is_active ? 'bg-white/80 text-gray-600 hover:text-orange-500' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+            title={item.is_active ? "ซ่อนจากหน้าร้าน" : "แสดงที่หน้าร้าน"}
+          >
+            {item.is_active ? <Eye size={18}/> : <EyeOff size={18}/>}
           </button>
         </div>
+
+        <div className={`h-44 bg-gray-100 rounded-2xl mb-4 overflow-hidden relative ${!item.is_active ? 'grayscale' : ''}`}>
+          {item.image_url?.[0] ? (
+            <img src={item.image_url[0]} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-300">
+              <ImageIcon size={40}/>
+            </div>
+          )}
+          
+          <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-blue-600 shadow-sm flex items-center gap-1">
+            {item.type === 'course' ? <Clock size={10}/> : <Book size={10}/>}
+            {item.category}
+          </div>
+
+          {!item.is_active && (
+            <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center">
+              <span className="bg-gray-900 text-white px-4 py-2 rounded-xl font-black text-sm tracking-widest uppercase">ซ่อนอยู่</span>
+            </div>
+          )}
+        </div>
+        
+        <h3 className="font-bold text-lg text-gray-800 line-clamp-1 pr-12">{item.title}</h3>
+        
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+           {item.is_unlimited ? (
+             <span className="text-[10px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded-lg flex items-center gap-1 w-max"><Infinity size={12}/> ไม่จำกัดสต็อก</span>
+           ) : isOutOfStock ? (
+             <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-1 rounded-lg flex items-center gap-1 w-max border border-red-100">❌ สินค้าหมดแล้ว</span>
+           ) : (
+             <span className="text-[10px] font-black text-gray-600 bg-gray-100 px-2 py-1 rounded-lg flex items-center gap-1 w-max"><Box size={12}/> เหลือ {item.stock} ชิ้น</span>
+           )}
+
+           {item.referral_points > 0 && (
+             <span className="text-[10px] font-black text-white bg-gradient-to-r from-purple-500 to-indigo-500 px-2 py-1 rounded-lg flex items-center gap-1 w-max shadow-sm"><Gift size={10}/> {item.referral_points} pts</span>
+           )}
+
+           {/* ✨ แจ้งเตือนว่ามีลิงก์เอกสารแล้ว */}
+           {item.type === 'book' && item.document_url && (
+             <span className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2 py-1 rounded-lg flex items-center gap-1 w-max">
+               <ExternalLink size={10}/> มีลิงก์เอกสาร
+             </span>
+           )}
+        </div>
+
+        <div className="mt-auto pt-4 flex justify-between items-center">
+          <div className="flex flex-col">
+              {item.type === 'course' && <span className="text-[10px] font-black text-blue-500 uppercase">{item.hours_count} ชม.</span>}
+              <span className="text-xl font-black text-gray-900">฿{item.price}</span>
+          </div>
+          <div className="flex gap-2 relative z-10">
+            <button onClick={() => handleEdit(item)} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-colors">
+              <Edit3 size={18}/>
+            </button>
+            <button onClick={() => handleDelete(item.id)} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-colors">
+              <Trash2 size={18}/>
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen font-sans text-gray-900">
@@ -215,6 +274,8 @@ export default function ManageCoursesPage() {
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        
+        {/* --- ส่วนที่ 1: ฟอร์มกรอกข้อมูล --- */}
         <div className="lg:col-span-4">
           <div className="bg-white p-8 rounded-[40px] shadow-xl shadow-blue-100/20 border border-blue-50 sticky top-8">
             <h2 className="text-2xl font-black mb-8 text-gray-800 flex items-center gap-3">
@@ -250,9 +311,24 @@ export default function ManageCoursesPage() {
               <div className="space-y-4">
                 <input type="text" placeholder="ชื่อรายการ..." className="w-full p-4 bg-gray-50 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold" value={title} onChange={(e) => setTitle(e.target.value)} />
                 
-                {/* ✨ ส่วนใหม่: เลือกประเภทกระเป๋า (เฉพาะถ้าเป็นคอร์ส) */}
+                {/* ✨ ส่วนลิงก์เอกสาร (โชว์เฉพาะถ้าเป็นหนังสือ/ชีท) */}
+                {type === 'book' && (
+                  <div className="space-y-1 animate-in fade-in zoom-in duration-300">
+                    <label className="text-[10px] font-black text-orange-500 ml-2 uppercase flex items-center gap-1">
+                      <LinkIcon size={12}/> ลิงก์ไฟล์เอกสาร (Google Drive, PDF ฯลฯ)
+                    </label>
+                    <input 
+                      type="url" 
+                      placeholder="https://drive.google.com/..." 
+                      className="w-full p-4 bg-orange-50/50 rounded-2xl focus:ring-2 focus:ring-orange-400 outline-none font-bold text-gray-700 border border-orange-100" 
+                      value={documentUrl} 
+                      onChange={(e) => setDocumentUrl(e.target.value)} 
+                    />
+                  </div>
+                )}
+
                 {type === 'course' && (
-                  <div className="space-y-1">
+                  <div className="space-y-1 animate-in fade-in zoom-in duration-300">
                     <label className="text-[10px] font-black text-blue-600 ml-2 uppercase flex items-center gap-1">
                       <Wallet size={12}/> ระบุกระเป๋าที่จะเติมชั่วโมง
                     </label>
@@ -274,10 +350,43 @@ export default function ManageCoursesPage() {
                     <label className="text-[10px] font-black text-gray-400 ml-2 uppercase">ราคา (บาท)</label>
                     <input type="number" className="w-full p-4 bg-gray-50 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-black text-blue-600" value={price} onChange={(e) => setPrice(e.target.value)} />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 ml-2 uppercase">ชั่วโมงที่ได้รับ</label>
-                    <input type="number" className="w-full p-4 bg-gray-50 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-black text-gray-700" value={hoursCount} onChange={(e) => setHoursCount(e.target.value)} />
-                  </div>
+                  {type === 'course' && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 ml-2 uppercase">ชั่วโมงที่ได้รับ</label>
+                      <input type="number" className="w-full p-4 bg-gray-50 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-black text-gray-700" value={hoursCount} onChange={(e) => setHoursCount(e.target.value)} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-2xl space-y-3 border border-gray-100">
+                   <div className="flex items-center gap-2">
+                     <Box size={16} className="text-gray-400"/>
+                     <span className="text-xs font-black text-gray-600 uppercase">จัดการสต็อก</span>
+                   </div>
+                   <div className="flex items-center gap-3">
+                     <input 
+                       type="checkbox" 
+                       id="unlimitedStock"
+                       className="w-5 h-5 accent-blue-600 cursor-pointer rounded"
+                       checked={isUnlimited}
+                       onChange={(e) => setIsUnlimited(e.target.checked)}
+                     />
+                     <label htmlFor="unlimitedStock" className="text-xs font-bold text-gray-700 cursor-pointer flex items-center gap-1">
+                       <Infinity size={14} className="text-blue-500" /> ไม่จำกัดจำนวน (ขายได้เรื่อยๆ)
+                     </label>
+                   </div>
+                   
+                   {!isUnlimited && (
+                     <div className="pl-8 animate-in fade-in slide-in-from-top-2">
+                       <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">ระบุจำนวนชิ้นที่มี</label>
+                       <input 
+                         type="number" min="0" 
+                         className="w-full p-3 bg-white rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-black border border-gray-200" 
+                         value={stock} 
+                         onChange={(e) => setStock(e.target.value)} 
+                       />
+                     </div>
+                   )}
                 </div>
 
                 <div className="space-y-1">
@@ -287,7 +396,7 @@ export default function ManageCoursesPage() {
 
                 <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 ml-2 uppercase">หมวดหมู่</label>
-                    <select className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold" value={category} onChange={(e) => setCategory(e.target.value)}>
+                    <select className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
                         <option>ชั่วโมงเรียน</option>
                         <option>วิดีโอ</option>
                         <option>หนังสือ</option>
@@ -295,39 +404,40 @@ export default function ManageCoursesPage() {
                     </select>
                 </div>
                 
-                <textarea placeholder="รายละเอียด..." className="w-full p-4 bg-gray-50 rounded-2xl outline-none h-32 resize-none text-gray-600" value={description} onChange={(e) => setDescription(e.target.value)} />
+                <textarea placeholder="รายละเอียดสินค้า..." className="w-full p-4 bg-gray-50 rounded-2xl outline-none h-24 resize-none text-gray-600 text-sm" value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
               
               <button onClick={handleSave} disabled={loading} className={`w-full p-5 rounded-[24px] text-white font-black shadow-lg active:scale-95 flex items-center justify-center gap-3 ${loading ? 'bg-gray-400' : type === 'course' ? 'bg-blue-600' : 'bg-orange-500'}`}>
                 {loading ? <Loader2 className="animate-spin"/> : <Save size={20}/>}
-                {editingItem ? 'บันทึกการแก้ไข' : 'ยืนยันการเพิ่ม'}
+                {editingItem ? 'บันทึกการแก้ไข' : 'ยืนยันการเพิ่มรายการ'}
               </button>
             </div>
           </div>
         </div>
 
+        {/* --- ส่วนที่ 2: แสดงรายการคอร์ส --- */}
         <div className="lg:col-span-8 space-y-16">
-          {/* ส่วนแสดงรายการสินค้า แบ่งเป็น Course และ Book เหมือนเดิม */}
           <div>
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600"><Clock size={24}/></div>
               <h2 className="text-3xl font-black text-gray-800">คอร์สเรียน & บริการ</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {items.filter(i => i.type === 'course').map(item => <ItemCard key={item.id} item={item} />)}
             </div>
           </div>
-          <hr />
+          <hr className="border-gray-200" />
           <div>
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600"><Book size={24}/></div>
               <h2 className="text-3xl font-black text-gray-800">หนังสือ & ชีทเรียน</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {items.filter(i => i.type === 'book').map(item => <ItemCard key={item.id} item={item} />)}
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

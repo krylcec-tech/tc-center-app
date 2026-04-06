@@ -6,12 +6,13 @@ import Link from 'next/link';
 import { 
   LayoutDashboard, Calendar, LogOut, Loader2, UserCircle, 
   ChevronRight, CalendarDays, History, CheckCircle2, Gift, 
-  Menu, X, Clock, MapPin, Settings, Bookmark
+  Menu, X, Clock, MapPin, Settings, AlertCircle
 } from 'lucide-react';
 
 export default function TutorDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [tutorData, setTutorData] = useState({ id: '', name: '', avatar: '' });
   const [stats, setStats] = useState({ upcomingSlots: 0, completedHours: 0, todaySlots: 0 });
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
@@ -21,81 +22,110 @@ export default function TutorDashboard() {
     fetchTutorData();
   }, []);
 
+  const isLessonCompleted = (item: any) => {
+    const status = String(item.status || '').trim().toUpperCase();
+    const hasLog = item.slots?.teaching_logs && item.slots.teaching_logs.length > 0;
+    return hasLog || status === 'VERIFIED' || item.is_completed === true;
+  };
+
   const fetchTutorData = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
-      // 1. ดึง Session ปัจจุบัน
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.replace('/login'); return; }
 
-      // 2. ดึงข้อมูลติวเตอร์ทั้งหมดม้วนเดียวจบ จากตาราง "tutors" โดยใช้ user_id
       const { data: profile, error: profileError } = await supabase
         .from('tutors')
-        .select('id, name, image_url, role') // ดึง role มาเช็คด้วย
+        .select('id, name, image_url, role') 
         .eq('user_id', session.user.id)
         .maybeSingle();
 
       if (profileError || !profile) { 
-        // ถ้าไม่มีข้อมูลในตาราง tutors ให้กลับไป login เพื่อป้องกัน error
         router.replace('/login'); 
         return; 
       }
 
-      // 3. เช็ค Role ว่าเป็นติวเตอร์จริงๆ ใช่ไหม
       const dbRole = (profile.role || '').replace(/'/g, "").trim().toUpperCase();
       if (dbRole !== 'TUTOR') {
-        router.replace('/student'); // ถ้าไม่ใช่ เตะไปหน้านักเรียน
+        router.replace('/student');
         return;
       }
 
-      // เซ็ตข้อมูลติวเตอร์เพื่อนำไปแสดงผลใน UI
       setTutorData({ id: profile.id, name: profile.name, avatar: profile.image_url });
 
-      // 4. ดึงสถิติและคิวสอน
-      const { count: upcomingCount } = await supabase
-        .from('slots')
-        .select('*', { count: 'exact', head: true })
-        .eq('tutor_id', profile.id)
-        .gte('start_time', new Date().toISOString());
-
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      // ดึง Bookings ของวันนี้
-      const { data: bookingsData } = await supabase
+      const { data: allBookings, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
-          id, subject, student_id,
-          slots!inner ( id, start_time, location_type )
+          id, status, is_completed, student_id,
+          slots!inner ( id, start_time, location_type, teaching_logs ( id, created_at ) )
         `)
-        .eq('tutor_id', profile.id)
-        .gte('slots.start_time', `${todayStr}T00:00:00`)
-        .lte('slots.start_time', `${todayStr}T23:59:59`)
-        .order('slots(start_time)', { ascending: true });
+        .eq('tutor_id', profile.id);
 
-      let formattedBookings = [];
-      if (bookingsData && bookingsData.length > 0) {
-        // ดึงชื่อนักเรียนจาก student_wallets มาแสดง
-        const { data: studentsData } = await supabase
-          .from('student_wallets')
-          .select('user_id, student_name');
-          
-        const studentMap = new Map(studentsData?.map(s => [s.user_id, s.student_name]) || []);
+      if (bookingsError) throw new Error(bookingsError.message);
+
+      const { data: studentsData } = await supabase
+        .from('student_wallets')
+        .select('user_id, student_name');
         
-        formattedBookings = bookingsData.map((item: any) => ({
-          ...item,
-          student_name: studentMap.get(item.student_id) || 'ไม่ระบุชื่อ'
-        }));
-      }
+      const studentMap = new Map(studentsData?.map(s => [s.user_id, s.student_name]) || []);
 
-      setTodayBookings(formattedBookings);
-      setStats({
-        upcomingSlots: upcomingCount || 0,
-        completedHours: 0, // ส่วนนี้สามารถเชื่อมกับตารางสรุปยอดในอนาคตได้
-        todaySlots: formattedBookings.length
+      const now = new Date();
+      const bkkDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+      const currentMonth = bkkDate.getMonth();
+      const currentYear = bkkDate.getFullYear();
+      const todayStr = [
+        bkkDate.getFullYear(),
+        String(bkkDate.getMonth() + 1).padStart(2, '0'),
+        String(bkkDate.getDate()).padStart(2, '0')
+      ].join('-');
+
+      let pendingCount = 0;
+      let completedMonthCount = 0;
+      let todayList: any[] = [];
+
+      // ✨ เติม : any ตรงตัว b เพื่อปลดล็อก TypeScript Error ครับ
+      (allBookings || []).forEach((b: any) => {
+        const slotDate = new Date(b.slots.start_time);
+        const slotBkkDate = new Date(slotDate.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+        
+        const isCompleted = isLessonCompleted(b); 
+        
+        if (!isCompleted) {
+          pendingCount++;
+        }
+
+        if (isCompleted && slotBkkDate.getMonth() === currentMonth && slotBkkDate.getFullYear() === currentYear) {
+          completedMonthCount++; 
+        }
+
+        const slotDateStr = [
+          slotBkkDate.getFullYear(),
+          String(slotBkkDate.getMonth() + 1).padStart(2, '0'),
+          String(slotBkkDate.getDate()).padStart(2, '0')
+        ].join('-');
+        
+        if (slotDateStr === todayStr) {
+           todayList.push({
+             ...b,
+             student_name: studentMap.get(b.student_id) || 'ไม่ระบุชื่อ',
+             isFinished: isCompleted
+           });
+        }
       });
 
-    } catch (err) {
-      console.error('Fetch error:', err);
+      todayList.sort((a, b) => new Date(a.slots.start_time).getTime() - new Date(b.slots.start_time).getTime());
+
+      setStats({
+        upcomingSlots: pendingCount,
+        completedHours: completedMonthCount,
+        todaySlots: todayList.length
+      });
+      setTodayBookings(todayList);
+
+    } catch (err: any) {
+      console.error('Fetch error:', err.message);
+      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
@@ -111,6 +141,19 @@ export default function TutorDashboard() {
       <Loader2 className="animate-spin text-blue-600" size={48} />
     </div>
   );
+
+  if (errorMsg) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6">
+        <div className="bg-red-50 border-2 border-red-200 p-8 rounded-3xl max-w-md text-center">
+          <AlertCircle className="text-red-500 mx-auto mb-4" size={48} />
+          <h2 className="text-xl font-black text-red-700 mb-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</h2>
+          <p className="text-sm font-bold text-red-500 mb-6">{errorMsg}</p>
+          <button onClick={fetchTutorData} className="bg-red-600 text-white px-6 py-3 rounded-xl font-black hover:bg-red-700 transition-all">โหลดใหม่อีกครั้ง</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row font-sans text-gray-900">
@@ -219,20 +262,28 @@ export default function TutorDashboard() {
                   </div>
                 ) : (
                   todayBookings.map((item) => (
-                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-white border border-gray-100 rounded-[2rem] hover:shadow-lg transition-all group gap-4">
+                    <div key={item.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-6 border rounded-[2rem] hover:shadow-lg transition-all group gap-4 ${item.isFinished ? 'bg-green-50/30 border-green-50' : 'bg-white border-gray-100'}`}>
                       <div className="flex items-center gap-5">
-                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[1.5rem] flex items-center justify-center font-black text-lg shadow-inner">
+                        <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-black text-lg shadow-inner ${item.isFinished ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-600'}`}>
                           {new Date(item.slots.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                         <div>
                           <h4 className="font-black text-gray-900 text-xl leading-none mb-1.5">น้อง{item.student_name}</h4>
                           <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase">
-                            <span className="bg-gray-100 px-2 py-0.5 rounded-md">{item.subject}</span>
                             <span className="flex items-center gap-1 text-blue-600"><MapPin size={12}/> {item.slots.location_type}</span>
                           </div>
                         </div>
                       </div>
-                      <Link href="/tutor/my-schedule" className="w-full sm:w-auto text-center px-6 py-3 bg-gray-900 text-white rounded-xl font-black text-xs hover:bg-blue-600 transition-all">จัดการคลาส</Link>
+                      
+                      {item.isFinished ? (
+                        <div className="w-full sm:w-auto text-center px-6 py-3 bg-green-50 text-green-600 border border-green-100 rounded-xl font-black text-xs flex items-center justify-center gap-2">
+                          <CheckCircle2 size={16}/> ส่งรายงานแล้ว
+                        </div>
+                      ) : (
+                        <Link href="/tutor/logs" className="w-full sm:w-auto text-center px-6 py-3 bg-gray-900 text-white rounded-xl font-black text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-2">
+                          เข้าสอน / ส่งงาน
+                        </Link>
+                      )}
                     </div>
                   ))
                 )}
