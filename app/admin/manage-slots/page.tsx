@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-// ✨ เพิ่ม X เข้ามาตรงนี้แล้วครับ!
 import { 
   ArrowLeft, Calendar as CalendarIcon, LayoutList, Clock, 
   Globe, Loader2, Filter, Trash, MapPin, LogOut, AlertCircle, PlusCircle, CheckCircle2, X 
@@ -63,7 +62,8 @@ export default function ManageSlotsTable() {
         if (!checkIsAdmin) setFilterTutor(currentUser?.id || tutorsData[0].id);
       }
 
-      let query = supabase.from('slots').select('*, tutors(name)').order('start_time', { ascending: false });
+      // ✨ อัปเดต Query: ดึง teaching_logs และ bookings เข้ามาเช็คสถานะด้วย
+      let query = supabase.from('slots').select('*, tutors(name), teaching_logs(id), bookings(status, student_verified, is_completed)').order('start_time', { ascending: false });
       
       if (!checkIsAdmin && currentUser) query = query.eq('tutor_id', currentUser.id);
       else if (checkIsAdmin && filterTutor !== 'all') query = query.eq('tutor_id', filterTutor);
@@ -278,45 +278,62 @@ export default function ManageSlotsTable() {
                 <tr><td colSpan={4} className="p-20 text-center"><Loader2 className="animate-spin text-blue-600 mx-auto" size={48} /></td></tr>
               ) : slots.length === 0 ? (
                 <tr><td colSpan={4} className="p-20 text-center font-black text-gray-300 text-xl">ไม่มีคิวว่างในช่วงนี้</td></tr>
-              ) : slots.map((slot) => (
-                <tr key={slot.id} className={`transition-all duration-200 ${selectedIds.includes(slot.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
-                  <td className="p-6 text-center">
-                    {!slot.is_booked ? (
-                      <input type="checkbox" className="w-5 h-5 rounded-md border-gray-300 text-blue-600 cursor-pointer accent-blue-600" checked={selectedIds.includes(slot.id)} onChange={() => toggleSelectOne(slot.id, slot.is_booked)} />
-                    ) : (
-                      <div className="w-5 h-5 mx-auto flex items-center justify-center text-gray-300" title="คิวถูกจองแล้ว ไม่สามารถลบได้"><AlertCircle size={16}/></div>
-                    )}
-                  </td>
-                  <td className="p-6">
-                     <p className="font-black text-gray-900 text-lg leading-none">ครู{slot.tutors?.name}</p>
-                  </td>
-                  <td className="p-6">
-                    <div className="font-black text-gray-800 text-sm mb-1">{new Date(slot.start_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-                    <div className="text-blue-600 font-black text-xl flex items-center gap-1.5"><Clock size={16}/> {new Date(slot.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</div>
-                  </td>
-                  <td className="p-6 text-center space-y-2">
-                     <div>
-                        {slot.is_booked ? (
-                          <span className="bg-red-50 text-red-600 border border-red-100 px-3 py-1.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1 shadow-sm">
-                            <CheckCircle2 size={12}/> ถูกจองแล้ว
+              ) : slots.map((slot) => {
+                
+                // ✨ ระบบคำนวณสถานะ (2-Step Verification)
+                const hasLog = slot.teaching_logs && slot.teaching_logs.length > 0;
+                const booking = slot.bookings && slot.bookings.length > 0 ? slot.bookings[0] : null;
+                const isVerified = booking?.student_verified === true || booking?.status === 'VERIFIED' || booking?.is_completed === true;
+
+                return (
+                  <tr key={slot.id} className={`transition-all duration-200 ${selectedIds.includes(slot.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
+                    <td className="p-6 text-center">
+                      {!slot.is_booked ? (
+                        <input type="checkbox" className="w-5 h-5 rounded-md border-gray-300 text-blue-600 cursor-pointer accent-blue-600" checked={selectedIds.includes(slot.id)} onChange={() => toggleSelectOne(slot.id, slot.is_booked)} />
+                      ) : (
+                        <div className="w-5 h-5 mx-auto flex items-center justify-center text-gray-300" title="คิวถูกจองแล้ว ไม่สามารถลบได้"><AlertCircle size={16}/></div>
+                      )}
+                    </td>
+                    <td className="p-6">
+                       <p className="font-black text-gray-900 text-lg leading-none">ครู{slot.tutors?.name}</p>
+                    </td>
+                    <td className="p-6">
+                      <div className="font-black text-gray-800 text-sm mb-1">{new Date(slot.start_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                      <div className="text-blue-600 font-black text-xl flex items-center gap-1.5"><Clock size={16}/> {new Date(slot.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</div>
+                    </td>
+                    <td className="p-6 text-center space-y-2">
+                       <div>
+                          {/* ✨ แสดงสถานะตาม Logic ใหม่ */}
+                          {hasLog && isVerified ? (
+                            <span className="bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1 shadow-sm">
+                              <CheckCircle2 size={12}/> สมบูรณ์
+                            </span>
+                          ) : hasLog && !isVerified ? (
+                            <span className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-3 py-1.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1 shadow-sm">
+                              <Clock size={12}/> รอนักเรียนยืนยัน
+                            </span>
+                          ) : slot.is_booked ? (
+                            <span className="bg-red-50 text-red-600 border border-red-100 px-3 py-1.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1 shadow-sm">
+                              <CheckCircle2 size={12}/> ถูกจองแล้ว
+                            </span>
+                          ) : (
+                            <span className="bg-gray-50 text-gray-500 border border-gray-200 px-3 py-1.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
+                              ว่าง
+                            </span>
+                          )}
+                       </div>
+                       <div>
+                          <span className={`px-3 py-1 rounded-[1rem] text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1 ${
+                            slot.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 
+                            slot.location_type === 'Onsite' ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'
+                          }`}>
+                            {slot.location_type === 'นอกสถานที่' ? <MapPin size={10}/> : <Globe size={10}/>} {slot.location_type}
                           </span>
-                        ) : (
-                          <span className="bg-gray-50 text-gray-500 border border-gray-200 px-3 py-1.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
-                            ว่าง
-                          </span>
-                        )}
-                     </div>
-                     <div>
-                        <span className={`px-3 py-1 rounded-[1rem] text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1 ${
-                          slot.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 
-                          slot.location_type === 'Onsite' ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'
-                        }`}>
-                          {slot.location_type === 'นอกสถานที่' ? <MapPin size={10}/> : <Globe size={10}/>} {slot.location_type}
-                        </span>
-                     </div>
-                  </td>
-                </tr>
-              ))}
+                       </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

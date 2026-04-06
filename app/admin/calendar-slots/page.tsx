@@ -5,7 +5,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import listPlugin from '@fullcalendar/list'; // ✨ กลับมาใช้ List Plugin แล้ว!
+import listPlugin from '@fullcalendar/list';
 import { 
   ArrowLeft, Calendar, User, Clock, LayoutList, Globe, Search, LogOut 
 } from 'lucide-react'; 
@@ -34,7 +34,6 @@ export default function CalendarManagePage() {
   const [endTime, setEndTime] = useState('');
   const [locationType, setLocationType] = useState('Online');
   
-  // State เช็คหน้าจอมือถือ
   const [isMobile, setIsMobile] = useState(false);
 
   const timeOptions = Array.from({ length: 15 }, (_, i) => {
@@ -81,7 +80,8 @@ export default function CalendarManagePage() {
 
   const fetchSlots = async () => {
     try {
-      let query = supabase.from('slots').select('*, tutors(name), teaching_logs(id)');
+      // ✨ ดึงข้อมูลการจอง (bookings) พ่วงมาด้วยเพื่อดูว่าเด็กยืนยันหรือยัง
+      let query = supabase.from('slots').select('*, tutors(name), teaching_logs(id), bookings(status, student_verified)');
       
       if (!isAdmin && currentTutorId) query = query.eq('tutor_id', currentTutorId);
       else if (isAdmin && viewTutor !== 'all') query = query.eq('tutor_id', viewTutor);
@@ -91,14 +91,29 @@ export default function CalendarManagePage() {
 
       if (data) {
         const calendarEvents = data.map((slot: any) => {
-          const isCompleted = slot.teaching_logs && slot.teaching_logs.length > 0;
-          let bgColor = '#dcfce7'; let borderColor = '#22c55e'; let textColor = '#166534';
+          const hasLog = slot.teaching_logs && slot.teaching_logs.length > 0;
+          const booking = slot.bookings && slot.bookings.length > 0 ? slot.bookings[0] : null;
+          
+          // เช็คว่าเด็กกดยืนยันไปแล้วหรือยัง
+          const isVerified = booking?.student_verified === true || booking?.status === 'VERIFIED' || booking?.status === 'COMPLETED';
 
-          if (isCompleted) {
+          let bgColor = '#dcfce7'; let borderColor = '#22c55e'; let textColor = '#166534';
+          let statusText = '';
+
+          // ✨ Logic การเปลี่ยนสีปฏิทิน 3 สเตป!
+          if (hasLog && isVerified) {
+            // สเตป 3: เด็กยืนยันแล้ว -> สีเทา (สมบูรณ์)
             bgColor = '#e2e8f0'; borderColor = '#94a3b8'; textColor = '#475569';
+            statusText = ' ✅ สมบูรณ์';
+          } else if (hasLog && !isVerified) {
+            // สเตป 2: ครูส่งงานแล้ว รอเด็กยืนยัน -> สีเหลือง/ส้ม (รอดำเนินการ)
+            bgColor = '#fef08a'; borderColor = '#eab308'; textColor = '#854d0e'; 
+            statusText = ' ⏳ รอนักเรียน';
           } else if (slot.is_booked) {
+            // สเตป 1: จองแล้ว ยังไม่ถึงเวลาเรียน -> สีแดง
             bgColor = '#fee2e2'; borderColor = '#ef4444'; textColor = '#991b1b';
           } else {
+            // สเตป 0: ยังไม่มีคนจอง
             if (slot.location_type === 'Onsite') {
               bgColor = '#f3e8ff'; borderColor = '#a855f7'; textColor = '#6b21a8';
             } else if (slot.location_type === 'นอกสถานที่') {
@@ -109,7 +124,7 @@ export default function CalendarManagePage() {
           const startObj = new Date(slot.start_time);
           return {
             id: slot.id,
-            title: `${slot.tutors?.name || 'Tutor'} [${slot.location_type || 'Online'}] ${isCompleted ? '✅' : ''}`,
+            title: `${slot.tutors?.name || 'Tutor'} [${slot.location_type || 'Online'}]${statusText}`,
             start: startObj.toISOString(),
             end: new Date(startObj.getTime() + 60 * 60 * 1000).toISOString(),
             backgroundColor: bgColor,
@@ -117,7 +132,8 @@ export default function CalendarManagePage() {
             textColor: textColor,
             extendedProps: { 
               isBooked: slot.is_booked, 
-              isCompleted: isCompleted,
+              hasLog: hasLog,
+              isVerified: isVerified,
               tutorId: slot.tutor_id,
               tutorName: slot.tutors?.name 
             }
@@ -129,10 +145,12 @@ export default function CalendarManagePage() {
   };
 
   const handleEventClick = async (info: any) => {
-    const { isBooked, isCompleted, tutorId, tutorName } = info.event.extendedProps;
+    const { isBooked, hasLog, isVerified, tutorId, tutorName } = info.event.extendedProps;
     const slotId = info.event.id;
 
-    if (isCompleted) return alert("คิวนี้บันทึกการสอนไปแล้วครับ");
+    // ✨ ดักจับสเตทต่างๆ เพื่อแจ้งเตือนติวเตอร์
+    if (hasLog && isVerified) return alert("คิวนี้เรียนจบและนักเรียนยืนยันสมบูรณ์แล้วครับ ✅");
+    if (hasLog && !isVerified) return alert("คุณบันทึกการสอนไปแล้ว ⏳ ตอนนี้กำลังรอนักเรียนกดยืนยันในระบบครับ");
     if (!isBooked) return alert("คิวนี้ยังไม่มีการจองครับ");
 
     const studentName = window.prompt(`👤 บันทึกการสอนของ ${tutorName}\nกรุณาระบุชื่อนักเรียน:`, "นักเรียน");
@@ -141,7 +159,8 @@ export default function CalendarManagePage() {
     const note = window.prompt("📝 บันทึกรายละเอียดการเรียนสอน:", "");
     if (note === null) return;
 
-    if (window.confirm(`ยืนยันการบันทึกรายงานใช่ไหมครับ?`)) {
+    if (window.confirm(`ยืนยันการส่งรายงานใช่ไหมครับ?\n(เมื่อส่งแล้ว ระบบจะรอให้นักเรียนกดยืนยันอีกครั้ง)`)) {
+      // ติวเตอร์บันทึกเฉพาะลง teaching_logs (ไม่แตะตารางของนักเรียน ทำให้ไม่ติดบัค RLS)
       const { error } = await supabase.from('teaching_logs').insert({
         tutor_id: tutorId, 
         slot_id: slotId,
@@ -152,8 +171,13 @@ export default function CalendarManagePage() {
         notes: note
       });
 
-      if (!error) { alert("✅ บันทึกสำเร็จ!"); fetchSlots(); } 
-      else { alert("❌ Error: " + error.message); }
+      if (!error) { 
+        alert("✅ ส่งรายงานให้ระบบรอนักเรียนยืนยันแล้ว!"); 
+        fetchSlots(); 
+      } 
+      else { 
+        alert("❌ Error: " + error.message); 
+      }
     }
   };
 
@@ -277,21 +301,22 @@ export default function CalendarManagePage() {
         </div>
       </div>
 
-      {/* --- Legend (คำอธิบายสี) --- */}
+      {/* --- Legend (คำอธิบายสีใหม่) --- */}
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-[9px] font-black uppercase tracking-[0.2em] mb-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></div> Online</div>
           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#a855f7]"></div> Onsite</div>
           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#f97316]"></div> นอกสถานที่</div>
           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-pulse"></div> จองแล้ว</div>
-          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#94a3b8]"></div> สอนแล้ว</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#eab308]"></div> รอนักเรียน</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#94a3b8]"></div> จบสมบูรณ์</div>
       </div>
 
       {/* --- ปฏิทิน --- */}
       <div className="bg-white p-2 md:p-6 rounded-[2rem] md:rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden fc-premium-theme">
         <FullCalendar
           ref={calendarRef}
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]} // ✨ รองรับ List View เรียบร้อย
-          initialView={isMobile ? "listWeek" : "timeGridWeek"} // ✨ ถ้าจอมือถือให้เปิดโหมด List (อ่านง่ายมาก)
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+          initialView={isMobile ? "listWeek" : "timeGridWeek"}
           headerToolbar={{
             left: isMobile ? 'prev,next' : 'prev,next today',
             center: 'title',
@@ -314,7 +339,7 @@ export default function CalendarManagePage() {
         />
       </div>
 
-      {/* ✨ CSS ตกแต่งปฏิทินให้ดูพรีเมียมและเหมาะกับมือถือ */}
+      {/* CSS */}
       <style jsx global>{`
         .fc-premium-theme .fc { 
           --fc-border-color: #f1f5f9; 
@@ -333,13 +358,9 @@ export default function CalendarManagePage() {
         .fc-premium-theme .fc-button-active { color: white !important; box-shadow: 0 4px 6px -1px rgb(37 99 235 / 0.3); }
         .fc-premium-theme .fc-v-event { border-radius: 8px !important; border: none !important; box-shadow: inset 2px 0 0 0 rgba(0,0,0,0.2); padding: 2px; }
         .fc-premium-theme .fc-event-title { font-weight: 800; font-size: 0.75rem; letter-spacing: -0.02em; }
-        
-        /* 🎨 สไตล์สำหรับ List View (มือถือ) ให้ดูสวยงาม */
         .fc-premium-theme .fc-list-event-title { font-weight: 800; color: #1e293b; padding: 12px 8px !important; }
         .fc-premium-theme .fc-list-event-time { font-weight: 900; color: #64748b; padding: 12px 8px !important; }
         .fc-premium-theme .fc-list-day-cushion { background-color: #f8fafc !important; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #3b82f6; padding: 10px 14px !important; }
-        
-        /* ซ่อนปุ่มที่ไม่จำเป็นในมือถือเพื่อประหยัดพื้นที่ */
         @media (max-width: 768px) {
           .fc-toolbar { flex-wrap: wrap; gap: 10px; justify-content: center !important; }
         }

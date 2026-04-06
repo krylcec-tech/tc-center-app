@@ -10,6 +10,7 @@ import Link from 'next/link';
 export default function MySchedulePage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +23,7 @@ export default function MySchedulePage() {
 
   const fetchMyBookings = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -29,9 +31,12 @@ export default function MySchedulePage() {
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          id, status, student_verified, tutor_finished_at,
-          slots!inner ( id, start_time, location_type ),
-          tutors!inner ( name, image_url, meeting_url )
+          id, status, is_completed, meeting_url, 
+          slots!inner ( 
+            id, start_time, location_type,
+            teaching_logs ( id, created_at )
+          ),
+          tutors!inner ( name, image_url ) 
         `)
         .eq('student_id', user.id)
         .order('id', { ascending: false });
@@ -40,45 +45,65 @@ export default function MySchedulePage() {
       setBookings(data || []);
     } catch (err: any) {
       console.error("🚨 Fetch Error:", err.message);
+      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerifyLesson = async (bookingId: string) => {
-    if (!confirm('ยืนยันว่าคุณได้รับชมการสอนและเรียนจบชั่วโมงนี้แล้วใช่ไหม?\n(เพื่อเป็นหลักฐานความถูกต้องของระบบ)')) return;
+    if (!confirm('ยืนยันว่าคุณได้รับชมการสอนและเรียนจบชั่วโมงนี้แล้วใช่ไหม?\n(เมื่อยืนยันแล้ว คลาสจะย้ายไปที่ประวัติการเรียน)')) return;
     
     setVerifyingId(bookingId);
     try {
       const { error } = await supabase
         .from('bookings')
         .update({ 
-          student_verified: true,
-          status: 'VERIFIED' // เปลี่ยนสถานะเป็นตรวจสอบแล้ว
+          status: 'VERIFIED',
+          is_completed: true 
         })
         .eq('id', bookingId);
 
       if (!error) {
         alert('ขอบคุณที่ยืนยันการเข้าเรียนครับ! ✨');
         fetchMyBookings();
+      } else {
+        throw error;
       }
-    } catch (err) {
-      alert("เกิดข้อผิดพลาดในการยืนยัน");
+    } catch (err: any) {
+      alert("เกิดข้อผิดพลาดในการยืนยัน: " + err.message);
     } finally {
       setVerifyingId(null);
     }
   };
 
+  const isStudentVerified = (item: any) => {
+    const status = String(item.status || '').trim().toUpperCase();
+    return status === 'VERIFIED' || item.is_completed === true;
+  };
+
+  const isTutorFinished = (item: any) => {
+    const hasLog = item.slots?.teaching_logs && item.slots.teaching_logs.length > 0;
+    const classEndTime = new Date(item.slots.start_time).getTime() + (60 * 60 * 1000);
+    const isTimePassed = new Date().getTime() > classEndTime;
+    return hasLog || isTimePassed;
+  };
+
+  const upcomingCount = useMemo(() => bookings.filter(b => !isStudentVerified(b)).length, [bookings]);
+  const pastCount = useMemo(() => bookings.filter(b => isStudentVerified(b)).length, [bookings]);
+
   const filteredBookings = useMemo(() => {
     return bookings.filter(item => {
-      const startTime = new Date(item.slots.start_time);
-      const isPast = startTime < new Date();
-      const matchesSearch = item.tutors?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!item.slots || !item.tutors) return false;
+
+      const isFinished = isStudentVerified(item);
+      const tutorName = String(item.tutors?.name || '').toLowerCase();
+      const matchesSearch = tutorName.includes(searchTerm.toLowerCase());
       
       if (activeStatusTab === 'upcoming') {
-        return !isPast && matchesSearch;
+        return !isFinished && matchesSearch;
       } else {
-        return isPast && matchesSearch;
+        return isFinished && matchesSearch;
       }
     });
   }, [bookings, searchTerm, activeStatusTab]);
@@ -99,7 +124,28 @@ export default function MySchedulePage() {
     setCurrentWeekStart(next);
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
+  // ✨ ฟังก์ชันสำหรับเลือกเดือน/ปี จากปฏิทิน
+  const handleMonthYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value) {
+      const newDate = new Date(e.target.value);
+      setCurrentWeekStart(newDate);
+    }
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
+
+  if (errorMsg) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6">
+        <div className="bg-red-50 border-2 border-red-200 p-8 rounded-3xl max-w-md text-center">
+          <AlertCircle className="text-red-500 mx-auto mb-4" size={48} />
+          <h2 className="text-xl font-black text-red-700 mb-2">เกิดข้อผิดพลาดในการดึงข้อมูล</h2>
+          <p className="text-sm font-bold text-red-500 mb-6">{errorMsg}</p>
+          <button onClick={fetchMyBookings} className="bg-red-600 text-white px-6 py-3 rounded-xl font-black hover:bg-red-700 transition-all">ลองใหม่อีกครั้ง</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans text-gray-900">
@@ -132,29 +178,32 @@ export default function MySchedulePage() {
             onClick={() => setActiveStatusTab('upcoming')}
             className={`px-6 py-2.5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${activeStatusTab === 'upcoming' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
           >
-            รอเรียน ({bookings.filter(b => new Date(b.slots.start_time) >= new Date()).length})
+            รอเรียน ({upcomingCount})
           </button>
           <button 
             onClick={() => setActiveStatusTab('past')}
             className={`px-6 py-2.5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${activeStatusTab === 'past' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
           >
-            เรียนจบแล้ว ({bookings.filter(b => new Date(b.slots.start_time) < new Date()).length})
+            เรียนจบแล้ว ({pastCount})
           </button>
         </div>
 
         <section className="space-y-4 mb-16">
           {filteredBookings.length === 0 ? (
             <div className="bg-white p-12 rounded-[2.5rem] text-center border border-gray-50 shadow-sm">
-               <p className="text-gray-400 font-bold text-sm">ไม่พบรายการที่ค้นหา</p>
+               <p className="text-gray-400 font-bold text-sm">ไม่มีคลาสในหมวดหมู่นี้</p>
             </div>
           ) : (
             filteredBookings.map((item) => {
               const startTime = new Date(item.slots.start_time);
-              const isPast = startTime < new Date();
-              const canJoin = !isPast || (new Date().getTime() - startTime.getTime() < 3600000);
+              const verified = isStudentVerified(item); 
+              const tutorDone = isTutorFinished(item);  
+              const canJoin = !verified; 
+              
+              const hasTeachingLog = item.slots.teaching_logs && item.slots.teaching_logs.length > 0;
 
               return (
-                <div key={item.id} className={`p-5 md:p-6 rounded-[2.2rem] shadow-sm border transition-all flex flex-col gap-4 ${isPast ? 'bg-green-50/20 border-green-50' : 'bg-white border-gray-50'}`}>
+                <div key={item.id} className={`p-5 md:p-6 rounded-[2.2rem] shadow-sm border transition-all flex flex-col gap-4 ${verified ? 'bg-green-50/20 border-green-50' : 'bg-white border-gray-50'}`}>
                   <div className="flex flex-col md:flex-row justify-between items-center gap-4 w-full">
                     <div className="flex items-center gap-4 w-full">
                       <img src={item.tutors?.image_url || '/placeholder-avatar.png'} className="w-14 h-14 object-cover rounded-2xl shadow-sm border-2 border-white" alt="tutor" />
@@ -170,16 +219,16 @@ export default function MySchedulePage() {
                     </div>
 
                     <div className="w-full md:w-auto flex flex-col gap-2 min-w-[160px]">
-                      {!isPast && item.tutors?.meeting_url && (
+                      {!verified && item.meeting_url && (
                         <a 
-                          href={item.tutors.meeting_url} 
+                          href={item.meeting_url} 
                           target="_blank" 
                           className={`flex-1 md:flex-none py-3 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 ${canJoin ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                         >
                             <Video size={14}/> เข้าห้องเรียนออนไลน์
                         </a>
                       )}
-                      {!isPast && !item.tutors?.meeting_url && (
+                      {!verified && !item.meeting_url && (
                         <div className="text-[9px] font-bold text-gray-400 text-center flex items-center justify-center gap-1 bg-gray-50 py-2 rounded-xl">
                           <AlertCircle size={12}/> รอลิงก์จากครู
                         </div>
@@ -187,16 +236,15 @@ export default function MySchedulePage() {
                     </div>
                   </div>
 
-                  {/* ✨ ระบบยืนยันการเรียน & Auto-Verify Notice */}
-                  {item.status === 'COMPLETED' && !item.student_verified && (
-                    <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl">
+                  {!verified && tutorDone && (
+                    <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                         <div className="flex items-center gap-2 text-orange-600">
                           <Clock size={16} className="animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-wider">รอการยืนยันเข้าเรียน</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">รอการยืนยันจากคุณ</span>
                         </div>
                         <span className="text-[9px] bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold">
-                          ระบบจะยืนยันอัตโนมัติ 24 ชม. หลังครูสอนเสร็จ
+                          เพื่อความถูกต้องของระบบการเรียน
                         </span>
                       </div>
                       
@@ -206,20 +254,20 @@ export default function MySchedulePage() {
                         className="w-full bg-gray-900 text-white py-3.5 rounded-xl font-black text-xs hover:bg-blue-600 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg"
                       >
                         {verifyingId === item.id ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle2 size={16}/>}
-                        ยืนยันว่าได้เข้าเรียนจริง (เสร็จสมบูรณ์)
+                        ยืนยันว่าได้เข้าเรียนจริง (กดยืนยันเพื่อจบงาน)
                       </button>
-                      
-                      {item.tutor_finished_at && (
+
+                      {hasTeachingLog && (
                         <p className="text-[8px] text-gray-400 text-center mt-3 font-medium uppercase tracking-tighter">
-                          ติวเตอร์บันทึกจบงานเมื่อ: {new Date(item.tutor_finished_at).toLocaleString('th-TH')}
+                          ติวเตอร์ส่งรายงานเมื่อ: {new Date(item.slots.teaching_logs[0].created_at).toLocaleString('th-TH')}
                         </p>
                       )}
                     </div>
                   )}
 
-                  {item.student_verified && (
-                    <div className="flex items-center justify-center gap-2 text-green-600 font-black text-[10px] bg-green-50 py-3 rounded-xl border border-green-100">
-                      <CheckCircle2 size={14}/> ตรวจสอบความถูกต้องเรียบร้อยแล้ว
+                  {verified && (
+                    <div className="flex items-center justify-center gap-2 text-green-600 font-black text-[10px] bg-green-50 py-3 rounded-xl border border-green-100 mt-2">
+                      <CheckCircle2 size={14}/> ยืนยันการเข้าเรียนสมบูรณ์แล้ว
                     </div>
                   )}
                 </div>
@@ -228,32 +276,47 @@ export default function MySchedulePage() {
           )}
         </section>
 
-        {/* --- 📅 ตารางรายสัปดาห์ (คงเดิม) --- */}
-        <section className="bg-white rounded-[3rem] p-6 md:p-10 border border-gray-50 shadow-xl overflow-hidden">
-          <div className="flex justify-between items-center mb-8">
+        {/* ✨ ปฏิทินรายสัปดาห์ (เพิ่มตัวเลือก เดือน/ปี) */}
+        <section className="bg-white rounded-[3.5rem] p-6 md:p-10 border border-gray-50 shadow-xl overflow-hidden text-gray-900">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 px-2 gap-4">
              <div className="flex items-center gap-3">
-                <LayoutGrid className="text-blue-600" size={20}/>
-                <h2 className="text-xl font-black tracking-tight">ภาพรวมรายสัปดาห์</h2>
+                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner"><LayoutGrid size={20}/></div>
+                <h2 className="text-xl font-black tracking-tight text-gray-900">ภาพรวมการเรียน</h2>
              </div>
-             <div className="flex gap-1">
-                <button onClick={() => changeWeek(-1)} className="p-2 hover:bg-gray-50 rounded-xl transition-all"><ChevronLeft size={20}/></button>
-                <button onClick={() => changeWeek(1)} className="p-2 hover:bg-gray-50 rounded-xl transition-all"><ChevronRight size={20}/></button>
+             
+             <div className="flex items-center gap-4 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                <div className="flex items-center gap-2 px-3 border-r border-gray-200">
+                  <Calendar size={14} className="text-gray-400"/>
+                  <input 
+                    type="month" 
+                    className="bg-transparent text-xs font-black outline-none text-gray-600 cursor-pointer"
+                    value={currentWeekStart.toISOString().slice(0, 7)}
+                    onChange={handleMonthYearChange}
+                  />
+                </div>
+                <div className="flex gap-1 pr-1">
+                  <button onClick={() => changeWeek(-1)} className="p-2 bg-white shadow-sm hover:bg-gray-100 rounded-xl transition-all text-gray-600"><ChevronLeft size={16}/></button>
+                  <button onClick={() => changeWeek(1)} className="p-2 bg-white shadow-sm hover:bg-gray-100 rounded-xl transition-all text-gray-600"><ChevronRight size={16}/></button>
+                </div>
              </div>
           </div>
+
           <div className="grid grid-cols-7 gap-1 md:gap-4 border-t border-gray-50 pt-8">
             {weekDays.map((day, idx) => {
               const isToday = day.toDateString() === new Date().toDateString();
               const dayBookings = bookings.filter(b => new Date(b.slots.start_time).toDateString() === day.toDateString());
               return (
                 <div key={idx} className="flex flex-col items-center">
-                  <p className="text-[8px] font-black text-gray-300 uppercase mb-3">{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-                  <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-xl mb-4 font-black text-[10px] md:text-xs ${isToday ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-gray-50 text-gray-400'}`}>
+                  <p className="text-[9px] font-black text-gray-300 uppercase mb-3 tracking-widest">{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                  <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-xl mb-4 font-black text-[10px] md:text-xs transition-all ${isToday ? 'bg-blue-600 text-white shadow-xl shadow-blue-200' : 'bg-gray-50 text-gray-400'}`}>
                     {day.getDate()}
                   </div>
-                  <div className="space-y-1 w-full min-h-[80px]">
+                  <div className="space-y-1 w-full min-h-[100px]">
                     {dayBookings.map((b) => (
-                      <div key={b.id} className={`w-full p-1.5 rounded-lg text-center border text-[7px] font-black uppercase ${new Date(b.slots.start_time) < new Date() ? 'bg-green-50 border-green-100 text-green-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
-                         {b.tutors?.name}
+                      <div key={b.id} className="group relative flex justify-center">
+                        <div className={`w-full p-1.5 rounded-lg text-center border text-[7px] font-black uppercase transition-all ${isStudentVerified(b) ? 'bg-green-50 border-green-100 text-green-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
+                           {b.tutors?.name}
+                        </div>
                       </div>
                     ))}
                   </div>
