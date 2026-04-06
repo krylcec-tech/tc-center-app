@@ -21,24 +21,30 @@ export default function MyBooksPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 💡 เปลี่ยนจาก user_id เป็น student_id ให้ตรงกับฐานข้อมูลแล้วครับ
+      // 💡 ดึงออเดอร์ที่ SUCCESS ของนักเรียนคนนี้มาทั้งหมดก่อน
+      // (ถอดการกรอง courses.type ออก เพื่อป้องกันบัคของ Supabase)
       const { data, error } = await supabase
         .from('course_orders') 
         .select(`
           id, status,
-          courses!inner (
+          courses (
             id, title, description, image_url, type, document_url, category
           )
         `)
-        .eq('student_id', user.id) // ✨ แก้ตรงนี้ครับ!
-        .eq('status', 'COMPLETED') // ถ้าแอดมินอนุมัติแล้วเปลี่ยนเป็นสถานะอื่น (เช่น APPROVED) อย่าลืมแก้ตรงนี้นะครับ
-        .eq('courses.type', 'book')
+        .eq('student_id', user.id) 
+        .eq('status', 'SUCCESS') 
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // จัดฟอร์แมตข้อมูลให้ใช้งานง่ายขึ้น และดึงรูปแรกออกมาโชว์
-      const formattedBooks = (data || []).map((order: any) => ({
+      // ✨ ให้ JavaScript คัดแยกเฉพาะที่เป็น 'book' แทน ชัวร์ 100% 
+      // (ใช้ toLowerCase() เผื่อบางทีฐานข้อมูลเซฟเป็นพิมพ์ใหญ่)
+      const bookOrders = (data || []).filter((order: any) => 
+        order.courses && String(order.courses.type).toLowerCase() === 'book'
+      );
+
+      // จัดฟอร์แมตข้อมูลให้ใช้งานง่ายขึ้น
+      const formattedBooks = bookOrders.map((order: any) => ({
         order_id: order.id,
         ...order.courses,
         image_url: Array.isArray(order.courses.image_url) 
