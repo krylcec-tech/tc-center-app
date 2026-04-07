@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "TC CENTER | The Convergence of Academic Excellence",
   description: "ยกระดับการเรียนรู้ สอบติดคณะในฝัน กับทีมติวเตอร์มืออาชีพจากมหาวิทยาลัยชั้นนำ",
   icons: {
-    icon: "/favicon.ico", // อย่าลืมเอารูปโลโก้ไปวางในโฟลเดอร์ public และเปลี่ยนชื่อเป็น favicon.ico นะครับ
+    icon: "/icon.png", // อย่าลืมเอารูปโลโก้ไปวางในโฟลเดอร์ public และเปลี่ยนชื่อเป็น favicon.ico นะครับ
   },
 };
 
