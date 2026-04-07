@@ -1,12 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
+// แก้ไขไฟล์สำหรับสร้าง Supabase Client (SSR Edition)
+import { createBrowserClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,   // สำคัญมาก: สั่งให้จำ Session ไว้ใน Browser
-    autoRefreshToken: true, // ให้รีเฟรช Token อัตโนมัติเมื่อหมดอายุ
-    detectSessionInUrl: true // ช่วยในการจัดการพวก Magic Link หรือการยืนยันอีเมล
+export const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: true, // ✅ บังคับให้จำการล็อกอินไว้ในเครื่อง
+      autoRefreshToken: true, // ✅ ต่ออายุตั๋วล็อกอินอัตโนมัติ ไม่ต้องกรอกรหัสใหม่
+      detectSessionInUrl: true, // ✅ ช่วยให้ระบบจำได้เวลาคลิกลิงก์ยืนยันจากอีเมล
+    }
   }
-})
+)
