@@ -7,7 +7,7 @@ import {
   LogOut, Wallet, Calendar, Clock, BookOpen, 
   History, Settings, Users, Gift, Share2, Copy, 
   Check, Loader2, ArrowRight, ShoppingCart,
-  LayoutDashboard, Globe, MapPin, User 
+  LayoutDashboard, Globe, MapPin, User, Home // ✨ เพิ่ม Home icon
 } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -94,7 +94,6 @@ export default function StudentDashboard() {
           <Link href="/student/booking-flow" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Calendar size={20}/> จองคิวเรียน</Link>
           <Link href="/student/my-schedule" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Clock size={20}/> ตารางเรียน</Link>
           
-          {/* ✨ เพิ่มเมนูคลังหนังสือตรงนี้ */}
           <Link href="/student/my-books" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><BookOpen size={20}/> คลังหนังสือและชีท</Link>
           
           <Link href="/student/tutors" className="flex items-center gap-3 px-5 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-[1.5rem] font-bold transition-colors"><Users size={20}/> ทำเนียบติวเตอร์</Link>
@@ -148,22 +147,33 @@ export default function StudentDashboard() {
             <p className="text-gray-500 font-bold text-sm text-left">ยินดีต้อนรับกลับสู่ห้องเรียนของคุณ</p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={handleLogout} 
-              className="lg:hidden p-3 bg-red-50 text-red-500 rounded-2xl active:scale-95 transition-all shadow-sm border border-red-100"
-            >
-              <LogOut size={20}/>
-            </button>
+          {/* ✨ เพิ่มปุ่มกลับหน้าหลักขวาบน */}
+          <div className="flex flex-col items-end gap-3">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={handleLogout} 
+                className="lg:hidden p-3 bg-red-50 text-red-500 rounded-2xl active:scale-95 transition-all shadow-sm border border-red-100"
+              >
+                <LogOut size={20}/>
+              </button>
 
-            <Link href="/student/profile" className="shrink-0 transition-transform hover:scale-105 active:scale-95">
-              {studentData?.avatar_url ? (
-                <img src={studentData.avatar_url} alt="Profile" className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-4 border-white" />
-              ) : (
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black text-2xl shadow-lg border-4 border-white">
-                  {wallet?.student_name?.charAt(0) || 'TC'}
-                </div>
-              )}
+              <Link href="/student/profile" className="shrink-0 transition-transform hover:scale-105 active:scale-95">
+                {studentData?.avatar_url ? (
+                  <img src={studentData.avatar_url} alt="Profile" className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-4 border-white" />
+                ) : (
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-black text-2xl shadow-lg border-4 border-white">
+                    {wallet?.student_name?.charAt(0) || 'TC'}
+                  </div>
+                )}
+              </Link>
+            </div>
+            
+            {/* ✨ ปุ่มกลับหน้าหลัก (Desktop & Mobile) */}
+            <Link 
+              href="/" 
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100 active:scale-95"
+            >
+              <Home size={14}/> หน้าหลักเว็บไซต์
             </Link>
           </div>
         </header>
@@ -176,7 +186,6 @@ export default function StudentDashboard() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Tier 1 */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="bg-blue-600 text-white p-5 text-center font-black text-lg">ประถม - ม.ต้น</div>
               <div className="p-6 flex-1 flex flex-col justify-between text-left">
@@ -198,7 +207,6 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            {/* Tier 2 */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="bg-[#9333ea] text-white p-5 text-center font-black text-lg">สอบเข้า ม.4</div>
               <div className="p-6 flex-1 flex flex-col justify-between text-left">
@@ -220,7 +228,6 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            {/* Tier 3 */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="bg-[#ea580c] text-white p-5 text-center font-black text-lg">ม.ปลาย / มหาลัย</div>
               <div className="p-6 flex-1 flex flex-col justify-between text-left">
@@ -247,9 +254,7 @@ export default function StudentDashboard() {
         {/* Shortcuts */}
         <section className="mb-12">
           <h2 className="text-xl font-black mb-6 text-left">เมนูทางลัด</h2>
-          {/* ✨ ปรับ Grid ให้รองรับ 5 กล่องได้สวยงาม */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            
             <Link href="/student/courses" className="bg-gray-900 text-white p-5 md:p-6 rounded-[2rem] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group flex flex-col justify-between h-36 border border-gray-800 text-left">
               <ShoppingCart size={32} className="text-blue-400 group-hover:scale-110 transition-transform"/>
               <div className="text-left">
@@ -274,7 +279,6 @@ export default function StudentDashboard() {
               </div>
             </Link>
 
-            {/* ✨ กล่องเมนูใหม่: คลังหนังสือและชีท */}
             <Link href="/student/my-books" className="bg-white p-5 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex flex-col justify-between h-36 text-left">
               <BookOpen size={32} className="text-orange-500 group-hover:scale-110 transition-transform"/>
               <div className="text-left">
@@ -290,7 +294,6 @@ export default function StudentDashboard() {
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 text-left">Tutors Catalog</p>
               </div>
             </Link>
-
           </div>
         </section>
 
@@ -314,7 +317,6 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Affiliate Shop */}
         <Link href="/student/affiliate/shop" className="block bg-gradient-to-r from-orange-500 to-red-500 rounded-[3rem] p-8 md:p-10 text-white shadow-xl shadow-orange-200/50 hover:shadow-2xl transition-all group relative overflow-hidden text-left">
           <div className="absolute right-0 bottom-0 opacity-20 group-hover:scale-110 transition-transform duration-500 text-left"><Gift size={150} className="-mr-10 -mb-10"/></div>
           <div className="flex items-center justify-between relative z-10 text-left">

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   LayoutDashboard, Calendar, LogOut, Loader2, UserCircle, 
   ChevronRight, CalendarDays, History, CheckCircle2, Gift, 
-  Menu, X, Clock, MapPin, Settings, AlertCircle
+  Menu, X, Clock, MapPin, Settings, AlertCircle, Home // ✨ เพิ่ม Home icon
 } from 'lucide-react';
 
 export default function TutorDashboard() {
@@ -84,7 +84,6 @@ export default function TutorDashboard() {
       let completedMonthCount = 0;
       let todayList: any[] = [];
 
-      // ✨ เติม : any ตรงตัว b เพื่อปลดล็อก TypeScript Error ครับ
       (allBookings || []).forEach((b: any) => {
         const slotDate = new Date(b.slots.start_time);
         const slotBkkDate = new Date(slotDate.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
@@ -222,9 +221,21 @@ export default function TutorDashboard() {
 
       {/* --- Main Content --- */}
       <main className="flex-1 p-6 md:p-10 lg:p-14 overflow-y-auto w-full max-w-7xl mx-auto">
-        <header className="mb-10">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none text-gray-900">ยินดีต้อนรับครับ!</h1>
-          <p className="text-gray-500 font-bold mt-3">วันนี้คุณมีภารกิจสอนทั้งหมด <span className="text-blue-600">{stats.todaySlots} คิว</span></p>
+        <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none text-gray-900">ยินดีต้อนรับครับ!</h1>
+            <p className="text-gray-500 font-bold mt-3">วันนี้คุณมีภารกิจสอนทั้งหมด <span className="text-blue-600">{stats.todaySlots} คิว</span></p>
+          </div>
+
+          {/* ✨ เพิ่มปุ่มกลับหน้าหลักขวาบนสำหรับ Tutor */}
+          <div className="flex flex-col items-end gap-3">
+             <Link 
+              href="/" 
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100 active:scale-95"
+            >
+              <Home size={14}/> หน้าหลักเว็บไซต์
+            </Link>
+          </div>
         </header>
 
         {/* --- Stats Cards --- */}
