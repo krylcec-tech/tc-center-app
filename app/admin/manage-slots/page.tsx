@@ -62,7 +62,6 @@ export default function ManageSlotsTable() {
         if (!checkIsAdmin) setFilterTutor(currentUser?.id || tutorsData[0].id);
       }
 
-      // ✨ อัปเดต Query: ดึง teaching_logs และ bookings เข้ามาเช็คสถานะด้วย
       let query = supabase.from('slots').select('*, tutors(name), teaching_logs(id), bookings(status, student_verified, is_completed)').order('start_time', { ascending: false });
       
       if (!checkIsAdmin && currentUser) query = query.eq('tutor_id', currentUser.id);
@@ -72,7 +71,47 @@ export default function ManageSlotsTable() {
       if (filterEndDate) query = query.lte('start_time', `${filterEndDate}T23:59:59`);
 
       const { data: slotsData } = await query;
-      setSlots(slotsData || []);
+      
+      if (slotsData) {
+        // 1. หาเวลาที่ถูกจองไปแล้ว
+        const bookedKeys = new Set(
+          slotsData.filter((s: any) => s.is_booked).map((s: any) => `${s.tutor_id}_${s.start_time}`)
+        );
+
+        // 2. กรองซ่อนคิวที่ว่าง แต่เวลาชนกับคิวที่จองแล้ว
+        const validSlots = slotsData.filter((s: any) => {
+          if (s.is_booked) return true;
+          const key = `${s.tutor_id}_${s.start_time}`;
+          if (bookedKeys.has(key)) return false; 
+          return true;
+        });
+
+        // 3. จัดกลุ่มเวลาเดียวกันเข้าด้วยกัน
+        const groupedMap = new Map();
+        validSlots.forEach((slot: any) => {
+          const key = `${slot.tutor_id}_${slot.start_time}`;
+          if (!groupedMap.has(key)) {
+            groupedMap.set(key, {
+              ...slot,
+              ids: [slot.id], 
+              all_locations: [slot.location_type] 
+            });
+          } else {
+            const existing = groupedMap.get(key);
+            existing.ids.push(slot.id);
+            if (!existing.all_locations.includes(slot.location_type)) {
+              existing.all_locations.push(slot.location_type);
+            }
+          }
+        });
+
+        const finalSlots = Array.from(groupedMap.values());
+        finalSlots.sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+
+        setSlots(finalSlots);
+      } else {
+        setSlots([]);
+      }
       
     } catch (error) {
       console.error(error);
@@ -85,7 +124,7 @@ export default function ManageSlotsTable() {
   const handleAddDate = () => {
     if (!tempDate) return;
     if (!dates.includes(tempDate)) setDates([...dates, tempDate]);
-    setTempDate('');
+    setTempDate(''); 
   };
 
   const removeDate = (d: string) => setDates(dates.filter(date => date !== d));
@@ -117,21 +156,28 @@ export default function ManageSlotsTable() {
 
   const toggleSelectAll = () => {
     const availableSlots = slots.filter(s => !s.is_booked); 
-    if (selectedIds.length === availableSlots.length && availableSlots.length > 0) {
+    // ✨ ป้องกัน Error ด้วยการเติม || [s.id]
+    const allAvailableIds = availableSlots.flatMap(s => s.ids || [s.id]);
+    if (selectedIds.length === allAvailableIds.length && allAvailableIds.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(availableSlots.map(s => s.id));
+      setSelectedIds(allAvailableIds);
     }
   };
 
-  const toggleSelectOne = (id: string, isBooked: boolean) => {
+  const toggleSelectOne = (ids: string[], isBooked: boolean) => {
     if (isBooked) return alert("ไม่สามารถลบคิวที่มีนักเรียนจองแล้วได้ครับ");
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+    const allSelected = ids.every(id => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(item => !ids.includes(item)));
+    } else {
+      setSelectedIds(prev => [...prev, ...ids.filter(id => !prev.includes(id))]);
+    }
   };
 
   const deleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`⚠️ ยืนยันลบ ${selectedIds.length} รายการที่เลือก?\n(คิวที่ถูกลบจะไม่สามารถกู้คืนได้)`)) return;
+    if (!confirm(`⚠️ ยืนยันลบคิวที่เลือก?\n(คิวที่ถูกลบจะไม่สามารถกู้คืนได้)`)) return;
     
     const { error } = await supabase.from('slots').delete().in('id', selectedIds);
     if (!error) { 
@@ -197,27 +243,44 @@ export default function ManageSlotsTable() {
             </select>
           </div>
 
-          <div className="md:col-span-12 flex flex-col gap-2 mt-2">
+          <div className="md:col-span-12 flex flex-col gap-2 mt-4">
              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">เลือกวันที่ต้องการสอน (เพิ่มได้หลายวัน)</label>
-             <div className="flex flex-wrap items-center gap-3">
-                <div className="flex bg-gray-50 rounded-2xl p-1 border-2 border-gray-100 focus-within:border-blue-400 transition-colors w-max">
-                  <input type="date" className="p-2 bg-transparent text-sm font-bold outline-none" value={tempDate} onChange={(e) => setTempDate(e.target.value)} />
-                  <button onClick={handleAddDate} className="bg-blue-600 text-white px-4 rounded-xl font-black text-xs hover:bg-blue-700 transition-colors shadow-sm"><PlusCircle size={16}/></button>
+             <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                <div className="flex bg-gray-50 rounded-2xl p-1 border-2 border-gray-100 focus-within:border-blue-400 transition-colors w-full md:w-max">
+                  <input 
+                    type="date" 
+                    className="p-3 bg-transparent text-sm font-bold outline-none flex-1 md:w-40 cursor-pointer" 
+                    value={tempDate} 
+                    onChange={(e) => setTempDate(e.target.value)} 
+                  />
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault(); 
+                      handleAddDate();
+                    }} 
+                    type="button"
+                    className="bg-blue-600 text-white px-5 rounded-xl font-black text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-sm flex items-center justify-center min-w-[60px]"
+                  >
+                    <PlusCircle size={20} className="md:hidden" />
+                    <span className="hidden md:inline">เพิ่ม</span>
+                  </button>
                 </div>
-                <div className="flex flex-wrap gap-2 flex-1">
-                  {dates.length === 0 && <span className="text-xs text-gray-400 font-bold italic py-2">ยังไม่ได้เลือกวันที่...</span>}
+
+                <div className="flex flex-wrap gap-2 flex-1 w-full p-2 min-h-[48px] bg-white rounded-2xl border border-gray-100 shadow-inner">
+                  {dates.length === 0 && <span className="text-xs text-gray-400 font-bold italic p-2 w-full text-center md:text-left">กรุณาเลือกวันที่และกดเพิ่ม...</span>}
                   {dates.map(d => (
-                    <div key={d} className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-sm">
-                      {new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                      <button onClick={() => removeDate(d)} className="text-blue-400 hover:text-red-500 transition-colors"><X size={14}/></button>
+                    <div key={d} className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-sm animate-in fade-in zoom-in duration-200">
+                      {new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <button onClick={() => removeDate(d)} className="text-blue-400 hover:text-red-500 transition-colors p-1"><X size={14}/></button>
                     </div>
                   ))}
                 </div>
              </div>
           </div>
 
-          <div className="md:col-span-12 mt-4">
-             <button onClick={addBulkSlots} className="w-full bg-gray-900 text-white p-4 rounded-2xl font-black hover:bg-blue-600 shadow-xl active:scale-95 transition-all uppercase text-[10px] tracking-[0.2em]">
+          <div className="md:col-span-12 mt-6">
+             <button onClick={addBulkSlots} className="w-full bg-gray-900 text-white p-4 rounded-2xl font-black hover:bg-blue-600 shadow-xl active:scale-95 transition-all uppercase text-[10px] md:text-xs tracking-[0.2em] flex items-center justify-center gap-2">
+              <CheckCircle2 size={18}/>
               {isAdmin ? `บันทึกคิวติวเตอร์ (${dates.length} วัน)` : `เปิดรับคิวสอน (${dates.length} วัน)`}
              </button>
           </div>
@@ -244,9 +307,9 @@ export default function ManageSlotsTable() {
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto">
              <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 w-full sm:w-auto">
                <span className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">ตั้งแต่:</span>
-               <input type="date" className="bg-transparent text-sm font-bold p-2 outline-none" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)}/>
+               <input type="date" className="bg-transparent text-sm font-bold p-2 outline-none w-full" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)}/>
                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ถึง:</span>
-               <input type="date" className="bg-transparent text-sm font-bold p-2 outline-none" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)}/>
+               <input type="date" className="bg-transparent text-sm font-bold p-2 outline-none w-full" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)}/>
                {(filterStartDate || filterEndDate) && (
                  <button onClick={() => {setFilterStartDate(''); setFilterEndDate('');}} className="p-2 text-gray-400 hover:text-red-500"><X size={16}/></button>
                )}
@@ -254,7 +317,7 @@ export default function ManageSlotsTable() {
 
             {selectedIds.length > 0 && (
               <button onClick={deleteSelected} className="bg-red-50 text-red-600 px-6 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto hover:bg-red-600 hover:text-white transition-colors active:scale-95 shrink-0">
-                <Trash size={18} /> ลบ {selectedIds.length} คิว
+                <Trash size={18} /> ลบที่เลือก
               </button>
             )}
           </div>
@@ -266,7 +329,10 @@ export default function ManageSlotsTable() {
             <thead className="bg-gray-50/80 border-b border-gray-100">
               <tr>
                 <th className="p-6 w-16 text-center">
-                  <input type="checkbox" className="w-5 h-5 rounded-md border-gray-300 text-blue-600 cursor-pointer accent-blue-600" checked={slots.length > 0 && selectedIds.length === slots.filter(s=>!s.is_booked).length && slots.filter(s=>!s.is_booked).length > 0} onChange={toggleSelectAll} />
+                  <input type="checkbox" className="w-5 h-5 rounded-md border-gray-300 text-blue-600 cursor-pointer accent-blue-600" 
+                    checked={slots.filter(s=>!s.is_booked).flatMap(s=>s.ids || [s.id]).length > 0 && selectedIds.length === slots.filter(s=>!s.is_booked).flatMap(s=>s.ids || [s.id]).length} 
+                    onChange={toggleSelectAll} 
+                  />
                 </th>
                 <th className="p-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">ติวเตอร์</th>
                 <th className="p-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">วัน / เวลาที่สอน</th>
@@ -280,16 +346,22 @@ export default function ManageSlotsTable() {
                 <tr><td colSpan={4} className="p-20 text-center font-black text-gray-300 text-xl">ไม่มีคิวว่างในช่วงนี้</td></tr>
               ) : slots.map((slot) => {
                 
-                // ✨ ระบบคำนวณสถานะ (2-Step Verification)
+                // ✨ ระบบความปลอดภัย ดักข้อมูลไว้เสมอ
+                const slotIds = slot.ids || [slot.id];
+                const allLocs = slot.all_locations || [slot.location_type];
+                
                 const hasLog = slot.teaching_logs && slot.teaching_logs.length > 0;
                 const booking = slot.bookings && slot.bookings.length > 0 ? slot.bookings[0] : null;
                 const isVerified = booking?.student_verified === true || booking?.status === 'VERIFIED' || booking?.is_completed === true;
 
                 return (
-                  <tr key={slot.id} className={`transition-all duration-200 ${selectedIds.includes(slot.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
+                  <tr key={slot.id} className={`transition-all duration-200 ${slotIds.every((id: string) => selectedIds.includes(id)) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
                     <td className="p-6 text-center">
                       {!slot.is_booked ? (
-                        <input type="checkbox" className="w-5 h-5 rounded-md border-gray-300 text-blue-600 cursor-pointer accent-blue-600" checked={selectedIds.includes(slot.id)} onChange={() => toggleSelectOne(slot.id, slot.is_booked)} />
+                        <input type="checkbox" className="w-5 h-5 rounded-md border-gray-300 text-blue-600 cursor-pointer accent-blue-600" 
+                          checked={slotIds.every((id: string) => selectedIds.includes(id))} 
+                          onChange={() => toggleSelectOne(slotIds, slot.is_booked)} 
+                        />
                       ) : (
                         <div className="w-5 h-5 mx-auto flex items-center justify-center text-gray-300" title="คิวถูกจองแล้ว ไม่สามารถลบได้"><AlertCircle size={16}/></div>
                       )}
@@ -303,7 +375,6 @@ export default function ManageSlotsTable() {
                     </td>
                     <td className="p-6 text-center space-y-2">
                        <div>
-                          {/* ✨ แสดงสถานะตาม Logic ใหม่ */}
                           {hasLog && isVerified ? (
                             <span className="bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1 shadow-sm">
                               <CheckCircle2 size={12}/> สมบูรณ์
@@ -322,13 +393,16 @@ export default function ManageSlotsTable() {
                             </span>
                           )}
                        </div>
-                       <div>
-                          <span className={`px-3 py-1 rounded-[1rem] text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1 ${
-                            slot.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 
-                            slot.location_type === 'Onsite' ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'
-                          }`}>
-                            {slot.location_type === 'นอกสถานที่' ? <MapPin size={10}/> : <Globe size={10}/>} {slot.location_type}
-                          </span>
+                       
+                       <div className="flex flex-wrap gap-1 justify-center mt-1">
+                          {allLocs.map((loc: string) => (
+                            <span key={loc} className={`px-2.5 py-1 rounded-[1rem] text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1 border ${
+                              loc === 'Online' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+                              loc === 'Onsite' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                            }`}>
+                              {loc === 'นอกสถานที่' ? <MapPin size={10}/> : <Globe size={10}/>} {loc}
+                            </span>
+                          ))}
                        </div>
                     </td>
                   </tr>

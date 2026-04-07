@@ -80,7 +80,6 @@ export default function CalendarManagePage() {
 
   const fetchSlots = async () => {
     try {
-      // ✨ ดึงข้อมูลการจอง (bookings) พ่วงมาด้วยเพื่อดูว่าเด็กยืนยันหรือยัง
       let query = supabase.from('slots').select('*, tutors(name), teaching_logs(id), bookings(status, student_verified)');
       
       if (!isAdmin && currentTutorId) query = query.eq('tutor_id', currentTutorId);
@@ -90,30 +89,42 @@ export default function CalendarManagePage() {
       if (error) throw error;
 
       if (data) {
-        const calendarEvents = data.map((slot: any) => {
+        // ✨ LOGIC ใหม่: คัดกรองคิวที่เวลาชนกัน 
+        
+        // 1. หาว่าครูแต่ละคน มี "เวลาไหน" ที่ถูกจองไปแล้วบ้าง (เก็บเป็น Key เช่น "tutorId_2026-04-07T10:00")
+        const bookedTimeKeys = new Set(
+          data.filter((s: any) => s.is_booked).map((s: any) => `${s.tutor_id}_${s.start_time}`)
+        );
+
+        // 2. กรองข้อมูล (ถ้าว่าง แต่เวลาชนกับคิวที่จองแล้ว ให้ซ่อนทิ้งไปเลย)
+        const visibleSlots = data.filter((slot: any) => {
+          if (slot.is_booked) return true; // คิวที่จองแล้ว โชว์เสมอ
+          
+          const timeKey = `${slot.tutor_id}_${slot.start_time}`;
+          if (bookedTimeKeys.has(timeKey)) return false; // 🚫 คิวว่าง แต่เวลาชนกับคิวที่จองแล้ว -> ซ่อน
+          
+          return true; // คิวว่าง และเวลาไม่ชน -> โชว์ปกติ
+        });
+
+        // 3. เอาข้อมูลที่กรองแล้วมาทำเป็น ปฏิทิน Event
+        const calendarEvents = visibleSlots.map((slot: any) => {
           const hasLog = slot.teaching_logs && slot.teaching_logs.length > 0;
           const booking = slot.bookings && slot.bookings.length > 0 ? slot.bookings[0] : null;
           
-          // เช็คว่าเด็กกดยืนยันไปแล้วหรือยัง
-          const isVerified = booking?.student_verified === true || booking?.status === 'VERIFIED' || booking?.status === 'COMPLETED';
+          const isVerified = booking?.student_verified === true || booking?.status === 'VERIFIED' || booking?.status === 'COMPLETED' || booking?.status === 'SUCCESS';
 
           let bgColor = '#dcfce7'; let borderColor = '#22c55e'; let textColor = '#166534';
           let statusText = '';
 
-          // ✨ Logic การเปลี่ยนสีปฏิทิน 3 สเตป!
           if (hasLog && isVerified) {
-            // สเตป 3: เด็กยืนยันแล้ว -> สีเทา (สมบูรณ์)
             bgColor = '#e2e8f0'; borderColor = '#94a3b8'; textColor = '#475569';
             statusText = ' ✅ สมบูรณ์';
           } else if (hasLog && !isVerified) {
-            // สเตป 2: ครูส่งงานแล้ว รอเด็กยืนยัน -> สีเหลือง/ส้ม (รอดำเนินการ)
             bgColor = '#fef08a'; borderColor = '#eab308'; textColor = '#854d0e'; 
             statusText = ' ⏳ รอนักเรียน';
           } else if (slot.is_booked) {
-            // สเตป 1: จองแล้ว ยังไม่ถึงเวลาเรียน -> สีแดง
             bgColor = '#fee2e2'; borderColor = '#ef4444'; textColor = '#991b1b';
           } else {
-            // สเตป 0: ยังไม่มีคนจอง
             if (slot.location_type === 'Onsite') {
               bgColor = '#f3e8ff'; borderColor = '#a855f7'; textColor = '#6b21a8';
             } else if (slot.location_type === 'นอกสถานที่') {
@@ -148,10 +159,9 @@ export default function CalendarManagePage() {
     const { isBooked, hasLog, isVerified, tutorId, tutorName } = info.event.extendedProps;
     const slotId = info.event.id;
 
-    // ✨ ดักจับสเตทต่างๆ เพื่อแจ้งเตือนติวเตอร์
     if (hasLog && isVerified) return alert("คิวนี้เรียนจบและนักเรียนยืนยันสมบูรณ์แล้วครับ ✅");
     if (hasLog && !isVerified) return alert("คุณบันทึกการสอนไปแล้ว ⏳ ตอนนี้กำลังรอนักเรียนกดยืนยันในระบบครับ");
-    if (!isBooked) return alert("คิวนี้ยังไม่มีการจองครับ");
+    if (!isBooked) return alert("คิวนี้ยังไม่มีการจองครับ (สามารถลบได้ในรูปแบบ 'ตาราง')");
 
     const studentName = window.prompt(`👤 บันทึกการสอนของ ${tutorName}\nกรุณาระบุชื่อนักเรียน:`, "นักเรียน");
     if (!studentName) return;
@@ -160,7 +170,6 @@ export default function CalendarManagePage() {
     if (note === null) return;
 
     if (window.confirm(`ยืนยันการส่งรายงานใช่ไหมครับ?\n(เมื่อส่งแล้ว ระบบจะรอให้นักเรียนกดยืนยันอีกครั้ง)`)) {
-      // ติวเตอร์บันทึกเฉพาะลง teaching_logs (ไม่แตะตารางของนักเรียน ทำให้ไม่ติดบัค RLS)
       const { error } = await supabase.from('teaching_logs').insert({
         tutor_id: tutorId, 
         slot_id: slotId,

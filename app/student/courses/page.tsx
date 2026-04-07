@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Search, ShoppingCart, BookOpen, Clock, 
   Tag, Loader2, PlayCircle, MessageCircle, Gift, ChevronRight, X, Upload, CheckCircle2,
-  Smartphone, Wallet 
+  Smartphone, Wallet, Info
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -14,13 +14,16 @@ function CatalogContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'course' | 'book'>('all');
+  const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const [selectedItem, setSelectedItem] = useState<any>(null); 
+  const [selectedItem, setSelectedItem] = useState<any>(null); // สำหรับ Checkout
+  const [viewingItem, setViewingItem] = useState<any>(null); // ✨ สำหรับดูรายละเอียดเต็ม
+  
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -50,18 +53,39 @@ function CatalogContent() {
   const fetchActiveItems = async () => {
     setLoading(true);
     
-    // ✨ อัปเดต: ดึงมาเฉพาะคอลัมน์ที่จำเป็นต่อการขายเท่านั้น ห้ามดึง document_url เด็ดขาด!
     const { data, error } = await supabase
       .from('courses')
-      .select('id, title, description, price, hours_count, referral_points, type, category, image_url, target_wallet_type') 
-      .eq('is_active', true) // ดึงเฉพาะอันที่เปิดขายอยู่
+      .select('id, title, description, price, hours_count, referral_points, type, category, image_url, target_wallet_type, tags') 
+      .eq('is_active', true) 
+      .order('sort_order', { ascending: false })
       .order('created_at', { ascending: false });
       
     if (!error && data) {
-      setItems(data.map(item => ({
-        ...item,
-        image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : [])
-      })));
+      const tagsSet = new Set<string>();
+
+      const formattedItems = data.map(item => {
+        let parsedTags: string[] = [];
+        if (Array.isArray(item.tags)) {
+          parsedTags = item.tags;
+        } else if (typeof item.tags === 'string') {
+          try {
+            parsedTags = JSON.parse(item.tags);
+          } catch {
+            parsedTags = item.tags.replace(/^{|}$/g, '').split(',').map(t => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
+          }
+        }
+
+        parsedTags.forEach(t => tagsSet.add(t));
+
+        return {
+          ...item,
+          image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : []),
+          tags: parsedTags
+        };
+      });
+
+      setItems(formattedItems);
+      setAvailableTags(Array.from(tagsSet));
     }
     setLoading(false);
   };
@@ -88,7 +112,6 @@ function CatalogContent() {
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('slips').getPublicUrl(`public/${fileName}`);
-
       const refTutorId = localStorage.getItem('affiliate_ref');
 
       const { error: orderError } = await supabase.from('course_orders').insert([{
@@ -114,7 +137,12 @@ function CatalogContent() {
   };
 
   const filteredItems = items.filter(item => {
-    const matchTab = activeTab === 'all' || item.type === activeTab;
+    let matchTab = false;
+    if (activeTab === 'all') matchTab = true;
+    else if (activeTab === 'course') matchTab = item.type === 'course';
+    else if (activeTab === 'book') matchTab = item.type === 'book';
+    else matchTab = item.tags && item.tags.includes(activeTab);
+
     const matchSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchTab && matchSearch;
   });
@@ -124,39 +152,90 @@ function CatalogContent() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen font-sans text-gray-900">
       
+      {/* ✨ 1. Modal ดูรายละเอียดสินค้าแบบเต็ม */}
+      {viewingItem && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewingItem(null)}>
+          <div className="bg-white rounded-[2rem] w-full max-w-2xl p-6 md:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setViewingItem(null)} className="absolute top-4 right-4 bg-gray-100 text-gray-500 p-2 rounded-full hover:bg-gray-200 transition-colors z-10"><X size={20}/></button>
+            
+            {/* แกลลอรี่รูปภาพ (ปัดซ้ายขวาได้ถ้ารูปเยอะ) */}
+            {viewingItem.image_url && viewingItem.image_url.length > 0 && (
+              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar mb-6 pb-2">
+                {viewingItem.image_url.map((url: string, idx: number) => (
+                  <img key={idx} src={url} className="w-[85%] sm:w-2/3 h-52 sm:h-64 object-cover rounded-[1.5rem] snap-center shrink-0 border border-gray-100 shadow-sm" alt={`Preview ${idx+1}`} />
+                ))}
+              </div>
+            )}
+
+            <div className="mb-4">
+               <div className="flex flex-wrap items-center gap-2 mb-3">
+                 <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-[10px] font-black uppercase flex items-center gap-1">
+                   {viewingItem.type === 'course' ? <Clock size={10}/> : <BookOpen size={10}/>} {viewingItem.category}
+                 </span>
+                 {viewingItem.tags && viewingItem.tags.map((t: string) => (
+                   <span key={t} className="bg-gray-100 text-gray-500 px-2 py-1 rounded-md text-[10px] font-black uppercase">#{t}</span>
+                 ))}
+               </div>
+               <h2 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight mb-2">{viewingItem.title}</h2>
+            </div>
+
+            <div className="bg-gray-50 p-4 sm:p-5 rounded-2xl mb-6">
+              <p className="text-gray-600 text-sm font-medium whitespace-pre-wrap leading-relaxed">{viewingItem.description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
+            </div>
+
+            <div className="mt-auto flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-100">
+               <div className="w-full sm:w-auto text-left">
+                  <span className="text-[10px] font-black text-gray-400 uppercase block tracking-widest">ราคา</span>
+                  <span className="text-3xl font-black text-blue-600">฿{viewingItem.price.toLocaleString()}</span>
+               </div>
+               <button 
+                 onClick={() => {
+                   setViewingItem(null);
+                   handleBuyClick(viewingItem);
+                 }} 
+                 className="w-full sm:w-auto bg-gray-900 text-white px-8 py-4 rounded-[1rem] font-black text-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl shadow-gray-200"
+               >
+                 สั่งซื้อรายการนี้ <ShoppingCart size={18} />
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Modal ชำระเงิน (ของเดิม) */}
       {selectedItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedItem(null)}>
-          <div className="bg-white rounded-[3rem] w-full max-w-lg p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedItem(null)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors"><X size={24}/></button>
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-colors"><X size={20}/></button>
             <h2 className="text-2xl font-black mb-2">ยืนยันการสั่งซื้อ</h2>
             <div className="bg-blue-50 p-4 rounded-2xl mb-6">
-              <p className="text-blue-600 font-black text-lg line-clamp-1">{selectedItem.title}</p>
+              <p className="text-blue-600 font-black text-base sm:text-lg line-clamp-1">{selectedItem.title}</p>
               <p className="text-gray-500 font-bold">ยอดที่ต้องชำระ: <span className="text-blue-700 text-xl">฿{selectedItem.price.toLocaleString()}</span></p>
             </div>
-            <div className="bg-gray-50 p-6 rounded-[2.5rem] mb-6 border border-gray-100 text-center shadow-inner">
+            <div className="bg-gray-50 p-6 rounded-[2rem] mb-6 border border-gray-100 text-center shadow-inner">
               <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest flex items-center justify-center gap-2"><Smartphone size={14}/> สแกนเพื่อชำระเงิน</p>
               <div className="bg-white p-4 rounded-2xl inline-block shadow-md border border-gray-100 mb-4 group">
-                 <img src="/images/mae-manee-qr.png" alt="TC Center QR Payment" className="w-full h-auto max-w-[220px] mx-auto rounded-lg group-hover:scale-[1.02] transition-transform"/>
+                 <img src="/images/mae-manee-qr.png" alt="TC Center QR Payment" className="w-full h-auto max-w-[200px] mx-auto rounded-lg group-hover:scale-[1.02] transition-transform"/>
               </div>
-              <p className="font-black text-gray-800">บจก. ทีซี เซ็นเตอร์ (ไทยแลนด์)</p>
-              <p className="text-[10px] font-bold text-gray-400 mt-1 italic tracking-tight">สแกนได้ทุกแอปธนาคาร ฟรีค่าธรรมเนียม</p>
+              <p className="font-black text-gray-800 text-sm sm:text-base">บจก. ทีซี เซ็นเตอร์ (ไทยแลนด์)</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 mt-1 italic tracking-tight">สแกนได้ทุกแอปธนาคาร ฟรีค่าธรรมเนียม</p>
             </div>
             <div className="space-y-4">
-              <label className="block text-xs font-black text-gray-400 uppercase ml-2 flex justify-between items-center">
-                <span>อัปโหลดสลิปยืนยัน</span><span className="text-blue-600 text-[10px]">รองรับไฟล์ภาพ JPG, PNG</span>
+              <label className="block text-[10px] sm:text-xs font-black text-gray-400 uppercase ml-2 flex justify-between items-center">
+                <span>อัปโหลดสลิปยืนยัน</span><span className="text-blue-600 text-[9px] sm:text-[10px]">รองรับไฟล์ภาพ JPG, PNG</span>
               </label>
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-[2rem] cursor-pointer hover:bg-gray-50 transition-all overflow-hidden group">
+              <label className="flex flex-col items-center justify-center w-full h-28 sm:h-32 border-2 border-dashed border-gray-200 rounded-[1.5rem] cursor-pointer hover:bg-gray-50 transition-all overflow-hidden group">
                 {file ? (
                   <div className="text-center p-4">
-                    <CheckCircle2 className="text-green-500 mx-auto mb-1 animate-bounce" size={28} />
-                    <p className="font-bold text-blue-600 text-xs truncate max-w-[200px]">{file.name}</p>
+                    <CheckCircle2 className="text-green-500 mx-auto mb-1 animate-bounce" size={24} />
+                    <p className="font-bold text-blue-600 text-[10px] sm:text-xs truncate max-w-[180px]">{file.name}</p>
                   </div>
                 ) : (
-                  <><Upload className="text-gray-300 mb-2 group-hover:scale-110 transition-transform" size={28} /><p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">คลิกเพื่อแนบสลิป</p></>
+                  <><Upload className="text-gray-300 mb-2 group-hover:scale-110 transition-transform" size={24} /><p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-tighter">คลิกเพื่อแนบสลิป</p></>
                 )}
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               </label>
-              <button disabled={uploading} onClick={handleUploadSlip} className="w-full bg-gray-900 text-white py-5 rounded-[1.5rem] font-black text-lg shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:bg-gray-200">
+              <button disabled={uploading} onClick={handleUploadSlip} className="w-full bg-gray-900 text-white py-4 rounded-[1rem] font-black text-base shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:bg-gray-200">
                 {uploading ? <Loader2 className="animate-spin" /> : "ส่งหลักฐานการโอน"}
               </button>
             </div>
@@ -167,56 +246,111 @@ function CatalogContent() {
       {showSuccess && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-blue-600 animate-in zoom-in duration-300 text-white">
           <div className="text-center">
-            <div className="w-24 h-24 bg-white text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl"><CheckCircle2 size={60} /></div>
-            <h2 className="text-4xl font-black mb-2 tracking-tight">เรียบร้อยครับ!</h2>
-            <p className="text-blue-100 font-bold mb-8">แอดมินได้รับสลิปแล้ว กำลังตรวจสอบ<br/>หนังสือและชั่วโมงเรียนจะถูกอัปเดตในไม่ช้านี้ครับ</p>
-            <button onClick={() => setShowSuccess(false)} className="px-12 py-4 bg-white text-blue-600 rounded-2xl font-black shadow-lg hover:bg-gray-50 active:scale-95 transition-all">กลับหน้าร้านค้า</button>
+            <div className="w-20 h-20 bg-white text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl"><CheckCircle2 size={40} /></div>
+            <h2 className="text-3xl sm:text-4xl font-black mb-2 tracking-tight">เรียบร้อยครับ!</h2>
+            <p className="text-blue-100 font-bold mb-8 text-sm sm:text-base">แอดมินได้รับสลิปแล้ว กำลังตรวจสอบ<br/>ชั่วโมงจะเข้ากระเป๋าในไม่ช้านี้ครับ</p>
+            <button onClick={() => setShowSuccess(false)} className="px-10 py-3.5 bg-white text-blue-600 rounded-xl font-black shadow-lg hover:bg-gray-50 active:scale-95 transition-all">กลับหน้าร้านค้า</button>
           </div>
         </div>
       )}
 
       {/* Main UI */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <Link href={!isLoggedIn ? "/" : (isAdmin ? "/admin" : "/student")} className="text-blue-600 font-black text-xs uppercase tracking-widest flex items-center gap-2 mb-2 group">
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> กลับหน้าหลัก
+          <Link href={!isLoggedIn ? "/" : (isAdmin ? "/admin" : "/student")} className="text-blue-600 font-black text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2 mb-2 group w-max">
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> กลับหน้าหลัก
           </Link>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight">คอร์สเรียน & เอกสาร</h1>
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">คอร์สเรียน & เอกสาร</h1>
         </div>
         <div className="relative w-full md:w-auto text-gray-900">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input type="text" placeholder="ค้นหาคอร์ส..." className="w-full md:w-80 pl-12 pr-4 py-3.5 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-blue-400 font-bold transition-all shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input type="text" placeholder="ค้นหาคอร์ส..." className="w-full md:w-72 pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-[1rem] outline-none focus:border-blue-400 font-bold text-sm transition-all shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
       </div>
 
-      <div className="flex gap-3 mb-8 overflow-x-auto pb-2 no-scrollbar">
-        <button onClick={() => setActiveTab('all')} className={`px-6 py-3 rounded-2xl font-black transition-all ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>ทั้งหมด</button>
-        <button onClick={() => setActiveTab('course')} className={`px-6 py-3 rounded-2xl font-black transition-all ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-blue-50'}`}>คอร์สเรียน</button>
-        <button onClick={() => setActiveTab('book')} className={`px-6 py-3 rounded-2xl font-black transition-all ${activeTab === 'book' ? 'bg-orange-50 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
+      <div className="flex gap-2 sm:gap-3 mb-6 overflow-x-auto pb-2 no-scrollbar items-center">
+        <button onClick={() => setActiveTab('all')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
+        <button onClick={() => setActiveTab('course')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
+        <button onClick={() => setActiveTab('book')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
+        
+        {availableTags.length > 0 && <div className="w-px h-6 bg-gray-200 mx-1 shrink-0"></div>}
+
+        {availableTags.map(tag => (
+          <button 
+            key={tag} 
+            onClick={() => setActiveTab(tag)} 
+            className={`shrink-0 px-4 py-2.5 rounded-[1rem] font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1 ${activeTab === tag ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'}`}
+          >
+            <Tag size={12}/> {tag}
+          </button>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {/* ✨ 3. อัปเดต Grid การ์ด ให้คอมแพคขึ้น เล็กลงพอดีตาบนมือถือ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {filteredItems.map((item) => (
-          <div key={item.id} className="bg-white rounded-[2.5rem] shadow-sm hover:shadow-xl border border-gray-100 flex flex-col h-full group transition-all duration-300 overflow-hidden text-gray-900">
-            <div className="h-52 bg-gray-50 relative overflow-hidden">
+          <div key={item.id} className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl border border-gray-100 flex flex-col h-full group transition-all duration-300 overflow-hidden text-gray-900 relative">
+            
+            {/* คลิกที่รูปเพื่อดูรายละเอียด */}
+            <div 
+              className="h-40 sm:h-44 bg-gray-50 relative overflow-hidden cursor-pointer"
+              onClick={() => setViewingItem(item)}
+            >
               <img src={item.image_url?.[0] || '/placeholder.png'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              
+              <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2.5 py-1 rounded-md text-[9px] font-black text-gray-700 shadow-sm flex items-center gap-1 uppercase tracking-widest">
+                 {item.type === 'course' ? <Clock size={10} className="text-blue-600"/> : <BookOpen size={10} className="text-orange-500"/>} 
+                 {item.category}
+              </div>
             </div>
-            <div className="p-7 flex flex-col flex-1">
-              <h3 className="font-black text-xl mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors">{item.title}</h3>
-              <p className="text-gray-400 text-sm line-clamp-2 mb-6 font-medium h-10 leading-relaxed">{item.description}</p>
-              <div className="mt-auto pt-5 border-t border-gray-50 flex justify-between items-center">
-                <div>
-                  <span className="text-[10px] font-black text-gray-400 uppercase block tracking-widest">ราคา</span>
-                  <span className="text-2xl font-black text-gray-900">฿{item.price.toLocaleString()}</span>
+            
+            <div className="p-4 sm:p-5 flex flex-col flex-1">
+              <h3 className="font-black text-lg sm:text-xl mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors cursor-pointer" onClick={() => setViewingItem(item)}>{item.title}</h3>
+              
+              {item.tags && item.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {item.tags.map((t: string) => (
+                    <span key={t} className="bg-gray-100 text-gray-500 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded uppercase">#{t}</span>
+                  ))}
                 </div>
-                <button onClick={() => handleBuyClick(item)} className="bg-gray-900 text-white px-6 py-3.5 rounded-2xl font-black text-sm hover:bg-blue-600 transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gray-100">
-                  เลือกซื้อ <ChevronRight size={16} />
-                </button>
+              )}
+
+              <p className={`text-gray-400 text-xs sm:text-sm line-clamp-2 font-medium leading-relaxed ${item.tags?.length > 0 ? 'h-8 sm:h-10 mb-3' : 'h-8 sm:h-10 mb-4'}`}>{item.description}</p>
+              
+              <div className="mt-auto pt-4 border-t border-gray-50 flex justify-between items-end">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">ราคา</span>
+                  <span className="text-xl sm:text-2xl font-black text-gray-900 leading-none">฿{item.price.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {/* ✨ ปุ่มดูรายละเอียด */}
+                  <button 
+                    onClick={() => setViewingItem(item)} 
+                    className="p-2 sm:px-3 sm:py-2.5 bg-gray-50 text-gray-500 rounded-xl hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center justify-center font-black text-[10px] sm:text-xs"
+                    title="ดูรายละเอียด"
+                  >
+                     <Info size={16} className="sm:hidden"/> 
+                     <span className="hidden sm:inline">รายละเอียด</span>
+                  </button>
+                  {/* ปุ่มซื้อ */}
+                  <button 
+                    onClick={() => handleBuyClick(item)} 
+                    className="bg-gray-900 text-white p-2 sm:px-4 sm:py-2.5 rounded-xl font-black text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-1 active:scale-95 shadow-md"
+                  >
+                    <span className="hidden sm:inline">ซื้อ</span> <ShoppingCart size={16} className="sm:hidden"/> <ChevronRight size={14} className="hidden sm:block"/>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
+      
+      {filteredItems.length === 0 && !loading && (
+        <div className="text-center py-20">
+          <p className="text-gray-400 font-bold text-lg">ไม่พบรายการที่ค้นหาครับ 🥲</p>
+        </div>
+      )}
     </div>
   );
 }
