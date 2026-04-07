@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// ✨ ตั้งค่าสีแถบสถานะบนมือถือ (Status Bar) ให้เป็นสีฟ้าแบรนด์เรา
+export const viewport: Viewport = {
+  themeColor: "#3b82f6",
+};
+
 export const metadata: Metadata = {
   title: "TC CENTER | The Convergence",
-  description: "ยกระดับการเรียนรู้ สอบติดคณะในฝัน กับทีมติวเตอร์มืออาชีพจากมหาวิทยาลัยชั้นนำ",
+  description: "ยระดับการเรียนรู้ สอบติดคณะในฝัน กับทีมติวเตอร์มืออาชีพจากมหาวิทยาลัยชั้นนำ",
+  manifest: "/manifest.json", // 🚀 เชื่อมต่อระบบ PWA App
   icons: {
     icon: "/icon.png",
   },
