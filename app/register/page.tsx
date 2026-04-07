@@ -155,7 +155,7 @@ export default function RegisterPage() {
             <ArrowLeft size={16}/> กลับไปหน้าล็อคอิน
           </Link>
           
-          <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">สมัครสมาชิกใหม่ 🎓</h1>
+          <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">สมัครสมาชิกใหม่สำหรับนักเรียน 🎓</h1>
           <p className="text-gray-500 font-bold mb-8">เพื่อเข้าสู่ระบบการเรียนระดับพรีเมียม</p>
 
           <form onSubmit={handleRegister} className="space-y-4">
