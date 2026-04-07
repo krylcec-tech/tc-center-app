@@ -21,8 +21,8 @@ function CatalogContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const [selectedItem, setSelectedItem] = useState<any>(null); // สำหรับ Checkout
-  const [viewingItem, setViewingItem] = useState<any>(null); // ✨ สำหรับดูรายละเอียดเต็ม
+  const [selectedItem, setSelectedItem] = useState<any>(null); 
+  const [viewingItem, setViewingItem] = useState<any>(null); 
   
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -92,7 +92,7 @@ function CatalogContent() {
 
   const handleBuyClick = (item: any) => {
     if (!isLoggedIn) {
-      if (confirm("กรุณาเข้าสู่ระบบก่อนสั่งซื้อครับ\n(แอบกระซิบ: สมัครสมาชิกใหม่รับชั่วโมงเรียนฟรีนะ!)")) {
+      if (confirm("กรุณาเข้าสู่ระบบก่อนสั่งซื้อครับ")) {
         router.push('/register');
       }
       return;
@@ -152,13 +152,12 @@ function CatalogContent() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen font-sans text-gray-900">
       
-      {/* ✨ 1. Modal ดูรายละเอียดสินค้าแบบเต็ม */}
+      {/* 1. Modal ดูรายละเอียดสินค้าแบบเต็ม */}
       {viewingItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewingItem(null)}>
           <div className="bg-white rounded-[2rem] w-full max-w-2xl p-6 md:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <button onClick={() => setViewingItem(null)} className="absolute top-4 right-4 bg-gray-100 text-gray-500 p-2 rounded-full hover:bg-gray-200 transition-colors z-10"><X size={20}/></button>
             
-            {/* แกลลอรี่รูปภาพ (ปัดซ้ายขวาได้ถ้ารูปเยอะ) */}
             {viewingItem.image_url && viewingItem.image_url.length > 0 && (
               <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar mb-6 pb-2">
                 {viewingItem.image_url.map((url: string, idx: number) => (
@@ -172,9 +171,6 @@ function CatalogContent() {
                  <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-[10px] font-black uppercase flex items-center gap-1">
                    {viewingItem.type === 'course' ? <Clock size={10}/> : <BookOpen size={10}/>} {viewingItem.category}
                  </span>
-                 {viewingItem.tags && viewingItem.tags.map((t: string) => (
-                   <span key={t} className="bg-gray-100 text-gray-500 px-2 py-1 rounded-md text-[10px] font-black uppercase">#{t}</span>
-                 ))}
                </div>
                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight mb-2">{viewingItem.title}</h2>
             </div>
@@ -202,40 +198,36 @@ function CatalogContent() {
         </div>
       )}
 
-      {/* 2. Modal ชำระเงิน (ของเดิม) */}
+      {/* 2. Modal ชำระเงิน */}
       {selectedItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedItem(null)}>
           <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-6 sm:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-colors"><X size={20}/></button>
             <h2 className="text-2xl font-black mb-2">ยืนยันการสั่งซื้อ</h2>
             <div className="bg-blue-50 p-4 rounded-2xl mb-6">
-              <p className="text-blue-600 font-black text-base sm:text-lg line-clamp-1">{selectedItem.title}</p>
-              <p className="text-gray-500 font-bold">ยอดที่ต้องชำระ: <span className="text-blue-700 text-xl">฿{selectedItem.price.toLocaleString()}</span></p>
+              <p className="text-blue-600 font-black text-base line-clamp-1">{selectedItem.title}</p>
+              <p className="text-gray-500 font-bold">ยอด: <span className="text-blue-700 text-xl">฿{selectedItem.price.toLocaleString()}</span></p>
             </div>
             <div className="bg-gray-50 p-6 rounded-[2rem] mb-6 border border-gray-100 text-center shadow-inner">
               <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest flex items-center justify-center gap-2"><Smartphone size={14}/> สแกนเพื่อชำระเงิน</p>
               <div className="bg-white p-4 rounded-2xl inline-block shadow-md border border-gray-100 mb-4 group">
-                 <img src="/images/mae-manee-qr.png" alt="TC Center QR Payment" className="w-full h-auto max-w-[200px] mx-auto rounded-lg group-hover:scale-[1.02] transition-transform"/>
+                 <img src="/images/mae-manee-qr.png" alt="TC Center QR" className="w-full h-auto max-w-[180px] mx-auto rounded-lg"/>
               </div>
-              <p className="font-black text-gray-800 text-sm sm:text-base">บจก. ทีซี เซ็นเตอร์ (ไทยแลนด์)</p>
-              <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 mt-1 italic tracking-tight">สแกนได้ทุกแอปธนาคาร ฟรีค่าธรรมเนียม</p>
+              <p className="font-black text-gray-800 text-sm">บจก. ทีซี เซ็นเตอร์ (ไทยแลนด์)</p>
             </div>
             <div className="space-y-4">
-              <label className="block text-[10px] sm:text-xs font-black text-gray-400 uppercase ml-2 flex justify-between items-center">
-                <span>อัปโหลดสลิปยืนยัน</span><span className="text-blue-600 text-[9px] sm:text-[10px]">รองรับไฟล์ภาพ JPG, PNG</span>
-              </label>
-              <label className="flex flex-col items-center justify-center w-full h-28 sm:h-32 border-2 border-dashed border-gray-200 rounded-[1.5rem] cursor-pointer hover:bg-gray-50 transition-all overflow-hidden group">
+              <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-200 rounded-[1.5rem] cursor-pointer hover:bg-gray-50 transition-all overflow-hidden group">
                 {file ? (
                   <div className="text-center p-4">
                     <CheckCircle2 className="text-green-500 mx-auto mb-1 animate-bounce" size={24} />
-                    <p className="font-bold text-blue-600 text-[10px] sm:text-xs truncate max-w-[180px]">{file.name}</p>
+                    <p className="font-bold text-blue-600 text-[10px] truncate max-w-[150px]">{file.name}</p>
                   </div>
                 ) : (
-                  <><Upload className="text-gray-300 mb-2 group-hover:scale-110 transition-transform" size={24} /><p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-tighter">คลิกเพื่อแนบสลิป</p></>
+                  <><Upload className="text-gray-300 mb-2" size={24} /><p className="text-[9px] font-black text-gray-400 uppercase">คลิกเพื่อแนบสลิป</p></>
                 )}
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               </label>
-              <button disabled={uploading} onClick={handleUploadSlip} className="w-full bg-gray-900 text-white py-4 rounded-[1rem] font-black text-base shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:bg-gray-200">
+              <button disabled={uploading} onClick={handleUploadSlip} className="w-full bg-gray-900 text-white py-4 rounded-[1rem] font-black text-base shadow-xl active:scale-95 disabled:bg-gray-200">
                 {uploading ? <Loader2 className="animate-spin" /> : "ส่งหลักฐานการโอน"}
               </button>
             </div>
@@ -244,12 +236,12 @@ function CatalogContent() {
       )}
 
       {showSuccess && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-blue-600 animate-in zoom-in duration-300 text-white">
-          <div className="text-center">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-blue-600 animate-in zoom-in duration-300 text-white text-center">
+          <div>
             <div className="w-20 h-20 bg-white text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl"><CheckCircle2 size={40} /></div>
-            <h2 className="text-3xl sm:text-4xl font-black mb-2 tracking-tight">เรียบร้อยครับ!</h2>
-            <p className="text-blue-100 font-bold mb-8 text-sm sm:text-base">แอดมินได้รับสลิปแล้ว กำลังตรวจสอบ<br/>ชั่วโมงจะเข้ากระเป๋าในไม่ช้านี้ครับ</p>
-            <button onClick={() => setShowSuccess(false)} className="px-10 py-3.5 bg-white text-blue-600 rounded-xl font-black shadow-lg hover:bg-gray-50 active:scale-95 transition-all">กลับหน้าร้านค้า</button>
+            <h2 className="text-3xl font-black mb-2">เรียบร้อยครับ!</h2>
+            <p className="text-blue-100 font-bold mb-8">ตรวจสอบสำเร็จชั่วโมงจะเข้ากระเป๋าครับ</p>
+            <button onClick={() => setShowSuccess(false)} className="px-10 py-3.5 bg-white text-blue-600 rounded-xl font-black shadow-lg">กลับหน้าร้านค้า</button>
           </div>
         </div>
       )}
@@ -257,87 +249,70 @@ function CatalogContent() {
       {/* Main UI */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <Link href={!isLoggedIn ? "/" : (isAdmin ? "/admin" : "/student")} className="text-blue-600 font-black text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2 mb-2 group w-max">
-            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> กลับหน้าหลัก
+          <Link href={!isLoggedIn ? "/" : (isAdmin ? "/admin" : "/student")} className="text-blue-600 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 mb-2 group w-max">
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> กลับ
           </Link>
-          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">คอร์สเรียน & เอกสาร</h1>
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tight">คอร์สเรียน & เอกสาร</h1>
         </div>
         <div className="relative w-full md:w-auto text-gray-900">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input type="text" placeholder="ค้นหาคอร์ส..." className="w-full md:w-72 pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-[1rem] outline-none focus:border-blue-400 font-bold text-sm transition-all shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <input type="text" placeholder="ค้นหา..." className="w-full md:w-72 pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-[1rem] outline-none font-bold text-sm shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
       </div>
 
-      <div className="flex gap-2 sm:gap-3 mb-6 overflow-x-auto pb-2 no-scrollbar items-center">
-        <button onClick={() => setActiveTab('all')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
-        <button onClick={() => setActiveTab('course')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
-        <button onClick={() => setActiveTab('book')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
-        
-        {availableTags.length > 0 && <div className="w-px h-6 bg-gray-200 mx-1 shrink-0"></div>}
-
-        {availableTags.map(tag => (
-          <button 
-            key={tag} 
-            onClick={() => setActiveTab(tag)} 
-            className={`shrink-0 px-4 py-2.5 rounded-[1rem] font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1 ${activeTab === tag ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'}`}
-          >
-            <Tag size={12}/> {tag}
-          </button>
-        ))}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar items-center">
+        <button onClick={() => setActiveTab('all')} className={`shrink-0 px-4 py-2.5 rounded-[1rem] font-black text-xs transition-all ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100'}`}>ทั้งหมด</button>
+        <button onClick={() => setActiveTab('course')} className={`shrink-0 px-4 py-2.5 rounded-[1rem] font-black text-xs transition-all ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100'}`}>คอร์สเรียน</button>
+        <button onClick={() => setActiveTab('book')} className={`shrink-0 px-4 py-2.5 rounded-[1rem] font-black text-xs transition-all ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-white text-gray-500 border border-gray-100'}`}>หนังสือ</button>
       </div>
 
-      {/* ✨ 3. อัปเดต Grid การ์ด ให้คอมแพคขึ้น เล็กลงพอดีตาบนมือถือ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+      {/* ✨ อัปเดต Grid: มือถือขึ้น 2 คอลัมน์ (grid-cols-2) เพื่อให้การ์ดเล็กลงพอดีตา */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
         {filteredItems.map((item) => (
-          <div key={item.id} className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl border border-gray-100 flex flex-col h-full group transition-all duration-300 overflow-hidden text-gray-900 relative">
+          <div key={item.id} className="bg-white rounded-[1.25rem] shadow-sm hover:shadow-xl border border-gray-100 flex flex-col h-full group transition-all duration-300 overflow-hidden text-gray-900 relative">
             
-            {/* คลิกที่รูปเพื่อดูรายละเอียด */}
+            {/* คลิกที่รูปเพื่อดูรายละเอียด (ลดความสูงลงในมือถือ h-28) */}
             <div 
-              className="h-40 sm:h-44 bg-gray-50 relative overflow-hidden cursor-pointer"
+              className="h-28 sm:h-44 bg-gray-50 relative overflow-hidden cursor-pointer"
               onClick={() => setViewingItem(item)}
             >
               <img src={item.image_url?.[0] || '/placeholder.png'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               
-              <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2.5 py-1 rounded-md text-[9px] font-black text-gray-700 shadow-sm flex items-center gap-1 uppercase tracking-widest">
-                 {item.type === 'course' ? <Clock size={10} className="text-blue-600"/> : <BookOpen size={10} className="text-orange-500"/>} 
+              <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur px-2 py-0.5 rounded-md text-[7px] sm:text-[9px] font-black text-gray-700 shadow-sm flex items-center gap-1 uppercase tracking-widest">
+                 {item.type === 'course' ? <Clock size={8}/> : <BookOpen size={8}/>} 
                  {item.category}
               </div>
             </div>
             
-            <div className="p-4 sm:p-5 flex flex-col flex-1">
-              <h3 className="font-black text-lg sm:text-xl mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors cursor-pointer" onClick={() => setViewingItem(item)}>{item.title}</h3>
+            <div className="p-3 sm:p-5 flex flex-col flex-1">
+              {/* ย่อหัวข้อในมือถือ text-sm */}
+              <h3 className="font-black text-sm sm:text-xl mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors cursor-pointer" onClick={() => setViewingItem(item)}>{item.title}</h3>
               
-              {item.tags && item.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {item.tags.map((t: string) => (
-                    <span key={t} className="bg-gray-100 text-gray-500 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded uppercase">#{t}</span>
-                  ))}
-                </div>
-              )}
-
-              <p className={`text-gray-400 text-xs sm:text-sm line-clamp-2 font-medium leading-relaxed ${item.tags?.length > 0 ? 'h-8 sm:h-10 mb-3' : 'h-8 sm:h-10 mb-4'}`}>{item.description}</p>
+              {/* ซ่อน Description ในมือถือเพื่อให้การ์ดคอมแพค */}
+              <p className="hidden sm:block text-gray-400 text-sm line-clamp-2 font-medium leading-relaxed h-10 mb-4">{item.description}</p>
               
-              <div className="mt-auto pt-4 border-t border-gray-50 flex justify-between items-end">
+              <div className="mt-auto pt-2 sm:pt-4 border-t border-gray-50 flex justify-between items-end">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">ราคา</span>
-                  <span className="text-xl sm:text-2xl font-black text-gray-900 leading-none">฿{item.price.toLocaleString()}</span>
+                  <span className="text-[7px] sm:text-[9px] font-black text-gray-400 uppercase mb-0.5 sm:mb-1">ราคา</span>
+                  <span className="text-base sm:text-2xl font-black text-gray-900 leading-none">฿{item.price.toLocaleString()}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {/* ✨ ปุ่มดูรายละเอียด */}
+                
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  {/* ปุ่มรายละเอียด: มือถือเหลือแค่ไอคอน */}
                   <button 
                     onClick={() => setViewingItem(item)} 
-                    className="p-2 sm:px-3 sm:py-2.5 bg-gray-50 text-gray-500 rounded-xl hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center justify-center font-black text-[10px] sm:text-xs"
-                    title="ดูรายละเอียด"
+                    className="p-1.5 sm:px-3 sm:py-2.5 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center justify-center font-black text-xs"
                   >
-                     <Info size={16} className="sm:hidden"/> 
-                     <span className="hidden sm:inline">รายละเอียด</span>
+                     <Info size={14} />
+                     <span className="hidden sm:inline ml-1">รายละเอียด</span>
                   </button>
-                  {/* ปุ่มซื้อ */}
+                  {/* ปุ่มซื้อ: มือถือเหลือแค่ไอคอน ShoppingCart */}
                   <button 
                     onClick={() => handleBuyClick(item)} 
-                    className="bg-gray-900 text-white p-2 sm:px-4 sm:py-2.5 rounded-xl font-black text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-1 active:scale-95 shadow-md"
+                    className="bg-gray-900 text-white p-1.5 sm:px-4 sm:py-2.5 rounded-lg font-black text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-1 active:scale-95 shadow-md shadow-gray-100"
                   >
-                    <span className="hidden sm:inline">ซื้อ</span> <ShoppingCart size={16} className="sm:hidden"/> <ChevronRight size={14} className="hidden sm:block"/>
+                    <ShoppingCart size={14} />
+                    <span className="hidden sm:inline ml-1">ซื้อ</span>
                   </button>
                 </div>
               </div>
@@ -348,7 +323,7 @@ function CatalogContent() {
       
       {filteredItems.length === 0 && !loading && (
         <div className="text-center py-20">
-          <p className="text-gray-400 font-bold text-lg">ไม่พบรายการที่ค้นหาครับ 🥲</p>
+          <p className="text-gray-400 font-bold text-lg">ไม่พบรายการครับ 🥲</p>
         </div>
       )}
     </div>
