@@ -1,6 +1,6 @@
 'use client'
-import React, { useState, useEffect } from 'react'; // ✨ เพิ่ม useEffect
-import { supabase } from '@/lib/supabase'; // ✨ Import supabase client ของเรา
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { 
   User, Sparkles, ChevronRight, GraduationCap, Users, Star, MessageCircle, ArrowRight, Menu, X, LayoutDashboard
@@ -8,10 +8,10 @@ import {
 
 export default function PremiumResponsiveLanding() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null); // ✨ สร้าง State เก็บข้อมูล User
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✨ เช็กสถานะการล็อกอินทันทีที่เข้าหน้าแรก
+  // ✨ เช็กสถานะการล็อกอินทันทีที่เข้าหน้าแรก (ใช้ getSession เพื่อความเร็วสูงสุด)
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -19,12 +19,19 @@ export default function PremiumResponsiveLanding() {
       setLoading(false);
     };
     checkUser();
+
+    // ฟังเสียงเหตุการณ์ Auth (เช่น ถ้ามีการ Logout จาก Tab อื่น หน้าแรกจะอัปเดตเอง)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* 🌟 Navbar */}
+      {/* 🌟 Navbar: Fixed & Glassmorphism */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-b border-slate-200 shadow-sm transition-all h-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 h-full flex items-center justify-between">
           
@@ -54,17 +61,15 @@ export default function PremiumResponsiveLanding() {
             </Link>
           </div>
 
-          {/* ✨ Desktop Action Buttons: ปรับให้เปลี่ยนตามสถานะล็อกอิน */}
+          {/* ✨ Desktop Action Buttons: เปลี่ยนตามสถานะล็อกอิน */}
           <div className="hidden md:flex items-center gap-6">
             {!loading && (
               <>
                 {user ? (
-                  // ✅ ถ้าล็อกอินแล้ว โชว์ปุ่ม Dashboard
                   <Link href="/student" className="flex items-center gap-2 px-8 py-3.5 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-full hover:bg-blue-600 transition-all shadow-lg active:scale-95">
                     <LayoutDashboard size={18} /> เข้าสู่ห้องเรียน
                   </Link>
                 ) : (
-                  // ❌ ถ้ายังไม่ได้ล็อกอิน โชว์ปุ่มเดิม
                   <>
                     <Link href="/login" className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-slate-600 hover:text-blue-600 transition-colors px-2">
                       <User size={18} strokeWidth={2.5} /> เข้าสู่ระบบ
@@ -84,9 +89,9 @@ export default function PremiumResponsiveLanding() {
           </button>
         </div>
 
-        {/* 📱 Mobile Menu Dropdown: ปรับให้เปลี่ยนตามสถานะล็อกอิน */}
+        {/* 📱 Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
-          <div className="absolute top-24 left-0 w-full bg-white border-b border-slate-200 shadow-xl md:hidden flex flex-col px-6 py-6 gap-6 z-40">
+          <div className="absolute top-24 left-0 w-full bg-white border-b border-slate-200 shadow-xl md:hidden flex flex-col px-6 py-6 gap-6 z-40 animate-in slide-in-from-top-5 duration-300">
             <Link href="/student/courses" className="text-sm font-black uppercase tracking-widest text-slate-800" onClick={() => setIsMobileMenuOpen(false)}>คอร์สเรียนทั้งหมด</Link>
             <div className="w-full h-px bg-slate-100"></div>
             {user ? (
@@ -140,14 +145,14 @@ export default function PremiumResponsiveLanding() {
             { icon: Users, title: 'ทีมติวเตอร์ของเรา', desc: 'เรียนกับเหล่าครูพี่ๆ จากมหาวิทยาลัยชั้นนำ', link: '#', colorClass: 'text-amber-500', bgClass: 'bg-amber-50' },
             { icon: Star, title: 'รีวิวความสำเร็จ', desc: 'ร่วมภาคภูมิใจและรับแรงบันดาลใจจากรุ่นพี่', link: '#', colorClass: 'text-purple-600', bgClass: 'bg-purple-50' }
           ].map((item, idx) => (
-            <Link key={idx} href={item.link} className="group block bg-white p-8 md:p-12 rounded-[2rem] border border-slate-100 transition-all shadow-xl hover:-translate-y-2">
-              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-6 ${item.bgClass} ${item.colorClass}`}>
+            <Link key={idx} href={item.link} className="group block bg-white p-8 md:p-12 rounded-[2rem] border border-slate-100 transition-all shadow-xl hover:-translate-y-2 hover:shadow-2xl duration-300">
+              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-6 ${item.bgClass} ${item.colorClass} group-hover:scale-110 transition-transform`}>
                 <item.icon size={32} />
               </div>
-              <h3 className="text-xl md:text-2xl font-black mb-3 text-slate-900 group-hover:text-blue-600">{item.title}</h3>
-              <p className="text-slate-500 text-xs md:text-sm mb-8">{item.desc}</p>
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-blue-600">
-                Explore <ArrowRight size={16} />
+              <h3 className="text-xl md:text-2xl font-black mb-3 text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</h3>
+              <p className="text-slate-500 text-xs md:text-sm mb-8 leading-relaxed">{item.desc}</p>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-colors">
+                Explore <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
           ))}
