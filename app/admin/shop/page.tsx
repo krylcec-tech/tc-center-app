@@ -16,8 +16,8 @@ export default function AdminShopPage() {
   const [rewardName, setRewardName] = useState('');
   const [pointsCost, setPointsCost] = useState('');
   const [targetGroup, setTargetGroup] = useState('TUTOR');
-  const [rewardStock, setRewardStock] = useState('1'); // ✨ เพิ่มสต็อก
-  const [isUnlimited, setIsUnlimited] = useState(false); // ✨ เพิ่มสถานะไม่จำกัด
+  const [rewardStock, setRewardStock] = useState('1'); 
+  const [isUnlimited, setIsUnlimited] = useState(false); 
   
   // Image Upload States
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -33,14 +33,12 @@ export default function AdminShopPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // ดึงข้อมูลของรางวัล
       const { data: rewardsData } = await supabase
         .from('rewards')
         .select('*')
         .order('created_at', { ascending: false });
       setRewards(rewardsData || []);
 
-      // ดึงข้อมูลคำร้องขอแลก พร้อมชื่อผู้ใช้ (Join student_wallets)
       const { data: requestsData } = await supabase
         .from('redeem_requests')
         .select(`
@@ -49,7 +47,6 @@ export default function AdminShopPage() {
         `)
         .order('created_at', { ascending: false });
       
-      // ดึงชื่อนักเรียน/ติวเตอร์ มาแมปกับ request (ป้องกัน Error Join ข้าม Schema)
       const { data: profiles } = await supabase.from('student_wallets').select('user_id, student_name');
       const { data: tutors } = await supabase.from('tutors').select('user_id, name');
       const nameMap = new Map();
@@ -70,7 +67,7 @@ export default function AdminShopPage() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files.length > 0) {
       setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
     }
   };
@@ -95,7 +92,8 @@ export default function AdminShopPage() {
             .from('rewards')
             .upload(filePath, file);
 
-          if (uploadError) throw uploadError;
+          // ✨ ดักจับ Error Storage ให้ชัดเจนขึ้น
+          if (uploadError) throw new Error(`อัปโหลดรูปไม่สำเร็จ: (เช็ก Bucket 'rewards') ${uploadError.message}`);
 
           const { data: { publicUrl } } = supabase.storage
             .from('rewards')
@@ -112,13 +110,14 @@ export default function AdminShopPage() {
           points_cost: Number(pointsCost),
           target_group: targetGroup,
           image_urls: uploadedImageUrls,
-          stock: isUnlimited ? 0 : Number(rewardStock), // ✨ บันทึกสต็อก
-          is_unlimited: isUnlimited // ✨ บันทึกสถานะไม่จำกัด
+          stock: isUnlimited ? 0 : Number(rewardStock), 
+          is_unlimited: isUnlimited 
         }]);
 
-      if (error) throw error;
+      // ✨ ดักจับ Error Database ให้ชัดเจนขึ้น
+      if (error) throw new Error(`บันทึกข้อมูลลงฐานข้อมูลไม่สำเร็จ: ${error.message}`);
       
-      alert('เพิ่มของรางวัลเข้าระบบเรียบร้อย! 🎁');
+      alert('✅ เพิ่มของรางวัลเข้าระบบเรียบร้อย! 🎁');
       
       // Reset Form
       setRewardName('');
@@ -129,7 +128,7 @@ export default function AdminShopPage() {
       fetchData(); 
 
     } catch (error: any) {
-      alert('เกิดข้อผิดพลาด: ' + error.message);
+      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -248,8 +247,32 @@ export default function AdminShopPage() {
                   </label>
                   <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors bg-gray-50">
                     <input type="file" multiple accept="image/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                    <div className="text-sm font-bold text-gray-500">คลิกเพื่อเลือกไฟล์รูปภาพ</div>
+                    <div className="text-sm font-bold text-gray-500">
+                      {selectedFiles.length > 0 ? '+ เลือกรูปภาพเพิ่ม' : 'คลิกเพื่อเลือกไฟล์รูปภาพ'}
+                    </div>
                   </div>
+
+                  {/* ✨ เพิ่มส่วนพรีวิวรูปภาพตรงนี้! */}
+                  {selectedFiles.length > 0 && (
+                    <div className="flex gap-3 flex-wrap mt-4">
+                      {selectedFiles.map((file, idx) => (
+                        <div key={idx} className="relative group">
+                          <img 
+                            src={URL.createObjectURL(file)} 
+                            alt="preview" 
+                            className="w-16 h-16 object-cover rounded-xl border-2 border-gray-200 shadow-sm" 
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => removeFile(idx)} 
+                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 
                 <button disabled={saving} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black text-lg hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4">
@@ -261,7 +284,7 @@ export default function AdminShopPage() {
 
             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
                <h2 className="text-lg font-black text-gray-900 mb-4">🎁 รายการของรางวัล</h2>
-               <div className="space-y-3 h-[400px] overflow-y-auto pr-2">
+               <div className="space-y-3 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                  {rewards.map((reward) => {
                    const isOutOfStock = !reward.is_unlimited && reward.stock <= 0;
                    return (
@@ -285,7 +308,6 @@ export default function AdminShopPage() {
                               <span className="text-[9px] font-black text-orange-500 bg-orange-100 px-2 py-0.5 rounded flex items-center gap-1 w-max"><GraduationCap size={8}/> STUDENT</span>
                             )}
                             
-                            {/* ✨ โชว์สต็อกตรงนี้ */}
                             {reward.is_unlimited ? (
                               <span className="text-[9px] font-black text-purple-600 bg-purple-100 px-2 py-0.5 rounded flex items-center gap-1 w-max"><Infinity size={10}/> ไม่จำกัด</span>
                             ) : isOutOfStock ? (

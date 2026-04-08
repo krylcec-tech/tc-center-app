@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { 
   LayoutDashboard, Calendar, LogOut, Loader2, UserCircle, 
   ChevronRight, CalendarDays, History, CheckCircle2, Gift, 
-  Menu, X, Clock, MapPin, Settings, AlertCircle, Home // ✨ เพิ่ม Home icon
+  Menu, X, Clock, MapPin, Settings, AlertCircle, Home, 
+  BookOpen, FolderOpen, Share2, Sparkles // ✨ เพิ่มไอคอนใหม่
 } from 'lucide-react';
 
 export default function TutorDashboard() {
@@ -179,7 +180,7 @@ export default function TutorDashboard() {
           <p className="text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Tutor Partner</p>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto text-left">
           <Link href="/tutor" className="flex items-center gap-3 px-5 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black shadow-lg shadow-blue-200/50">
             <LayoutDashboard size={20} /> แดชบอร์ดหลัก
           </Link>
@@ -194,6 +195,11 @@ export default function TutorDashboard() {
 
           <Link href="/tutor/my-schedule" className="flex items-center gap-3 px-5 py-3.5 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all group">
             <CalendarDays size={20} className="text-gray-400 group-hover:text-blue-600" /> ตารางสอนทั้งหมด
+          </Link>
+
+          {/* ✨ เพิ่มเมนู Playlist ใน Sidebar */}
+          <Link href="/tutor/my-sheets" className="flex items-center gap-3 px-5 py-3.5 text-orange-600 bg-orange-50/50 hover:bg-orange-50 rounded-[1.2rem] font-black transition-all group border border-orange-100/50">
+            <FolderOpen size={20} className="text-orange-500" /> คลัง Playlist ของฉัน
           </Link>
 
           <Link href="/tutor/logs" className="flex items-center gap-3 px-5 py-3.5 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all group">
@@ -221,14 +227,20 @@ export default function TutorDashboard() {
 
       {/* --- Main Content --- */}
       <main className="flex-1 p-6 md:p-10 lg:p-14 overflow-y-auto w-full max-w-7xl mx-auto">
-        <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 text-left">
           <div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none text-gray-900">ยินดีต้อนรับครับ!</h1>
             <p className="text-gray-500 font-bold mt-3">วันนี้คุณมีภารกิจสอนทั้งหมด <span className="text-blue-600">{stats.todaySlots} คิว</span></p>
           </div>
 
-          {/* ✨ เพิ่มปุ่มกลับหน้าหลักขวาบนสำหรับ Tutor */}
-          <div className="flex flex-col items-end gap-3">
+          <div className="flex items-center gap-2">
+             {/* ✨ ปุ่มทางลัดไปคลังชีท */}
+             <Link 
+              href="/tutor/my-sheets" 
+              className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-md shadow-orange-100 active:scale-95"
+            >
+              <FolderOpen size={14}/> My Playlist
+            </Link>
              <Link 
               href="/" 
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100 active:scale-95"
@@ -239,7 +251,7 @@ export default function TutorDashboard() {
         </header>
 
         {/* --- Stats Cards --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10 text-left">
           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex items-center gap-6 group hover:shadow-md transition-all">
             <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform"><Calendar size={32}/></div>
             <div>
@@ -256,7 +268,7 @@ export default function TutorDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 text-left">
           
           <div className="xl:col-span-2">
             <div className="bg-white rounded-[3rem] p-8 md:p-10 border border-gray-100 shadow-sm h-full">
@@ -302,7 +314,22 @@ export default function TutorDashboard() {
             </div>
           </div>
 
+          {/* ✨ ฝั่งขวา: เน้น Book/Playlist ของติวเตอร์ */}
           <div className="xl:col-span-1 space-y-6">
+            
+            {/* 📂 การ์ดคลังเอกสาร (ใหม่ - เด่นมาก) */}
+            <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-[3rem] p-10 text-white shadow-xl shadow-orange-200 relative overflow-hidden group">
+               <div className="absolute -right-6 -bottom-6 opacity-20 group-hover:scale-125 transition-all duration-500 rotate-12"><BookOpen size={160}/></div>
+               <div className="relative z-10">
+                 <div className="bg-white/20 w-max p-2 rounded-xl mb-4 backdrop-blur-md"><Sparkles size={20}/></div>
+                 <h3 className="text-3xl font-black mb-3 leading-tight">My Playlist<br/>& Sharing</h3>
+                 <p className="text-orange-100 text-xs font-medium mb-8 leading-relaxed">จัดการชีทเรียนส่วนตัว และส่งให้<br/>นักเรียนเข้าคลัง My Books ทันที</p>
+                 <Link href="/tutor/my-sheets" className="flex items-center justify-center gap-2 bg-white text-orange-600 px-8 py-4 rounded-2xl font-black text-xs hover:bg-orange-50 transition-all active:scale-95 shadow-lg">
+                    เปิดคลังชีท <Share2 size={16} className="ml-1"/>
+                 </Link>
+               </div>
+            </div>
+
             <div className="bg-blue-600 rounded-[3rem] p-10 text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform"></div>
                <h3 className="text-2xl font-black mb-3">จัดการเวลาว่าง</h3>
@@ -320,6 +347,7 @@ export default function TutorDashboard() {
                  ดูรหัสและแต้ม <ChevronRight size={16}/>
                </Link>
             </div>
+
           </div>
 
         </div>

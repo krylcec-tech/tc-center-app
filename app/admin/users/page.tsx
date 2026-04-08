@@ -17,21 +17,24 @@ export default function SuperAdminUsers() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data: profiles, error: profError } = await supabase.from('profiles').select('id, email, full_name');
+      const { data: profiles, error: profError } = await supabase.from('profiles').select('id, email, full_name, role');
       if (profError) throw profError;
 
       const { data: wallets } = await supabase.from('student_wallets').select('*');
-      const { data: tutors } = await supabase.from('tutors').select('user_id, role');
+      const { data: tutors } = await supabase.from('tutors').select('*');
 
       const formatted = (profiles || []).map((p: any) => {
         const wallet = wallets?.find(w => w.user_id === p.id);
         const tutorInfo = tutors?.find(t => t.user_id === p.id);
 
+        let rawRole = p.role || tutorInfo?.role || 'student';
+        let cleanRole = rawRole.replace(/['"]/g, '').toLowerCase();
+
         return {
           id: p.id,
           email: p.email || 'No Email',
           name: wallet?.student_name || p.full_name || 'N/A',
-          role: tutorInfo?.role || 'student',
+          role: cleanRole, 
           tier1_online: wallet?.tier1_online_balance || 0,
           tier1_onsite: wallet?.tier1_onsite_balance || 0,
           tier2_online: wallet?.tier2_online_balance || 0,
@@ -42,8 +45,8 @@ export default function SuperAdminUsers() {
       });
 
       setAllUsers(formatted);
-      const { data: pending } = await supabase.from('tutors').select('*').contains('tags', ['รอการอนุมัติ']);
-      setPendingTutors(pending || []);
+      const pending = tutors?.filter(t => t.tags && t.tags.includes('รอการอนุมัติ')) || [];
+      setPendingTutors(pending);
     } catch (err: any) {
       console.error("Fetch Error:", err.message);
     } finally {
@@ -57,32 +60,28 @@ export default function SuperAdminUsers() {
     setProcessingId(payload.userId);
     try {
       if (action === 'CHANGE_ROLE') {
-        // ✨ แก้ไข Logic: เช็คก่อนว่ามีข้อมูลในตาราง tutors หรือยัง
-        const { data: existingTutor } = await supabase
+        // 1. อัปเดตตาราง tutors
+        const { error: tutorError } = await supabase
           .from('tutors')
-          .select('user_id')
-          .eq('user_id', payload.userId)
-          .maybeSingle();
+          .upsert({ 
+            user_id: payload.userId, 
+            role: payload.newRole, 
+            email: payload.email,
+            name: payload.name,
+            tags: ['เปลี่ยนสถานะโดยแอดมิน'] 
+          }, { 
+            onConflict: 'user_id' 
+          });
 
-        if (existingTutor) {
-          // ถ้ามีแล้ว ให้ Update
-          const { error } = await supabase
-            .from('tutors')
-            .update({ role: payload.newRole })
-            .eq('user_id', payload.userId);
-          if (error) throw error;
-        } else {
-          // ถ้ายังไม่มี ให้ Insert ใหม่
-          const { error } = await supabase
-            .from('tutors')
-            .insert({ 
-              user_id: payload.userId, 
-              role: payload.newRole, 
-              email: payload.email,
-              tags: ['ติวเตอร์ใหม่'] 
-            });
-          if (error) throw error;
-        }
+        if (tutorError) throw tutorError;
+
+        // 2. ✨ อัปเดตตาราง profiles เพื่อให้ระบบล็อกอินจำสิทธิ์ได้ถูกต้อง
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ role: payload.newRole })
+          .eq('id', payload.userId);
+
+        if (profileError) throw profileError;
       }
       
       if (action === 'UPDATE_HOUR') {
@@ -93,7 +92,7 @@ export default function SuperAdminUsers() {
           .eq('user_id', payload.userId);
         if (error) throw error;
       }
-      fetchData();
+      fetchData(); 
     } catch (err: any) { 
       alert("Error: " + err.message); 
     } finally {
@@ -101,15 +100,24 @@ export default function SuperAdminUsers() {
     }
   };
 
-  const approveTutor = async (tutorId: string) => {
+  // ✨ อัปเดตฟังก์ชันนี้ ให้ส่ง userId มาด้วยเพื่อไปเปลี่ยนสิทธิ์ในตารางหลัก
+  const approveTutor = async (tutorId: string, userId: string) => {
     if (!confirm('อนุมัติให้ติวเตอร์เริ่มสอน?')) return;
     setProcessingId(tutorId);
     try {
-      const { error } = await supabase.from('tutors').update({ 
+      // 1. อัปเดตสถานะในตาราง tutors
+      const { error: tutorError } = await supabase.from('tutors').update({ 
         tags: ['ติวเตอร์ใหม่'],
         role: 'tutor' 
       }).eq('id', tutorId);
-      if (error) throw error;
+      if (tutorError) throw tutorError;
+
+      // 2. ✨ อัปเดตตาราง profiles ทันที
+      const { error: profileError } = await supabase.from('profiles').update({ 
+        role: 'tutor' 
+      }).eq('id', userId);
+      if (profileError) throw profileError;
+
       alert('✅ อนุมัติสำเร็จ'); 
       fetchData();
     } catch (err: any) {
@@ -178,7 +186,12 @@ export default function SuperAdminUsers() {
                         </div>
                         <select 
                           value={user.role} 
-                          onChange={(e) => handleAction('CHANGE_ROLE', { userId: user.id, newRole: e.target.value, email: user.email })}
+                          onChange={(e) => handleAction('CHANGE_ROLE', { 
+                            userId: user.id, 
+                            newRole: e.target.value, 
+                            email: user.email,
+                            name: user.name
+                          })}
                           className={`text-[9px] font-black px-2 py-1 rounded-lg outline-none uppercase cursor-pointer ${user.role === 'admin' ? 'bg-red-50 text-red-600' : user.role === 'tutor' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}
                         >
                           <option value="student">Student</option>
@@ -224,6 +237,42 @@ export default function SuperAdminUsers() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+        
+        {activeTab === 'pending' && (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-orange-100 overflow-hidden p-6 md:p-8">
+            <h2 className="font-black flex items-center gap-2 mb-6 text-orange-600">
+              <ShieldCheck size={24}/> รายการขอเป็นติวเตอร์ ({pendingTutors.length})
+            </h2>
+            
+            {pendingTutors.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-3xl border border-dashed">
+                <p className="text-gray-400 font-bold">🎉 เยี่ยมมาก! ไม่มีรายการรออนุมัติค้างอยู่</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {pendingTutors.map(tutor => (
+                  <div key={tutor.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border border-orange-100 rounded-3xl bg-orange-50/30 hover:bg-orange-50/80 transition-all gap-4">
+                    <div>
+                      <p className="font-black text-gray-900 text-lg">{tutor.name || 'ไม่ระบุชื่อ'}</p>
+                      <p className="text-xs text-orange-600 font-bold flex items-center gap-1 mt-1">
+                        <Mail size={12}/> {tutor.email || 'ไม่มีข้อมูลอีเมล'}
+                      </p>
+                    </div>
+                    <button 
+                      // ✨ ส่ง user_id พ่วงไปด้วย เพื่อให้อัปเดตตาราง profiles ได้
+                      onClick={() => approveTutor(tutor.id, tutor.user_id)} 
+                      disabled={processingId === tutor.id}
+                      className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {processingId === tutor.id ? <Loader2 className="animate-spin" size={16}/> : <ShieldCheck size={16}/>}
+                      อนุมัติให้เป็นติวเตอร์
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

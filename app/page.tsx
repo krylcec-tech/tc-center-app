@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { 
-  User, Sparkles, ChevronRight, GraduationCap, Users, Star, MessageCircle, ArrowRight, Menu, X, LayoutDashboard
+  User, Sparkles, ChevronRight, GraduationCap, Users, Star, MessageCircle, Menu, X, LayoutDashboard, Heart, Rocket
 } from 'lucide-react';
 
 export default function PremiumResponsiveLanding() {
@@ -11,7 +11,6 @@ export default function PremiumResponsiveLanding() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✨ เช็กสถานะการล็อกอินทันทีที่เข้าหน้าแรก (ใช้ getSession เพื่อความเร็วสูงสุด)
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -20,7 +19,6 @@ export default function PremiumResponsiveLanding() {
     };
     checkUser();
 
-    // ฟังเสียงเหตุการณ์ Auth (เช่น ถ้ามีการ Logout จาก Tab อื่น หน้าแรกจะอัปเดตเอง)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -29,53 +27,59 @@ export default function PremiumResponsiveLanding() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-blue-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 font-sans text-slate-800 selection:bg-orange-200 overflow-x-hidden relative">
       
-      {/* 🌟 Navbar: Fixed & Glassmorphism */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-b border-slate-200 shadow-sm transition-all h-24">
+      {/* 🪄 CSS ซ่อน Scrollbar */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}} />
+
+      {/* 🌟 Navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-orange-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all h-20 md:h-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 h-full flex items-center justify-between">
-          
-          {/* Logo Section */}
-          <Link href="/" className="flex items-center gap-3 md:gap-4 group">
-            <div className="p-2 bg-slate-100/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] group-hover:shadow-[inset_0_2px_8px_rgba(0,0,0,0.1)] transition-all">
+          <Link href="/" className="flex items-center gap-3 md:gap-4 group hover:scale-105 transition-transform duration-300">
+            <div className="p-2 bg-white rounded-[1.25rem] shadow-sm border border-slate-100 group-hover:shadow-md transition-all">
               <img src="/icon.png" alt="TC Center" className="h-10 md:h-12 w-auto object-contain" />
             </div>
-            
             <div className="flex flex-col justify-center">
-              <p className="text-lg md:text-xl font-black tracking-[0.15em] text-transparent bg-clip-text bg-gradient-to-b from-slate-900 to-slate-500 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] leading-none uppercase">
+              <p className="text-xl md:text-2xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-orange-500 leading-none">
                 TC CENTER
               </p>
-              <p className="text-[9px] md:text-[10px] font-bold tracking-[0.25em] text-blue-600 uppercase mt-1 drop-shadow-sm">
+              <p className="text-[10px] md:text-xs font-bold tracking-[0.1em] text-orange-400 mt-1">
                 The Convergence
               </p>
             </div>
           </Link>
 
-          {/* Desktop Links */}
-          <div className="hidden lg:flex items-center gap-10">
-            <Link href="/student/courses" className="text-sm font-bold uppercase tracking-widest text-slate-600 hover:text-blue-600 transition-colors relative after:content-[''] after:absolute after:-bottom-1.5 after:left-0 after:w-0 after:h-[2px] after:bg-blue-600 after:transition-all hover:after:w-full">
-              คอร์สเรียน
+          <div className="hidden lg:flex items-center gap-8 bg-orange-50/50 px-8 py-3 rounded-full border border-orange-100">
+            <Link href="/student/courses" className="text-sm font-bold text-slate-600 hover:text-orange-600 transition-colors flex items-center gap-2">
+              <GraduationCap size={18} className="text-blue-500"/> คอร์สเรียน
             </Link>
-            <Link href="#" className="text-sm font-bold uppercase tracking-widest text-slate-600 hover:text-blue-600 transition-colors relative after:content-[''] after:absolute after:-bottom-1.5 after:left-0 after:w-0 after:h-[2px] after:bg-blue-600 after:transition-all hover:after:w-full">
-              ทีมติวเตอร์
+            <Link href="#" className="text-sm font-bold text-slate-600 hover:text-orange-600 transition-colors flex items-center gap-2">
+              <Users size={18} className="text-pink-500"/> ทีมติวเตอร์
             </Link>
           </div>
 
-          {/* ✨ Desktop Action Buttons: เปลี่ยนตามสถานะล็อกอิน */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-4">
             {!loading && (
               <>
                 {user ? (
-                  <Link href="/student" className="flex items-center gap-2 px-8 py-3.5 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-full hover:bg-blue-600 transition-all shadow-lg active:scale-95">
-                    <LayoutDashboard size={18} /> เข้าสู่ห้องเรียน
+                  <Link href="/student" className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-full hover:bg-blue-700 shadow-[0_4px_15px_rgba(37,99,235,0.3)] hover:-translate-y-1 transition-all active:scale-95">
+                    <LayoutDashboard size={18} /> ห้องเรียนของฉัน
                   </Link>
                 ) : (
                   <>
-                    <Link href="/login" className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-slate-600 hover:text-blue-600 transition-colors px-2">
-                      <User size={18} strokeWidth={2.5} /> เข้าสู่ระบบ
+                    <Link href="/login" className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-100 px-5 py-2.5 rounded-full hover:bg-blue-200 transition-all border border-blue-200">
+                      <User size={18} /> เข้าสู่ระบบ
                     </Link>
-                    <Link href="/register" className="px-8 py-3.5 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-full hover:bg-blue-700 transition-all shadow-lg active:scale-95">
-                      สมัครเรียน
+                    <Link href="/register" className="flex items-center gap-2 px-6 py-2.5 bg-orange-500 text-white font-bold text-sm rounded-full shadow-[0_4px_15px_rgba(249,115,22,0.3)] hover:bg-orange-600 hover:-translate-y-1 transition-all active:scale-95">
+                      <Rocket size={18}/> เริ่มเรียนฟรี!
                     </Link>
                   </>
                 )}
@@ -83,86 +87,106 @@ export default function PremiumResponsiveLanding() {
             )}
           </div>
 
-          {/* Mobile Toggle */}
-          <button className="md:hidden p-2 text-slate-600" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+          <button className="md:hidden p-2 text-slate-500 bg-white rounded-full shadow-sm border border-slate-100" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            {isMobileMenuOpen ? <X size={24} className="text-orange-500" /> : <Menu size={24} className="text-blue-500" />}
           </button>
         </div>
 
-        {/* 📱 Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
-          <div className="absolute top-24 left-0 w-full bg-white border-b border-slate-200 shadow-xl md:hidden flex flex-col px-6 py-6 gap-6 z-40 animate-in slide-in-from-top-5 duration-300">
-            <Link href="/student/courses" className="text-sm font-black uppercase tracking-widest text-slate-800" onClick={() => setIsMobileMenuOpen(false)}>คอร์สเรียนทั้งหมด</Link>
+          <div className="absolute top-20 md:top-24 left-4 right-4 bg-white/95 backdrop-blur-xl border border-orange-100 shadow-2xl rounded-3xl p-6 flex flex-col gap-4 z-40 animate-in slide-in-from-top-5 duration-300">
+            <Link href="/student/courses" className="flex items-center gap-3 p-3 bg-blue-50 rounded-2xl text-blue-600 font-bold border border-blue-100" onClick={() => setIsMobileMenuOpen(false)}>
+              <GraduationCap size={20}/> คอร์สเรียนทั้งหมด
+            </Link>
             <div className="w-full h-px bg-slate-100"></div>
             {user ? (
-              <Link href="/student" className="w-full text-center py-4 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-md" onClick={() => setIsMobileMenuOpen(false)}>
-                กลับเข้าสู่ห้องเรียน
+              <Link href="/student" className="w-full flex justify-center items-center gap-2 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700" onClick={() => setIsMobileMenuOpen(false)}>
+                <LayoutDashboard size={20}/> กลับเข้าสู่ห้องเรียน
               </Link>
             ) : (
-              <>
-                <Link href="/login" className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-800" onClick={() => setIsMobileMenuOpen(false)}>
+              <div className="flex flex-col gap-3">
+                <Link href="/login" className="flex justify-center items-center gap-2 w-full py-3 bg-blue-100 text-blue-700 font-bold rounded-2xl" onClick={() => setIsMobileMenuOpen(false)}>
                   <User size={18} /> เข้าสู่ระบบ
                 </Link>
-                <Link href="/register" className="w-full text-center py-4 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-md" onClick={() => setIsMobileMenuOpen(false)}>
-                  สมัครเรียนออนไลน์
+                <Link href="/register" className="flex justify-center items-center gap-2 w-full py-3 bg-orange-500 text-white font-bold rounded-2xl shadow-lg hover:bg-orange-600" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Rocket size={18}/> สมัครเรียนออนไลน์ ✨
                 </Link>
-              </>
+              </div>
             )}
           </div>
         )}
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative pt-36 md:pt-44 pb-40 md:pb-56 px-6 text-center bg-slate-900 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[400px] bg-blue-500/20 blur-[100px] rounded-full pointer-events-none"></div>
+      {/* 🎈 Hero Section */}
+      <section className="relative pt-36 md:pt-48 pb-24 md:pb-32 px-6 text-center overflow-hidden">
+        <div className="absolute top-20 left-[10%] w-64 h-64 bg-blue-400/20 blur-[80px] rounded-full"></div>
+        <div className="absolute top-40 right-[10%] w-72 h-72 bg-pink-400/20 blur-[80px] rounded-full"></div>
+        <div className="absolute bottom-10 left-[40%] w-56 h-56 bg-orange-400/20 blur-[80px] rounded-full"></div>
 
-        <div className="relative z-10 max-w-4xl mx-auto mt-8 md:mt-0">
-          <div className="inline-flex items-center gap-2 px-5 py-2 bg-white/10 border border-white/20 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest text-blue-200 mb-8 md:mb-10 backdrop-blur-sm">
-            <Sparkles size={16} fill="currentColor" className="text-amber-400" /> Excellence in Education
+        <div className="relative z-10 max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-pink-50 border border-pink-200 rounded-full text-xs font-bold text-pink-600 mb-8 hover:scale-105 transition-transform cursor-default shadow-sm">
+            <Heart size={16} className="text-pink-500 fill-pink-500 animate-bounce" /> เรียนสนุก เข้าใจง่าย สไตล์ TC Center
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black leading-[1.2] mb-6 md:mb-8 tracking-tight text-white px-2">
-            เก่งขึ้น <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">จนครูทัก</span> <br />
-            สอบติดคณะในฝัน
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black leading-[1.3] mb-6 md:mb-8 text-slate-800">
+            เก่งขึ้น <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-500">จนครูทัก!</span> <br />
+            สอบติดคณะในฝัน 🎯
           </h1>
+          
+          <p className="text-slate-600 text-base md:text-lg max-w-2xl mx-auto mb-10 font-medium leading-relaxed bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-white">
+            แพลตฟอร์มเรียนออนไลน์ที่เข้าใจวัยรุ่นที่สุด จัดตารางเรียนเองได้ มีคอร์สตั้งแต่ประถมถึงมหาลัย พร้อมติวเตอร์ระดับท็อปคอยดูแล!
+          </p>
 
-          <div className="flex flex-col sm:flex-row items-center gap-4 justify-center px-4 mt-12">
-            <Link href={user ? "/student/courses" : "/login"} className="w-full sm:w-auto px-8 md:px-10 py-4 bg-blue-600 text-white font-bold rounded-full flex items-center justify-center gap-2 hover:bg-blue-500 transition-all shadow-lg active:scale-95 text-xs md:text-sm uppercase tracking-widest">
-              {user ? "เริ่มเรียนเลย" : "เข้าสู่ระบบเรียน"} <ChevronRight size={18} />
+          <div className="flex flex-col sm:flex-row items-center gap-4 justify-center px-4">
+            <Link href={user ? "/student/courses" : "/register"} className="w-full sm:w-auto px-8 md:px-10 py-4 bg-blue-600 text-white font-bold rounded-[2rem] flex items-center justify-center gap-2 hover:bg-blue-700 shadow-[0_8px_20px_rgba(37,99,235,0.3)] hover:-translate-y-1 transition-all active:scale-95 text-sm md:text-base">
+              {user ? "ลุยกันเลย!" : "ทดลองเรียนฟรี"} <Sparkles size={20} className="text-amber-300"/>
             </Link>
-            <Link href="https://lin.ee/ZSDR4B3" target="_blank" className="w-full sm:w-auto px-8 md:px-10 py-4 bg-white/10 text-white font-bold rounded-full flex items-center justify-center gap-2 border border-white/20 hover:bg-white/20 transition-all active:scale-95 text-xs md:text-sm uppercase tracking-widest backdrop-blur-sm">
-              <MessageCircle size={18} className="text-green-400" /> ปรึกษาแอดมินฟรี
+            <Link href="https://lin.ee/ZSDR4B3" target="_blank" className="w-full sm:w-auto px-8 md:px-10 py-4 bg-green-50 text-green-700 font-bold rounded-[2rem] flex items-center justify-center gap-2 border border-green-200 hover:bg-green-100 hover:shadow-md hover:-translate-y-1 transition-all active:scale-95 text-sm md:text-base">
+              <MessageCircle size={20} className="text-[#00B900]" /> ปรึกษาพี่แอดมิน
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 -mt-20 md:-mt-32 pb-32">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+      {/* 🧩 Features Grid: แก้ไขให้ชิดซ้ายและรองรับจอครึ่ง */}
+      <section className="relative z-20 max-w-7xl mx-auto pb-32">
+        {/* ✨ ใช้ lg:grid แทน md เพื่อให้ iPad/จอครึ่งใช้โหมดสไลด์ และเพิ่ม scroll-pl-6 ให้อิงขอบซ้ายพอดี */}
+        <div className="flex lg:grid lg:grid-cols-3 gap-4 lg:gap-8 overflow-x-auto snap-x snap-mandatory px-6 pb-8 lg:pb-0 hide-scrollbar scroll-pl-6">
           {[
-            { icon: GraduationCap, title: 'คอร์สเรียนทั้งหมด', desc: 'เนื้อหาเข้มข้น ครอบคลุมทุกวิชาสำคัญ', link: '/student/courses', colorClass: 'text-blue-600', bgClass: 'bg-blue-50' },
-            { icon: Users, title: 'ทีมติวเตอร์ของเรา', desc: 'เรียนกับเหล่าครูพี่ๆ จากมหาวิทยาลัยชั้นนำ', link: '#', colorClass: 'text-amber-500', bgClass: 'bg-amber-50' },
-            { icon: Star, title: 'รีวิวความสำเร็จ', desc: 'ร่วมภาคภูมิใจและรับแรงบันดาลใจจากรุ่นพี่', link: '#', colorClass: 'text-purple-600', bgClass: 'bg-purple-50' }
+            { icon: GraduationCap, title: 'คอร์สเรียนครบสูตร', desc: 'เนื้อหาแน่นแต่ย่อยง่าย พร้อมลุยทุกสนามสอบ', link: '/student/courses', colorClass: 'text-blue-600', iconBg: 'bg-blue-100', cardBg: 'bg-blue-50/50', borderClass: 'border-blue-100' },
+            { icon: Users, title: 'ติวเตอร์สุดปัง', desc: 'เรียนกับพี่ๆ ใจดี จากมหาลัยดัง สอนสนุกไม่น่าเบื่อ', link: '#', colorClass: 'text-pink-600', iconBg: 'bg-pink-100', cardBg: 'bg-pink-50/50', borderClass: 'border-pink-100' },
+            { icon: Star, title: 'รีวิวเพียบ!', desc: 'พิสูจน์แล้วจากน้องๆ ที่เกรดพุ่ง สอบติดคณะในฝันจริง', link: '#', colorClass: 'text-orange-600', iconBg: 'bg-orange-100', cardBg: 'bg-orange-50/50', borderClass: 'border-orange-100' }
           ].map((item, idx) => (
-            <Link key={idx} href={item.link} className="group block bg-white p-8 md:p-12 rounded-[2rem] border border-slate-100 transition-all shadow-xl hover:-translate-y-2 hover:shadow-2xl duration-300">
-              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-6 ${item.bgClass} ${item.colorClass} group-hover:scale-110 transition-transform`}>
-                <item.icon size={32} />
+            <Link 
+              key={idx} 
+              href={item.link} 
+              // ✨ เปลี่ยนจาก snap-center เป็น snap-start เพื่อให้การ์ดชิดซ้ายเสมอ
+              className={`group ${item.cardBg} p-8 md:p-10 rounded-[2.5rem] border ${item.borderClass} shadow-sm hover:shadow-lg transition-all hover:-translate-y-2 duration-300 flex flex-col items-center text-center bg-white min-w-[85vw] sm:min-w-[320px] lg:min-w-0 snap-start shrink-0`}
+            >
+              <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center mb-6 ${item.iconBg} ${item.colorClass} group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-sm`}>
+                <item.icon size={36} strokeWidth={2.5} />
               </div>
-              <h3 className="text-xl md:text-2xl font-black mb-3 text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</h3>
-              <p className="text-slate-500 text-xs md:text-sm mb-8 leading-relaxed">{item.desc}</p>
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-colors">
-                Explore <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              <h3 className="text-xl md:text-2xl font-black mb-3 text-slate-800">{item.title}</h3>
+              <p className="text-slate-600 text-sm mb-8 leading-relaxed px-2 font-medium">{item.desc}</p>
+              <div className={`mt-auto flex items-center gap-2 text-sm font-bold ${item.colorClass} ${item.iconBg} px-6 py-2.5 rounded-full group-hover:brightness-95 transition-all`}>
+                ดูรายละเอียด <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      <footer className="py-12 bg-white border-t border-slate-200 text-center">
-        <div className="max-w-4xl mx-auto px-6">
-          <p className="text-slate-900 text-[10px] font-black uppercase tracking-widest mb-2">TC CENTER LEARNING HUB</p>
-          <p className="text-slate-500 text-[9px] font-bold tracking-[0.2em] uppercase">The Convergence of Academic Excellence</p>
+      {/* Footer */}
+      <footer className="py-12 bg-white text-center border-t border-slate-100">
+        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2 font-black text-slate-800 text-lg">
+            TC CENTER <Heart size={16} className="text-pink-500 fill-pink-500" />
+          </div>
+          <p className="text-slate-400 text-xs font-medium">The Convergence of Academic Excellence</p>
+          <div className="flex gap-4 mt-4">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-pink-400"></span>
+          </div>
         </div>
       </footer>
 
