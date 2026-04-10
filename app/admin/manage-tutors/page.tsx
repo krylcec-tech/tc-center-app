@@ -1,10 +1,13 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase'; 
-import { ArrowLeft, Trash2, BookOpen, UserPlus, Image as ImageIcon, Edit2, Save, Loader2, Tag, GraduationCap } from 'lucide-react';
+import { 
+  ArrowLeft, Trash2, BookOpen, UserPlus, Image as ImageIcon, 
+  Edit2, Save, Loader2, Tag, GraduationCap, Eye, EyeOff 
+} from 'lucide-react';
 import Link from 'next/link';
 
-// ✨ ระดับชั้นมาตรฐาน 3 ระดับที่คุณกำหนดไว้
+// ✨ ระดับชั้นมาตรฐาน 3 ระดับ
 const GRADE_LEVELS = [
   'ประถม - ม.ต้น',
   'สอบเข้า ม.4',
@@ -19,8 +22,8 @@ export default function ManageTutorsPage() {
   const [editingTutor, setEditingTutor] = useState<any>(null);
   const [tutorName, setTutorName] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  // ✨ State สำหรับเก็บระดับชั้นที่เลือก
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [isActive, setIsActive] = useState<boolean>(true); // ✨ State สำหรับซ่อน/แสดง
   
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -69,9 +72,19 @@ export default function ManageTutorsPage() {
     setSelectedTags(prev => prev.includes(subjectName) ? prev.filter(t => t !== subjectName) : [...prev, subjectName]);
   };
 
-  // ✨ ฟังก์ชันกดเลือก/ยกเลิกระดับชั้น
   const toggleLevel = (level: string) => {
     setSelectedLevels(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]);
+  };
+
+  // ✨ ฟังก์ชัน Quick Toggle เปิด/ปิดจากรายชื่อโดยตรง
+  const toggleTutorVisibility = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase.from('tutors').update({ is_active: !currentStatus }).eq('id', id);
+      if (error) throw error;
+      fetchInitialData();
+    } catch (error: any) {
+      alert("Error: " + error.message);
+    }
   };
 
   const handleSaveTutor = async () => {
@@ -86,8 +99,9 @@ export default function ManageTutorsPage() {
       const tutorData = {
         name: tutorName,
         tags: selectedTags, 
-        grade_levels: selectedLevels, // ✨ บันทึกระดับชั้นลง DB
+        grade_levels: selectedLevels,
         image_url: finalImageUrl,
+        is_active: isActive, // ✨ บันทึกสถานะการซ่อน/แสดง
         role: 'tutor' 
       };
 
@@ -113,14 +127,15 @@ export default function ManageTutorsPage() {
     setEditingTutor(null);
     setTutorName('');
     setSelectedTags([]); 
-    setSelectedLevels([]); // ✨ ล้างค่าระดับชั้น
+    setSelectedLevels([]);
+    setIsActive(true); // ✨ คืนค่าเริ่มต้นให้เป็นแสดงผล
     setFile(null);
     setPreviewUrl(null);
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen font-sans">
-      <Link href="/admin" className="text-blue-600 font-black text-sm uppercase tracking-widest flex items-center gap-2 mb-6 group">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen font-sans text-left">
+      <Link href="/admin" className="text-blue-600 font-black text-sm uppercase tracking-widest flex items-center gap-2 mb-6 group w-max">
         <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> 
         กลับหน้าหลัก Admin
       </Link>
@@ -180,7 +195,7 @@ export default function ManageTutorsPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-6">
               <div className="relative">
-                <div className="w-24 h-24 bg-gray-50 border-2 border-dashed border-gray-300 rounded-3xl overflow-hidden flex items-center justify-center hover:border-blue-400 transition-colors cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className="w-24 h-24 bg-gray-50 border-2 border-dashed border-gray-300 rounded-3xl overflow-hidden flex items-center justify-center hover:border-blue-400 transition-colors cursor-pointer shrink-0" onClick={() => fileInputRef.current?.click()}>
                   {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" /> : <ImageIcon className="text-gray-300" size={32}/>}
                 </div>
                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => {
@@ -199,7 +214,25 @@ export default function ManageTutorsPage() {
               </div>
             </div>
 
-            {/* ✨ โซนเลือกระดับชั้น (Grade Levels) */}
+            {/* ✨ สวิตช์สำหรับกำหนดสถานะ ซ่อน/แสดง */}
+            <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between">
+              <div>
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                  {isActive ? <Eye size={14} className="text-green-500"/> : <EyeOff size={14} className="text-red-500"/>} 
+                  การแสดงผลบนหน้าเว็บไซต์
+                </label>
+                <p className="text-xs font-bold text-gray-400">{isActive ? 'นักเรียนทุกคนสามารถมองเห็นติวเตอร์คนนี้ได้' : 'ซ่อนโปรไฟล์นี้ไว้ (เฉพาะแอดมินที่เห็น)'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsActive(!isActive)}
+                className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none ${isActive ? 'bg-green-500' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform duration-300 ease-in-out ${isActive ? 'translate-x-7' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* โซนเลือกระดับชั้น (Grade Levels) */}
             <div className="bg-purple-50 p-6 rounded-[2rem] border border-purple-100">
               <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><GraduationCap size={14}/> ระดับชั้นที่รับสอน</label>
               <div className="flex flex-wrap gap-2">
@@ -258,15 +291,25 @@ export default function ManageTutorsPage() {
             <h3 className="font-black text-xl mb-6 text-gray-800">รายชื่อติวเตอร์ในระบบ</h3>
             <div className="grid grid-cols-1 gap-4">
               {tutors.map(t => (
-                <div key={t.id} className="flex flex-col md:flex-row items-start justify-between p-5 bg-white border-2 border-gray-50 rounded-[2rem] hover:border-blue-100 hover:shadow-sm transition-all group gap-4">
+                <div key={t.id} className={`flex flex-col md:flex-row items-start justify-between p-5 bg-white border-2 border-gray-50 rounded-[2rem] hover:border-blue-100 hover:shadow-sm transition-all group gap-4 ${t.is_active === false ? 'opacity-60 bg-gray-50' : ''}`}>
                   <div className="flex items-start gap-5">
-                    <div className="w-16 h-16 bg-gray-100 rounded-2xl overflow-hidden shadow-sm shrink-0">
-                      {t.image_url ? <img src={t.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><UserPlus size={24}/></div>}
+                    <div className="relative shrink-0">
+                      <div className="w-16 h-16 bg-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                        {t.image_url ? <img src={t.image_url} className={`w-full h-full object-cover ${t.is_active === false ? 'grayscale' : ''}`} /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><UserPlus size={24}/></div>}
+                      </div>
+                      {/* ✨ ป้ายบอกสถานะการซ่อน */}
+                      {t.is_active === false && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase shadow-md border-2 border-white">
+                          ซ่อนอยู่
+                        </span>
+                      )}
                     </div>
                     <div>
-                      <h4 className="font-black text-xl text-gray-900 mb-2">{t.name}</h4>
+                      <h4 className="font-black text-xl text-gray-900 mb-2 flex items-center gap-2">
+                        {t.name}
+                        {t.is_active === false && <EyeOff size={14} className="text-red-500"/>}
+                      </h4>
                       
-                      {/* ✨ แสดงระดับชั้น (สีม่วง) */}
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {(t.grade_levels || []).map((level: string) => (
                           <span key={level} className="px-2.5 py-1 bg-purple-50 text-purple-700 text-[10px] font-black rounded-lg uppercase tracking-wide border border-purple-100">
@@ -275,7 +318,6 @@ export default function ManageTutorsPage() {
                         ))}
                       </div>
 
-                      {/* แสดง Tags วิชา (สีฟ้า) */}
                       <div className="flex flex-wrap gap-1">
                         {(t.tags || []).map((tag: string) => (
                           <span key={tag} className="px-2.5 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-lg uppercase tracking-wide">
@@ -285,15 +327,27 @@ export default function ManageTutorsPage() {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* ปุ่ม Action ต่างๆ */}
                   <div className="flex gap-2 w-full md:w-auto justify-end md:self-center">
+                    {/* ✨ ปุ่ม Quick Toggle ซ่อน/แสดง */}
+                    <button onClick={() => toggleTutorVisibility(t.id, t.is_active !== false)} 
+                      className={`p-3 rounded-xl transition-colors ${t.is_active !== false ? 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-600 hover:text-white'}`}
+                      title={t.is_active !== false ? "ซ่อนติวเตอร์" : "แสดงติวเตอร์"}
+                    >
+                      {t.is_active !== false ? <Eye size={18}/> : <EyeOff size={18}/>}
+                    </button>
+
                     <button onClick={() => {
                       setEditingTutor(t);
                       setTutorName(t.name);
                       setSelectedTags(t.tags || []); 
-                      setSelectedLevels(t.grade_levels || []); // ✨ โหลดระดับชั้นเดิมมาแก้ไข
+                      setSelectedLevels(t.grade_levels || []);
+                      setIsActive(t.is_active !== false); // โหลดสถานะเดิม
                       setPreviewUrl(t.image_url);
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-colors"><Edit2 size={18}/></button>
+                    
                     <button onClick={async () => {
                       if(confirm(`ยืนยันการลบ ${t.name}?`)) {
                         await supabase.from('tutors').delete().eq('id', t.id);

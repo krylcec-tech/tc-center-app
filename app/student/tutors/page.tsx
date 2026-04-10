@@ -25,10 +25,11 @@ export default function TutorsCatalogPage() {
 
   const fetchTutors = async () => {
     setLoading(true);
-    // ดึงติวเตอร์ทั้งหมดที่เปิดใช้งานอยู่
+    // ✨ ดึงเฉพาะติวเตอร์ที่ไม่ได้ถูกซ่อน (is_active ไม่เท่ากับ false)
     const { data } = await supabase
       .from('tutors')
       .select('*')
+      .neq('is_active', false) // เพิ่มบรรทัดนี้เพื่อกรองคนถูกซ่อนออก
       .order('created_at', { ascending: false });
     
     setTutors(data || []);
@@ -44,7 +45,7 @@ export default function TutorsCatalogPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 lg:p-12 font-sans text-gray-900">
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 lg:p-12 font-sans text-gray-900 text-left">
       
       {/* --- Video Modal --- */}
       {selectedVideo && (
@@ -120,7 +121,7 @@ export default function TutorsCatalogPage() {
             <p className="font-black text-sm uppercase tracking-widest animate-pulse">กำลังโหลดข้อมูลติวเตอร์...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
             {filteredTutors.map(tutor => (
               <div key={tutor.id} className="bg-white rounded-[3rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col">
                 
