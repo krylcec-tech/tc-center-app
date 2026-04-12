@@ -6,6 +6,9 @@ import {
   User, Sparkles, ChevronRight, GraduationCap, Users, Star, MessageCircle, Menu, X, LayoutDashboard, Heart, Rocket
 } from 'lucide-react';
 
+// ✨ 1. Import Component น้อง Mascot เข้ามาเฉพาะหน้านี้
+import FloatingAIMascot from '@/components/FloatingAIMascot';
+
 export default function PremiumResponsiveLanding() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -149,7 +152,6 @@ export default function PremiumResponsiveLanding() {
 
       {/* 🧩 Features Grid: แก้ไขให้ชิดซ้ายและรองรับจอครึ่ง */}
       <section className="relative z-20 max-w-7xl mx-auto pb-32">
-        {/* ✨ ใช้ lg:grid แทน md เพื่อให้ iPad/จอครึ่งใช้โหมดสไลด์ และเพิ่ม scroll-pl-6 ให้อิงขอบซ้ายพอดี */}
         <div className="flex lg:grid lg:grid-cols-3 gap-4 lg:gap-8 overflow-x-auto snap-x snap-mandatory px-6 pb-8 lg:pb-0 hide-scrollbar scroll-pl-6">
           {[
             { icon: GraduationCap, title: 'คอร์สเรียนครบสูตร', desc: 'เนื้อหาแน่นแต่ย่อยง่าย พร้อมลุยทุกสนามสอบ', link: '/student/courses', colorClass: 'text-blue-600', iconBg: 'bg-blue-100', cardBg: 'bg-blue-50/50', borderClass: 'border-blue-100' },
@@ -159,7 +161,6 @@ export default function PremiumResponsiveLanding() {
             <Link 
               key={idx} 
               href={item.link} 
-              // ✨ เปลี่ยนจาก snap-center เป็น snap-start เพื่อให้การ์ดชิดซ้ายเสมอ
               className={`group ${item.cardBg} p-8 md:p-10 rounded-[2.5rem] border ${item.borderClass} shadow-sm hover:shadow-lg transition-all hover:-translate-y-2 duration-300 flex flex-col items-center text-center bg-white min-w-[85vw] sm:min-w-[320px] lg:min-w-0 snap-start shrink-0`}
             >
               <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center mb-6 ${item.iconBg} ${item.colorClass} group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-sm`}>
@@ -189,6 +190,9 @@ export default function PremiumResponsiveLanding() {
           </div>
         </div>
       </footer>
+
+      {/* ✨ 2. วางน้อง Mascot ไว้ล่างสุดของหน้านี้ (จะโชว์เฉพาะหน้านี้เท่านั้น) */}
+      <FloatingAIMascot />
 
     </div>
   );
