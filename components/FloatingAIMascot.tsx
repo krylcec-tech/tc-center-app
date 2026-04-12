@@ -1,6 +1,5 @@
 'use client'
 import { useState, useRef, useEffect } from 'react';
-// ✨ ลบ Bot ออกเพราะเราใช้รูปภาพแทนแล้ว
 import { X, Send, Sparkles, Loader2 } from 'lucide-react';
 
 export default function FloatingAIMascot() {
@@ -25,7 +24,6 @@ export default function FloatingAIMascot() {
     setInput('');
     setIsLoading(true);
 
-    // 🔴 ตรงนี้คือจุดเชื่อมต่อ API จริงในอนาคต
     setTimeout(() => {
       let aiResponse = '';
       
@@ -52,12 +50,11 @@ export default function FloatingAIMascot() {
         <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4 md:p-5 flex items-center justify-between text-white relative overflow-hidden">
           <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 blur-xl rounded-full"></div>
           <div className="flex items-center gap-3 relative z-10">
-            {/* ✨ จุดที่ 1: แก้ไอคอนในหัวแชท */}
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 shadow-inner">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 shadow-inner">
               <img src="/aibear.png" alt="TC AI Mascot" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h3 className="font-black text-lg leading-none">TC Assistant</h3>
+              <h3 className="font-black text-xl leading-none">TC Assistant</h3>
               <p className="text-[10px] font-bold text-orange-100 flex items-center gap-1 mt-1"><Sparkles size={10}/> AI Tutor & Support</p>
             </div>
           </div>
@@ -76,8 +73,7 @@ export default function FloatingAIMascot() {
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-2 text-slate-400 text-sm">
-                {/* ✨ แอบเอารูปน้องหมีมาใส่ตอนโหลดด้วยให้ดูน่ารัก */}
-                <img src="/aibear.png" alt="Typing" className="w-5 h-5 animate-pulse object-contain"/> กำลังคิด...
+                <img src="/aibear.png" alt="Typing" className="w-6 h-6 animate-pulse object-contain"/> กำลังคิด...
               </div>
             </div>
           )}
@@ -114,19 +110,27 @@ export default function FloatingAIMascot() {
         className="relative group animate-bounce-slow"
         style={{ animationDuration: '3s' }}
       >
-        {/* เงา 3D ด้านล่าง */}
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-3 bg-black/20 blur-sm rounded-[100%] group-hover:scale-75 transition-transform duration-300"></div>
+        {/* เงา 3D ด้านล่าง (ขยายเงาตามขนาด) */}
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-16 h-4 bg-black/20 blur-sm rounded-[100%] group-hover:scale-75 transition-transform duration-300"></div>
         
-        {/* ตัว Mascot (ใส่รูป aibear.png แทนไอคอน Bot) */}
-        <div className={`w-16 h-16 md:w-20 md:h-20 bg-gradient-to-tr from-orange-400 to-pink-500 rounded-[2rem] border-4 border-white shadow-[0_10px_25px_rgba(249,115,22,0.4)] flex items-center justify-center text-white relative z-10 transition-transform duration-300 group-hover:-translate-y-2 ${isOpen ? 'rotate-12 scale-90' : 'rotate-0'}`}>
-          {/* ✨ จุดที่ 2: แก้ไอคอนบนปุ่มลอย */}
-          {isOpen ? <X size={32} /> : <img src="/aibear.png" alt="AI Mascot Button" className="w-14 h-14 md:w-16 md:h-16 object-contain" />}
+        {/* ✨ จุดที่แก้ไข: ขยายขนาดวงกลม (w-20->w-24) และขยายขนาดรูปหมี */}
+        <div className={`w-20 h-20 md:w-24 md:h-24 bg-gradient-to-tr from-orange-400 to-pink-500 rounded-[2.5rem] border-4 border-white shadow-[0_10px_30px_rgba(249,115,22,0.4)] flex items-center justify-center text-white relative z-10 transition-transform duration-300 group-hover:-translate-y-2 ${isOpen ? 'rotate-12 scale-90' : 'rotate-0'}`}>
+          
+          {isOpen ? (
+             <X size={40} /> 
+          ) : (
+             <img 
+               src="/aibear.png" 
+               alt="AI Mascot Button" 
+               className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-lg group-hover:scale-110 transition-transform" 
+             />
+          )}
           
           {/* Notification Dot */}
           {!isOpen && (
-            <span className="absolute -top-2 -right-2 flex h-6 w-6">
+            <span className="absolute -top-1 -right-1 flex h-7 w-7">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-6 w-6 bg-red-500 border-2 border-white items-center justify-center text-[10px] font-black">1</span>
+              <span className="relative inline-flex rounded-full h-7 w-7 bg-red-500 border-[3px] border-white items-center justify-center text-[11px] font-black shadow-sm">1</span>
             </span>
           )}
         </div>
