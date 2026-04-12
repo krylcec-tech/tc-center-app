@@ -1,61 +1,84 @@
 'use client'
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, Loader2 } from 'lucide-react';
+import { X, Send, Sparkles, Loader2, ImageIcon } from 'lucide-react';
 
 export default function FloatingAIMascot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: 'ai', content: 'สวัสดีครับ! ผมคือน้อง TC AI หมีอัจฉริยะ 🐻🤖\nอยากสอบถามคอร์สเรียน หรือให้ช่วยไกด์การบ้านเรื่องไหน พิมพ์มาได้เลยครับ!' }
+  const [messages, setMessages] = useState<any[]>([
+    { role: 'ai', content: 'สวัสดีครับ! ผมคือน้อง TC AI หมีอัจฉริยะ 🐻🤖\nส่งรูปโจทย์ หรือพิมพ์ถามการบ้านมาได้เลยครับ! (ผมช่วยสอนนะ แต่ห้ามขอเฉลยล่ะ 😉)' }
   ]);
   const [input, setInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() && !selectedImage) return;
 
     const userMessage = input.trim();
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    const userImage = selectedImage;
+    
+    setMessages(prev => [...prev, { role: 'user', content: userMessage, image: userImage }]);
     setInput('');
+    setSelectedImage(null);
     setIsLoading(true);
 
-    setTimeout(() => {
-      let aiResponse = '';
-      
-      if (userMessage.includes('การบ้าน') || userMessage.includes('เฉลย') || userMessage.includes('ตอบอะไร')) {
-        aiResponse = 'เรื่องนี้ท้าทายดีนะครับ! 🧠 แต่เพื่อให้เก่งขึ้น ผมขอไม่บอกคำตอบตรงๆ นะครับ\n\nลองใบ้ให้นิดนึง: ลองทบทวนสูตรเรื่องนี้ดู หรือบอกผมหน่อยว่าตอนนี้คุณติดอยู่ตรงขั้นตอนไหน? เดี๋ยวเรามาแก้ไปด้วยกันครับ!';
-      } else if (userMessage.includes('คอร์ส') || userMessage.includes('ราคา')) {
-        aiResponse = 'คอร์สเรียนของเรามีตั้งแต่ระดับประถม - มหาลัยเลยครับ! สอนโดยติวเตอร์ระดับท็อป สามารถดูรายละเอียดและราคาได้ที่เมนู "ซื้อคอร์ส" ได้เลยครับ 📚 สนใจวิชาไหนเป็นพิเศษไหมครับ?';
-      } else {
-        aiResponse = 'น่าสนใจมากครับ! เล่ารายละเอียดเพิ่มอีกนิดได้ไหมครับ เดี๋ยวผมช่วยดูให้ ✨';
-      }
+    try {
+      // 🚀 ส่งไปหา Gemini API ผ่าน Route ที่เราสร้างไว้
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: userMessage, 
+          image: userImage 
+        }),
+      });
 
-      setMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
+      const data = await response.json();
+      
+      if (data.error) throw new Error(data.error);
+
+      setMessages(prev => [...prev, { role: 'ai', content: data.reply }]);
+    } catch (err: any) {
+      setMessages(prev => [...prev, { role: 'ai', content: "ขอโทษทีครับพี่ สมองผมขัดข้องนิดหน่อย ลองใหม่อีกทีนะ! 🐻💢" }]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end font-sans">
       
       {/* 💬 หน้าต่าง Chat Box */}
-      <div className={`mb-4 w-[90vw] sm:w-[380px] bg-white rounded-[2rem] shadow-2xl border border-orange-100 overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+      <div className={`mb-4 w-[90vw] sm:w-[380px] bg-white rounded-[2.5rem] shadow-2xl border border-orange-100 overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
         
         {/* Header แชท */}
-        <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4 md:p-5 flex items-center justify-between text-white relative overflow-hidden">
+        <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4 flex items-center justify-between text-white relative overflow-hidden">
           <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 blur-xl rounded-full"></div>
           <div className="flex items-center gap-3 relative z-10">
             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 shadow-inner">
-              <img src="/aibear.png" alt="TC AI Mascot" className="w-full h-full object-contain" />
+              <img src="/aibear.png" alt="TC AI Mascot" className="w-full h-full object-contain scale-110" />
             </div>
             <div>
-              <h3 className="font-black text-xl leading-none">TC Assistant</h3>
-              <p className="text-[10px] font-bold text-orange-100 flex items-center gap-1 mt-1"><Sparkles size={10}/> AI Tutor & Support</p>
+              <h3 className="font-black text-lg leading-none">TC Assistant</h3>
+              <p className="text-[10px] font-bold text-orange-100 flex items-center gap-1 mt-1"><Sparkles size={10}/> Gemini 1.5 Flash Online</p>
             </div>
           </div>
           <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-full transition-colors relative z-10"><X size={20}/></button>
@@ -64,71 +87,97 @@ export default function FloatingAIMascot() {
         {/* พื้นที่ข้อความ */}
         <div className="h-[350px] md:h-[400px] overflow-y-auto p-4 bg-slate-50/50 flex flex-col gap-4 custom-scrollbar">
           {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] p-3.5 rounded-2xl text-sm font-medium leading-relaxed ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-sm shadow-md' : 'bg-white text-slate-700 border border-slate-200 rounded-bl-sm shadow-sm whitespace-pre-wrap'}`}>
-                {msg.content}
-              </div>
+            <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+              {msg.image && (
+                <div className={`mb-2 max-w-[70%] p-1 rounded-2xl ${msg.role === 'user' ? 'bg-blue-100' : 'bg-slate-200'}`}>
+                  <img src={msg.image} alt="uploaded" className="rounded-xl w-full h-auto object-cover shadow-sm" />
+                </div>
+              )}
+              {msg.content && (
+                <div className={`max-w-[85%] p-3.5 rounded-2xl text-sm font-medium leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white text-slate-700 border border-slate-100 rounded-bl-sm whitespace-pre-wrap'}`}>
+                  {msg.content}
+                </div>
+              )}
             </div>
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-2 text-slate-400 text-sm">
-                <img src="/aibear.png" alt="Typing" className="w-6 h-6 animate-pulse object-contain"/> กำลังคิด...
+              <div className="bg-white border border-slate-100 p-3.5 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-2 text-slate-400 text-sm">
+                <img src="/aibear.png" alt="Typing" className="w-6 h-6 animate-pulse object-contain"/> กำลังประมวลผล...
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* ช่องพิมพ์ข้อความ */}
-        <div className="p-3 bg-white border-t border-slate-100">
-          <form onSubmit={handleSend} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full p-1 pl-4 focus-within:border-orange-300 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
-            <input 
-              type="text" 
-              placeholder="ถามคอร์สเรียน หรือ ปรึกษาการบ้าน..." 
-              className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-slate-700 placeholder:text-slate-400"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-            />
+        {/* ส่วนพิมพ์ข้อความและแนบรูป */}
+        <div className="bg-white border-t border-slate-100 flex flex-col">
+          {selectedImage && (
+            <div className="p-3 bg-slate-50 border-b border-slate-100 relative flex gap-2">
+              <div className="relative w-16 h-16 inline-block">
+                <img src={selectedImage} alt="preview" className="w-full h-full object-cover rounded-xl border border-slate-200 shadow-sm" />
+                <button type="button" onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:scale-110 transition-transform">
+                  <X size={12}/>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 self-center font-bold italic">หมีพร้อมสแกนการบ้านแล้วครับ!</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSend} className="flex items-end gap-2 p-3">
+            <div className="flex-1 bg-slate-50 border border-slate-200 rounded-[1.5rem] flex items-center p-1 pl-3 focus-within:border-orange-300 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+              <button 
+                type="button" 
+                onClick={() => fileInputRef.current?.click()}
+                className="text-slate-400 hover:text-orange-500 transition-colors p-1.5 shrink-0"
+              >
+                <ImageIcon size={20} />
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleImageChange} 
+              />
+              <input 
+                type="text" 
+                placeholder="ถามได้ทุกเรื่อง หรือส่งการบ้าน..." 
+                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-slate-700 placeholder:text-slate-400 px-2 py-2"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+              />
+            </div>
             <button 
               type="submit" 
-              disabled={!input.trim() || isLoading}
-              className="w-10 h-10 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600 disabled:bg-slate-200 disabled:text-slate-400 transition-colors shrink-0"
+              disabled={(!input.trim() && !selectedImage) || isLoading}
+              className="w-12 h-12 bg-gradient-to-tr from-orange-500 to-pink-500 text-white rounded-full flex items-center justify-center hover:shadow-lg disabled:opacity-50 disabled:grayscale transition-all shrink-0"
             >
-              <Send size={16} className="ml-1" />
+              <Send size={18} className="ml-1" />
             </button>
           </form>
         </div>
-        <div className="text-center py-2 bg-slate-50 border-t border-slate-100">
-          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Powered by TC Center AI</p>
-        </div>
       </div>
 
-      {/* 🚀 ปุ่ม Mascot ลอยๆ (3D Effect) */}
+      {/* 🚀 ปุ่ม Mascot ลอยๆ (3D Effect) - หมีตัวใหญ่เบิ้ม */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="relative group animate-bounce-slow"
         style={{ animationDuration: '3s' }}
       >
-        {/* เงา 3D ด้านล่าง (ขยายเงาตามขนาด) */}
         <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-16 h-4 bg-black/20 blur-sm rounded-[100%] group-hover:scale-75 transition-transform duration-300"></div>
-        
-        {/* ✨ จุดที่แก้ไข: ขยายขนาดวงกลม (w-20->w-24) และขยายขนาดรูปหมี */}
         <div className={`w-20 h-20 md:w-24 md:h-24 bg-gradient-to-tr from-orange-400 to-pink-500 rounded-[2.5rem] border-4 border-white shadow-[0_10px_30px_rgba(249,115,22,0.4)] flex items-center justify-center text-white relative z-10 transition-transform duration-300 group-hover:-translate-y-2 ${isOpen ? 'rotate-12 scale-90' : 'rotate-0'}`}>
-          
           {isOpen ? (
              <X size={40} /> 
           ) : (
              <img 
                src="/aibear.png" 
                alt="AI Mascot Button" 
-               className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-lg group-hover:scale-110 transition-transform" 
+               className="w-full h-full object-contain scale-[1.6] md:scale-[1.8] drop-shadow-[0_10px_15px_rgba(0,0,0,0.3)] group-hover:scale-[1.9] origin-bottom transition-transform duration-300" 
              />
           )}
-          
-          {/* Notification Dot */}
           {!isOpen && (
-            <span className="absolute -top-1 -right-1 flex h-7 w-7">
+            <span className="absolute -top-1 -right-1 flex h-7 w-7 z-20">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-7 w-7 bg-red-500 border-[3px] border-white items-center justify-center text-[11px] font-black shadow-sm">1</span>
             </span>
@@ -136,7 +185,6 @@ export default function FloatingAIMascot() {
         </div>
       </button>
 
-      {/* CSS อนิเมชั่นลอยขึ้นลงนุ่มๆ */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes bounce-slow {
           0%, 100% { transform: translateY(-5%); }
