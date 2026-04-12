@@ -59,7 +59,7 @@ export default function FloatingAIMascot() {
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end font-sans">
       
-      {/* 💬 หน้าต่าง Chat Box (เหมือนเดิม) */}
+      {/* 💬 หน้าต่าง Chat Box */}
       <div className={`mb-4 w-[90vw] sm:w-[380px] bg-white rounded-[2.5rem] shadow-2xl border border-orange-100 overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
         <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4 flex items-center justify-between text-white relative overflow-hidden">
           <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 blur-xl rounded-full"></div>
@@ -75,7 +75,7 @@ export default function FloatingAIMascot() {
           <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-full transition-colors relative z-10"><X size={20}/></button>
         </div>
 
-        <div className="h-[350px] md:h-[400px] overflow-y-auto p-4 bg-slate-50/50 flex flex-col gap-4">
+        <div className="h-[350px] md:h-[400px] overflow-y-auto p-4 bg-slate-50/50 flex flex-col gap-4 custom-scrollbar">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
               {msg.image && (
@@ -116,47 +116,49 @@ export default function FloatingAIMascot() {
         </div>
       </div>
 
-      {/* 🚀 ส่วนที่แก้: ปุ่ม Mascot (ขยายหมีให้ใหญ่แบบไม่โดนตัดขอบ) */}
+      {/* 🚀 ส่วนที่แก้: ลบกรอบส้ม และปรับเลข 1 ให้อยู่ใกล้หมีมากขึ้น */}
       <div className="relative group">
-        {/* เงาด้านล่าง */}
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-4 bg-black/20 blur-md rounded-[100%] transition-transform duration-300 group-hover:scale-75"></div>
-        
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative w-20 h-20 md:w-24 md:h-24 bg-gradient-to-tr from-orange-400 to-pink-500 rounded-[2.5rem] border-4 border-white shadow-xl flex items-center justify-center text-white z-10 transition-all duration-500 animate-bounce-slow hover:-translate-y-2 ${isOpen ? 'rotate-12 scale-90' : ''}`}
+          className={`relative flex items-center justify-center transition-all duration-500 animate-bounce-slow hover:scale-110 ${isOpen ? 'rotate-12' : ''}`}
         >
-          {isOpen ? <X size={40} /> : null}
-
-          {/* ✨ หัวใจสำคัญ: แยกรูปหมีออกมาลอยข้างนอกปุ่ม (Absolute) เพื่อไม่ให้โดนตัดขอบ */}
-          {!isOpen && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {!isOpen ? (
+            <div className="relative flex items-center justify-center">
+              {/* เงาใต้ตัวหมี */}
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-20 h-4 bg-black/10 blur-xl rounded-[100%] pointer-events-none"></div>
+              
+              {/* ✨ ขยายร่างน้องหมีให้ใหญ่สะใจ (w-32 ถึง w-40) */}
               <img 
                 src="/aibear.png" 
                 alt="AI Mascot" 
-                className="w-[140%] h-[140%] object-contain drop-shadow-[0_15px_15px_rgba(0,0,0,0.3)] transition-transform duration-500 group-hover:scale-110 mb-6" 
-                style={{ maxWidth: 'none' }}
+                className="w-32 h-32 md:w-40 md:h-40 object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.2)]" 
               />
+              
+              {/* ✨ ปรับตำแหน่งเลข 1: ขยับเข้ามาชิดหูหมีมากขึ้น (top-4 right-5) */}
+              <span className="absolute top-4 right-5 flex h-7 w-7 z-30">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-7 w-7 bg-red-500 border-2 border-white items-center justify-center text-[11px] font-black text-white shadow-md">1</span>
+              </span>
             </div>
-          )}
-
-          {/* แจ้งเตือนเลข 1 */}
-          {!isOpen && (
-            <span className="absolute -top-1 -right-1 flex h-7 w-7 z-30">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-7 w-7 bg-red-500 border-2 border-white items-center justify-center text-[10px] font-black shadow-sm">1</span>
-            </span>
+          ) : (
+            <div className="w-12 h-12 bg-slate-800 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+               <X size={24} />
+            </div>
           )}
         </button>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes bounce-slow {
-          0%, 100% { transform: translateY(-5%); }
+          0%, 100% { transform: translateY(-3%); }
           50% { transform: translateY(0); }
         }
         .animate-bounce-slow {
           animation: bounce-slow 3s infinite ease-in-out;
         }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
       `}} />
     </div>
   );
