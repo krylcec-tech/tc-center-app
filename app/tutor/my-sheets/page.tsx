@@ -1,13 +1,15 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   Plus, Search, Book, User, Loader2, Trash2, ArrowLeft, ExternalLink, 
-  Share2, Mail, X, ImagePlus, ImageIcon, CheckCircle2, Save, Tag, GraduationCap, AlertCircle, Filter, Layers, BookOpen
+  Share2, Mail, X, ImagePlus, ImageIcon, CheckCircle2, Save, Tag, GraduationCap, AlertCircle, Filter, Layers, BookOpen, Store, DollarSign, Upload
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function TutorMySheets() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [mySheets, setMySheets] = useState<any[]>([]);
@@ -24,7 +26,7 @@ export default function TutorMySheets() {
   const [activeSubject, setActiveSubject] = useState('ALL');
   const [activeLevel, setActiveLevel] = useState('ALL');
 
-  // Form States
+  // Form States (เพิ่มชีทส่วนตัว)
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('คณิตศาสตร์');
@@ -32,7 +34,7 @@ export default function TutorMySheets() {
   const [docUrl, setDocUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const subjects = ['คณิตศาสตร์', 'ภาษาอังกฤษ', 'ภาษาไทย', 'สังคมศึกษา', 'เคมี', 'ฟิสิกส์', 'ชีววิทยา', 'ประวัติศาสตร์', 'ทั่วไป'];
+  const subjects = ['คณิตศาสตร์', 'ภาษาอังกฤษ', 'ภาษาไทย', 'สังคมศึกษา', 'เคมี', 'ฟิสิกส์', 'ชีววิทยา', 'ประวัติศาสตร์', 'ทุกวิชา'];
   const levels = ['ประถม', 'ม.ต้น', 'ม.ปลาย', 'มหาวิทยาลัย'];
 
   useEffect(() => { fetchTutorData(); }, []);
@@ -121,23 +123,33 @@ export default function TutorMySheets() {
     <div className="min-h-screen bg-[#FFFBF7] font-sans text-gray-900 pb-20 text-left relative overflow-x-hidden">
       
       {/* 🌟 Header Gradient */}
-      <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 pt-12 pb-24 px-6 relative"> {/* ✨ เพิ่ม pt-12 กันชิดบน */}
+      <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 pt-12 pb-24 px-6 relative">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
         <div className="max-w-6xl mx-auto relative z-10">
           
-          {/* ✨ ปรับแต่งปุ่มเพิ่มชีทขวาบนให้เด่นและไม่ชิดขอบ */}
-          <div className="flex justify-between items-center mb-10"> 
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4"> 
             <Link href="/tutor" className="inline-flex items-center gap-2 text-white font-black text-xs uppercase tracking-widest bg-black/20 px-4 py-2.5 rounded-full backdrop-blur-md hover:bg-black/30 transition-all">
               <ArrowLeft size={14} /> Dashboard
             </Link>
             
-            <button 
-              onClick={() => setShowAddModal(true)} 
-              className="bg-white text-orange-600 px-6 py-3 rounded-2xl font-black text-[13px] shadow-[0_10px_25px_rgba(0,0,0,0.1)] flex items-center gap-2 hover:scale-105 hover:bg-orange-50 transition-all active:scale-95 border-b-4 border-orange-100"
-            >
-              <Plus size={20} strokeWidth={3} className="text-orange-600"/> 
-              <span>เพิ่มชีทเข้าคลัง</span>
-            </button>
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              <button 
+                onClick={() => setShowAddModal(true)} 
+                className="flex-1 md:flex-none bg-white/20 text-white px-5 py-3 rounded-2xl font-black text-[13px] flex items-center justify-center gap-2 hover:bg-white/30 backdrop-blur-md transition-all border border-white/20 active:scale-95"
+              >
+                <Plus size={18} strokeWidth={3}/> 
+                <span>เพิ่มชีทส่วนตัว</span>
+              </button>
+              
+              {/* ✅ เปลี่ยนเป็น Link ไปหน้า Seller Hub แทน Modal */}
+              <Link 
+                href="/tutor/seller-hub" 
+                className="flex-1 md:flex-none bg-white text-orange-600 px-6 py-3 rounded-2xl font-black text-[13px] shadow-[0_10px_25px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 hover:scale-105 transition-all active:scale-95 border-b-4 border-orange-200"
+              >
+                <Store size={18} strokeWidth={3} className="text-orange-500"/> 
+                <span>ลงขายชีททำเงิน 💸</span>
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -148,7 +160,7 @@ export default function TutorMySheets() {
             <div className="relative w-full md:w-80 group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-200" size={18} />
               <input 
-                type="text" placeholder="ค้นหาชื่อชีท..." 
+                type="text" placeholder="ค้นหาชื่อชีทในคลัง..." 
                 className="pl-12 pr-4 py-3.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-sm font-bold text-white placeholder:text-orange-200 focus:bg-white focus:text-orange-600 outline-none w-full transition-all shadow-lg"
                 value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -163,7 +175,7 @@ export default function TutorMySheets() {
             <div className="bg-orange-50 p-2 rounded-lg"><Filter size={14} className="text-orange-500" /></div>
             <select value={activeSubject} onChange={(e) => setActiveSubject(e.target.value)} className="bg-gray-50 px-4 py-2 rounded-xl text-[11px] font-black border-none outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer">
               <option value="ALL">ทุกวิชา</option>
-              {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+              {subjects.filter(s => s !== 'ทุกวิชา').map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <select value={activeLevel} onChange={(e) => setActiveLevel(e.target.value)} className="bg-gray-50 px-4 py-2 rounded-xl text-[11px] font-black border-none outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer">
               <option value="ALL">ทุกระดับ</option>
@@ -193,13 +205,13 @@ export default function TutorMySheets() {
         </div>
       </div>
 
-      {/* ➕ Modal เพิ่มชีทใหม่ */}
+      {/* ➕ Modal เพิ่มชีทส่วนตัว */}
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-[3rem] w-full max-w-xl p-8 md:p-10 relative shadow-2xl overflow-y-auto max-h-[90vh] text-left" onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowAddModal(false)} className="absolute top-8 right-8 text-gray-300 hover:text-red-500 transition-colors"><X size={28}/></button>
-            <h2 className="text-3xl font-black mb-2 text-gray-900 text-left">เพิ่มชีทใหม่ 📚</h2>
-            <p className="text-gray-400 font-bold text-sm mb-8 text-left">บันทึกเอกสารเข้า Playlist ส่วนตัวของคุณ</p>
+            <h2 className="text-3xl font-black mb-2 text-gray-900 text-left">เพิ่มชีทส่วนตัว 📚</h2>
+            <p className="text-gray-400 font-bold text-sm mb-8 text-left">บันทึกเอกสารเข้า Playlist สำหรับแชร์ให้นักเรียน</p>
             <form onSubmit={handleUploadSheet} className="space-y-5">
               <div className="relative h-44 border-2 border-dashed border-orange-100 rounded-3xl p-4 text-center bg-orange-50/30 flex flex-col items-center justify-center group hover:border-orange-400 transition-all cursor-pointer">
                 <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
@@ -207,7 +219,7 @@ export default function TutorMySheets() {
               </div>
               <input required type="text" placeholder="ชื่อชีท / หัวข้อ..." className="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold text-base border-2 border-transparent focus:border-orange-400" value={title} onChange={(e) => setTitle(e.target.value)} />
               <div className="grid grid-cols-2 gap-4">
-                <select className="px-5 py-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-400" value={subject} onChange={(e) => setSubject(e.target.value)}>{subjects.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                <select className="px-5 py-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-400" value={subject} onChange={(e) => setSubject(e.target.value)}>{subjects.filter(s => s !== 'ทุกวิชา').map(s => <option key={s} value={s}>{s}</option>)}</select>
                 <select className="px-5 py-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-400" value={level} onChange={(e) => setLevel(e.target.value)}>{levels.map(l => <option key={l} value={l}>{l}</option>)}</select>
               </div>
               <textarea rows={3} placeholder="รายละเอียดเพิ่มเติม..." className="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm border-2 border-transparent focus:border-orange-400 resize-none" value={description} onChange={(e) => setDescription(e.target.value)} />
@@ -218,7 +230,7 @@ export default function TutorMySheets() {
         </div>
       )}
 
-      {/* 🤝 Modal แชร์ให้นักเรียน */}
+      {/* 🤝 Modal แชร์ให้นักเรียน (คงเดิม) */}
       {sharingSheet && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-[3rem] w-full max-w-md p-8 relative shadow-2xl flex flex-col max-h-[90vh] text-left" onClick={e => e.stopPropagation()}>

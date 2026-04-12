@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
-  ArrowLeft, Book, Loader2, ExternalLink, Image as ImageIcon, Search, BookOpen, Filter, Tag, Layers, Sparkles, Trash2, MessageCircle, AlertTriangle, X
+  ArrowLeft, Book, Loader2, ExternalLink, Image as ImageIcon, Search, BookOpen, Filter, Tag, Layers, Sparkles, Trash2, MessageCircle, AlertTriangle, X, Store // ✨ นำเข้าไอคอน Store เพิ่มเติม
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -41,7 +41,6 @@ export default function MyBooksPage() {
     }
   };
 
-  // ✨ ฟังก์ชันลบแบบอัปเดตหน้าจอทันที
   const handleDeleteBook = async (id: string, title: string) => {
     const confirm1 = confirm(`❓ คุณแน่ใจนะว่าจะลบ "${title}" ?`);
     if (confirm1) {
@@ -53,7 +52,6 @@ export default function MyBooksPage() {
           
           if (error) throw error;
 
-          // ✅ จุดสำคัญ: สั่งให้ State ลบข้อมูลออกทันทีเพื่อให้หายไปจากหน้าจอ
           setBooks((prev) => prev.filter(book => book.id !== id));
           
           alert('🗑️ ลบหนังสือออกจากคลังเรียบร้อยแล้ว');
@@ -89,10 +87,13 @@ export default function MyBooksPage() {
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
         <div className="max-w-6xl mx-auto relative z-10 text-left">
           <div className="flex justify-between items-start mb-6">
-            <Link href="/student" className="inline-flex items-center gap-2 text-white font-black text-[10px] md:text-xs uppercase tracking-widest bg-black/20 px-4 py-2 rounded-full backdrop-blur-md hover:bg-black/30 transition-all">
+            <Link href="/student" className="inline-flex items-center gap-2 text-white font-black text-[10px] md:text-xs uppercase tracking-widest bg-black/20 px-4 py-2 rounded-full backdrop-blur-md hover:bg-black/30 transition-all shadow-md">
               <ArrowLeft size={14} /> กลับห้องเรียน
             </Link>
-            <img src="/icon.png" alt="Logo" className="h-8 md:h-10 w-auto brightness-0 invert opacity-50" />
+            {/* ✨ เพิ่มปุ่มระบบขายชีทตรงนี้ (ฝั่งขวาบน) */}
+            <Link href="/student/seller-hub" className="inline-flex items-center gap-2 bg-white text-orange-600 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 rounded-full hover:scale-105 transition-all shadow-lg active:scale-95">
+              <Store size={14} /> ระบบขายชีท
+            </Link>
           </div>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 text-left">
             <div className="text-left">
@@ -101,13 +102,15 @@ export default function MyBooksPage() {
               </h1>
               <p className="text-orange-100 font-bold text-xs md:text-sm tracking-wide opacity-90 text-left">คลังเอกสารเรียนรู้ส่วนตัวของคุณ</p>
             </div>
-            <div className="relative w-full md:w-80 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-200" size={18} />
-              <input 
-                type="text" placeholder="ค้นหาชื่อหนังสือ..." 
-                className="pl-12 pr-4 py-3.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-sm font-bold text-white placeholder:text-orange-200 focus:bg-white focus:text-orange-600 outline-none w-full transition-all shadow-lg"
-                value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="relative w-full md:w-80 group flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-200" size={18} />
+                <input 
+                  type="text" placeholder="ค้นหาชื่อหนังสือ..." 
+                  className="pl-12 pr-4 py-3.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-sm font-bold text-white placeholder:text-orange-200 focus:bg-white focus:text-orange-600 outline-none w-full transition-all shadow-lg"
+                  value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </div>

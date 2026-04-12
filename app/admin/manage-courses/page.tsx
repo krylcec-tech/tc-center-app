@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { 
   ArrowLeft, Plus, Trash2, Edit3, Image as ImageIcon, 
-  Book, Clock, X, Loader2, Camera, Save, Gift, Wallet, Infinity, Eye, EyeOff, Box, Link as LinkIcon, ExternalLink, Tag, ArrowUpCircle, GraduationCap
+  Book, Clock, X, Loader2, Camera, Save, Gift, Wallet, Infinity, Eye, EyeOff, Box, Link as LinkIcon, ExternalLink, Tag, ArrowUpCircle, GraduationCap, User
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,9 +26,12 @@ export default function ManageCoursesPage() {
   const [documentUrl, setDocumentUrl] = useState('');
   const [sortOrder, setSortOrder] = useState('0');
 
-  // ✨ ฟิลด์ใหม่สำหรับเชื่อม My Books
   const [subject, setSubject] = useState('คณิตศาสตร์');
   const [level, setLevel] = useState('ม.ปลาย');
+  
+  // ✨ ฟิลด์สำหรับระบุตัวตนคนขาย (ใช้กรณีที่แอดมินสร้างชีทให้เอง)
+  const [sellerType, setSellerType] = useState('institute');
+  const [sellerName, setSellerName] = useState('TC Center');
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState('');
@@ -67,7 +70,9 @@ export default function ManageCoursesPage() {
         image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : []),
         type: item.type || 'course',
         is_active: item.is_active !== false,
-        tags: Array.isArray(item.tags) ? item.tags : []
+        tags: Array.isArray(item.tags) ? item.tags : [],
+        seller_type: item.seller_type || 'institute',
+        seller_name: item.seller_name || 'TC Center'
       }));
       setItems(formattedData);
 
@@ -152,9 +157,12 @@ export default function ManageCoursesPage() {
         document_url: type === 'book' ? documentUrl : null,
         tags: finalTagsToSave,
         sort_order: parseInt(sortOrder) || 0,
-        // ✨ เพิ่มการบันทึกฟีลด์ใหม่
         subject: type === 'book' ? subject : null,
-        level: type === 'book' ? level : null
+        level: type === 'book' ? level : null,
+        // ✨ บันทึกข้อมูลคนขาย
+        seller_type: sellerType,
+        seller_name: sellerName,
+        approval_status: 'APPROVED' // ถ้าแอดมินสร้างเองให้ถือว่าอนุมัติแล้วเลย
       };
 
       const { error: dbError } = editingItem 
@@ -193,6 +201,8 @@ export default function ManageCoursesPage() {
     setPreviewUrls([]);
     setSubject('คณิตศาสตร์');
     setLevel('ม.ปลาย');
+    setSellerType('institute');
+    setSellerName('TC Center');
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -214,6 +224,8 @@ export default function ManageCoursesPage() {
     setPreviewUrls(item.image_url || []);
     setSubject(item.subject || 'คณิตศาสตร์');
     setLevel(item.level || 'ม.ปลาย');
+    setSellerType(item.seller_type || 'institute');
+    setSellerName(item.seller_name || 'TC Center');
     setImageFiles([]); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -280,6 +292,13 @@ export default function ManageCoursesPage() {
         
         <h3 className="font-bold text-base text-gray-800 line-clamp-1 pr-8 leading-tight">{item.title}</h3>
         
+        {/* ✨ ป้ายระบุคนขาย (เพื่อให้แอดมินดูง่าย) */}
+        {item.type === 'book' && item.seller_type !== 'institute' && (
+          <div className="flex items-center gap-1 mt-1 text-[10px] font-black text-orange-500">
+             <User size={10}/> โดย: {item.seller_name} ({item.seller_type === 'tutor' ? 'ติวเตอร์' : 'นักเรียน'})
+          </div>
+        )}
+
         {item.tags && item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1.5">
             {item.tags.map((t: string) => (
@@ -369,7 +388,25 @@ export default function ManageCoursesPage() {
                 <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
               </div>
 
-              {/* ✨ เพิ่มฟีลด์ใหม่เฉพาะตอนที่เป็น 'book' */}
+              {/* ข้อมูลคนขาย (เฉพาะหนังสือ) */}
+              {type === 'book' && (
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
+                  <label className="text-[10px] font-black text-gray-600 uppercase flex items-center gap-1"><User size={12}/> ข้อมูลผู้ขาย (Seller)</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <select className="w-full p-2.5 bg-white rounded-xl border border-gray-200 text-xs font-bold shadow-sm outline-none" value={sellerType} onChange={(e) => setSellerType(e.target.value)}>
+                      <option value="institute">สถาบัน (TC Center)</option>
+                      <option value="tutor">ติวเตอร์</option>
+                      <option value="student">นักเรียน</option>
+                    </select>
+                    <input 
+                      type="text" placeholder="ชื่อคนขาย" 
+                      className="w-full p-2.5 bg-white rounded-xl border border-gray-200 text-xs font-bold shadow-sm outline-none"
+                      value={sellerName} onChange={(e) => setSellerName(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
               {type === 'book' && (
                 <div className="grid grid-cols-2 gap-3 p-4 bg-orange-50/50 rounded-2xl border border-orange-100">
                   <div className="space-y-1">
@@ -493,7 +530,10 @@ export default function ManageCoursesPage() {
           </div>
         </div>
 
+        {/* 📚 ฝั่งแสดงรายการที่สร้างแล้ว (ด้านขวา) */}
         <div className="lg:col-span-8 space-y-12 text-left">
+          
+          {/* Section: คอร์สเรียน */}
           <div>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600"><Clock size={20}/></div>
@@ -503,12 +543,23 @@ export default function ManageCoursesPage() {
               {items.filter(i => i.type === 'course').map(item => <ItemCard key={item.id} item={item} />)}
             </div>
           </div>
+          
           <hr className="border-gray-200" />
+          
+          {/* Section: หนังสือ & ชีทเรียน */}
           <div>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600"><Book size={20}/></div>
               <h2 className="text-2xl font-black text-gray-800">หนังสือ & ชีทเรียน</h2>
             </div>
+            
+            {/* กรองรายการชีทเรียนเพิ่มเติม */}
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
+               <span className="text-xs font-bold text-gray-500 py-1 flex items-center gap-1"><User size={14}/> แหล่งที่มา:</span>
+               <button className="bg-gray-800 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm">ทั้งหมด</button>
+               {/* หมายเหตุ: ตรงนี้ CEO สามารถเขียน Logic กรองประเภท seller_type เพิ่มได้ถ้าต้องการครับ */}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {items.filter(i => i.type === 'book').map(item => <ItemCard key={item.id} item={item} />)}
             </div>

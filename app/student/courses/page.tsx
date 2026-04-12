@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Search, ShoppingCart, BookOpen, Clock, 
   Tag, Loader2, PlayCircle, MessageCircle, Gift, ChevronRight, X, Upload, CheckCircle2,
-  Smartphone, Wallet, Info
+  Smartphone, Wallet, Info, Store, Layers, Filter, User // ✨ เพิ่ม Filter และ User ตรงนี้ครับ
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -14,15 +14,17 @@ function CatalogContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [activeSellerType, setActiveSellerType] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const [selectedItem, setSelectedItem] = useState<any>(null); // สำหรับ Checkout
-  const [viewingItem, setViewingItem] = useState<any>(null); // ✨ สำหรับดูรายละเอียดเต็ม
+  const [selectedItem, setSelectedItem] = useState<any>(null); 
+  const [viewingItem, setViewingItem] = useState<any>(null); 
   
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -55,7 +57,7 @@ function CatalogContent() {
     
     const { data, error } = await supabase
       .from('courses')
-      .select('id, title, description, price, hours_count, referral_points, type, category, image_url, target_wallet_type, tags') 
+      .select('id, title, description, price, hours_count, referral_points, type, category, image_url, target_wallet_type, tags, seller_type, seller_name') 
       .eq('is_active', true) 
       .order('sort_order', { ascending: false })
       .order('created_at', { ascending: false });
@@ -80,7 +82,8 @@ function CatalogContent() {
         return {
           ...item,
           image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : []),
-          tags: parsedTags
+          tags: parsedTags,
+          seller_type: item.seller_type || 'institute' 
         };
       });
 
@@ -143,8 +146,13 @@ function CatalogContent() {
     else if (activeTab === 'book') matchTab = item.type === 'book';
     else matchTab = item.tags && item.tags.includes(activeTab);
 
+    let matchSeller = false;
+    if (activeSellerType === 'ALL') matchSeller = true;
+    else matchSeller = item.seller_type === activeSellerType;
+
     const matchSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchTab && matchSearch;
+    
+    return matchTab && matchSearch && matchSeller;
   });
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
@@ -170,6 +178,9 @@ function CatalogContent() {
                <div className="flex flex-wrap items-center gap-2 mb-3">
                  <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-[10px] font-black uppercase flex items-center gap-1">
                    {viewingItem.type === 'course' ? <Clock size={10}/> : <BookOpen size={10}/>} {viewingItem.category}
+                 </span>
+                 <span className="bg-orange-50 text-orange-600 px-2 py-1 rounded-md text-[10px] font-black uppercase flex items-center gap-1">
+                   <User size={10}/> {viewingItem.seller_name || 'TC Center'}
                  </span>
                  {viewingItem.tags && viewingItem.tags.map((t: string) => (
                    <span key={t} className="bg-gray-100 text-gray-500 px-2 py-1 rounded-md text-[10px] font-black uppercase">#{t}</span>
@@ -209,6 +220,7 @@ function CatalogContent() {
             <h2 className="text-2xl font-black mb-2">ยืนยันการสั่งซื้อ</h2>
             <div className="bg-blue-50 p-4 rounded-2xl mb-6">
               <p className="text-blue-600 font-black text-base sm:text-lg line-clamp-1">{selectedItem.title}</p>
+              <p className="text-blue-400 font-bold text-xs mb-2">ผู้ขาย: {selectedItem.seller_name || 'TC Center'}</p>
               <p className="text-gray-500 font-bold">ยอดที่ต้องชำระ: <span className="text-blue-700 text-xl">฿{selectedItem.price.toLocaleString()}</span></p>
             </div>
             <div className="bg-gray-50 p-6 rounded-[2rem] mb-6 border border-gray-100 text-center shadow-inner">
@@ -261,13 +273,22 @@ function CatalogContent() {
           </Link>
           <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">คอร์สเรียน & เอกสาร</h1>
         </div>
-        <div className="relative w-full md:w-auto text-gray-900">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input type="text" placeholder="ค้นหาคอร์ส..." className="w-full md:w-72 pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-[1rem] outline-none focus:border-blue-400 font-bold text-sm transition-all shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+        
+        <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+          {isLoggedIn && (
+            <Link href="/student/seller-hub" className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-black text-xs uppercase tracking-widest px-5 py-3 rounded-[1.2rem] hover:-translate-y-1 transition-all shadow-lg shadow-orange-200 active:scale-95 w-full justify-center md:w-auto">
+              <Store size={16} /> ลงขายชีทของฉัน
+            </Link>
+          )}
+          <div className="relative w-full md:w-72 text-gray-900">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input type="text" placeholder="ค้นหาคอร์ส..." className="w-full pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-[1rem] outline-none focus:border-blue-400 font-bold text-sm transition-all shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-2 sm:gap-3 mb-6 overflow-x-auto pb-2 no-scrollbar items-center">
+      {/* แถบหมวดหมู่หลัก */}
+      <div className="flex gap-2 sm:gap-3 mb-4 overflow-x-auto pb-2 no-scrollbar items-center">
         <button onClick={() => setActiveTab('all')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
         <button onClick={() => setActiveTab('course')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
         <button onClick={() => setActiveTab('book')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
@@ -285,7 +306,20 @@ function CatalogContent() {
         ))}
       </div>
 
-      {/* ✅ แก้ไขเฉพาะ Grid ตรงนี้: มือถือขึ้น 2 คอลัมน์ (grid-cols-2) */}
+      {/* แถบกรองประเภทคนขาย */}
+      {(activeTab === 'all' || activeTab === 'book') && (
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 no-scrollbar items-center bg-white p-2 rounded-[1.5rem] shadow-sm border border-gray-100 w-max">
+           <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2 pr-1 flex items-center gap-1">
+             <Filter size={12} /> กรองโดย
+           </span>
+           <button onClick={() => setActiveSellerType('ALL')} className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${activeSellerType === 'ALL' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>ทุกแหล่งที่มา</button>
+           <button onClick={() => setActiveSellerType('institute')} className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${activeSellerType === 'institute' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยสถาบัน</button>
+           <button onClick={() => setActiveSellerType('tutor')} className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${activeSellerType === 'tutor' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยติวเตอร์</button>
+           <button onClick={() => setActiveSellerType('student')} className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${activeSellerType === 'student' ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยนักเรียน</button>
+        </div>
+      )}
+
+      {/* Grid สินค้า */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
         {filteredItems.map((item) => (
           <div key={item.id} className="bg-white rounded-[1.25rem] sm:rounded-[1.5rem] shadow-sm hover:shadow-xl border border-gray-100 flex flex-col h-full group transition-all duration-300 overflow-hidden text-gray-900 relative">
@@ -300,6 +334,14 @@ function CatalogContent() {
                  {item.type === 'course' ? <Clock size={10} className="text-blue-600"/> : <BookOpen size={10} className="text-orange-500"/>} 
                  <span className="hidden xs:inline">{item.category}</span>
               </div>
+
+              {item.type === 'book' && item.seller_type !== 'institute' && (
+                <div className={`absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[7px] sm:text-[8px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1
+                  ${item.seller_type === 'tutor' ? 'bg-purple-500 text-white' : 'bg-orange-500 text-white'}
+                `}>
+                   <User size={8} /> {item.seller_name}
+                </div>
+              )}
             </div>
             
             <div className="p-3 sm:p-5 flex flex-col flex-1">
