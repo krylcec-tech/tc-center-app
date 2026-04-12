@@ -1,9 +1,11 @@
 'use client'
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles, Loader2, ImageIcon } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 export default function FloatingAIMascot() {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<any[]>([
     { role: 'ai', content: 'สวัสดีครับ! ผมคือน้อง TC AI หมีอัจฉริยะ 🐻🤖\nส่งรูปโจทย์ หรือพิมพ์ถามการบ้านมาได้เลยครับ! หรือจะสอบถามเกี่ยวกับรายละเอียดคอร์สอื่นๆ ได้เลยครับ' }
   ]);
@@ -14,8 +16,14 @@ export default function FloatingAIMascot() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isOpen]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -56,14 +64,17 @@ export default function FloatingAIMascot() {
     }
   };
 
+  if (!mounted) return null;
+
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end font-sans">
+    // ✨ แก้ตรงนี้: เปลี่ยนจาก bottom-6 right-6 เป็น bottom-4 right-2 (ชิดขวาแบบสุดๆ)
+    <div className="fixed bottom-4 right-2 md:right-4 z-[50] flex flex-col items-end font-sans pointer-events-none">
       
       {/* 💬 หน้าต่าง Chat Box */}
-      <div className={`mb-4 w-[90vw] sm:w-[380px] bg-white rounded-[2.5rem] shadow-2xl border border-orange-100 overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+      <div className={`mb-4 w-[90vw] sm:w-[380px] bg-white rounded-[2.5rem] shadow-2xl border border-orange-100 overflow-hidden transition-all duration-300 origin-bottom-right pointer-events-auto ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
         <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4 flex items-center justify-between text-white relative overflow-hidden">
           <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 blur-xl rounded-full"></div>
-          <div className="flex items-center gap-3 relative z-10">
+          <div className="flex items-center gap-3 relative z-10 text-left">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 shadow-inner overflow-hidden">
               <img src="/aibear.png" alt="TC AI Mascot" className="w-full h-full object-contain scale-125" />
             </div>
@@ -84,8 +95,18 @@ export default function FloatingAIMascot() {
                 </div>
               )}
               {msg.content && (
-                <div className={`max-w-[85%] p-3.5 rounded-2xl text-sm font-medium leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white text-slate-700 border border-slate-100 rounded-bl-sm'}`}>
-                  {msg.content}
+                <div className={`max-w-[85%] p-3.5 rounded-2xl text-sm font-medium leading-relaxed shadow-sm text-left ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white text-slate-700 border border-slate-100 rounded-bl-sm'}`}>
+                  <ReactMarkdown 
+                    components={{
+                      p: ({node, ...props}) => <p className="mb-2 last:mb-0 whitespace-pre-wrap" {...props} />,
+                      strong: ({node, ...props}) => <strong className="font-extrabold text-orange-500" {...props} />,
+                      ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
+                      ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
+                      li: ({node, ...props}) => <li className="pl-1" {...props} />
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
               )}
             </div>
@@ -116,32 +137,27 @@ export default function FloatingAIMascot() {
         </div>
       </div>
 
-      {/* 🚀 ส่วนที่แก้: ลบกรอบส้ม และปรับเลข 1 ให้อยู่ใกล้หมีมากขึ้น */}
-      <div className="relative group">
+      {/* 🚀 ปุ่ม Mascot */}
+      <div className="relative group pointer-events-auto">
         <button 
           onClick={() => setIsOpen(!isOpen)}
           className={`relative flex items-center justify-center transition-all duration-500 animate-bounce-slow hover:scale-110 ${isOpen ? 'rotate-12' : ''}`}
         >
           {!isOpen ? (
             <div className="relative flex items-center justify-center">
-              {/* เงาใต้ตัวหมี */}
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-20 h-4 bg-black/10 blur-xl rounded-[100%] pointer-events-none"></div>
-              
-              {/* ✨ ขยายร่างน้องหมีให้ใหญ่สะใจ (w-32 ถึง w-40) */}
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-24 h-5 bg-black/10 blur-xl rounded-[100%] pointer-events-none"></div>
               <img 
                 src="/aibear.png" 
                 alt="AI Mascot" 
-                className="w-32 h-32 md:w-40 md:h-40 object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.2)]" 
+                className="w-32 h-32 md:w-44 md:h-44 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.15)]" 
               />
-              
-              {/* ✨ ปรับตำแหน่งเลข 1: ขยับเข้ามาชิดหูหมีมากขึ้น (top-4 right-5) */}
-              <span className="absolute top-4 right-5 flex h-7 w-7 z-30">
+              <span className="absolute top-6 right-6 flex h-7 w-7 z-30">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-7 w-7 bg-red-500 border-2 border-white items-center justify-center text-[11px] font-black text-white shadow-md">1</span>
+                <span className="relative inline-flex rounded-full h-7 w-7 bg-red-500 border-2 border-white items-center justify-center text-[11px] font-black text-white shadow-lg">1</span>
               </span>
             </div>
           ) : (
-            <div className="w-12 h-12 bg-slate-800 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+            <div className="w-12 h-12 bg-slate-800 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white active:scale-90 transition-transform mb-2 mr-2">
                <X size={24} />
             </div>
           )}
