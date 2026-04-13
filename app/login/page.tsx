@@ -33,19 +33,25 @@ export default function LoginPage() {
           return; 
         }
 
-        const { data: tutorProfile } = await supabase
-          .from('tutors')
+        // ✨ แก้ไขจุดสำคัญ: เปลี่ยนไปเช็คสถานะจากตาราง profiles ด้วยคอลัมน์ id
+        const { data: userProfile } = await supabase
+          .from('profiles')
           .select('role')
-          .eq('user_id', authData.user.id)
+          .eq('id', authData.user.id)
           .maybeSingle();
 
-        if (tutorProfile) {
-          const dbRole = (tutorProfile.role || '').replace(/'/g, "").trim().toUpperCase();
+        if (userProfile) {
+          const dbRole = (userProfile.role || '').replace(/'/g, "").trim().toUpperCase();
           if (dbRole === 'TUTOR') {
             window.location.href = '/tutor'; 
             return;
+          } else if (dbRole === 'ADMIN') {
+            window.location.href = '/admin'; 
+            return;
           }
         }
+        
+        // ถ้าไม่ใช่ติวเตอร์ ไม่ใช่แอดมิน ก็ให้เป็นนักเรียนเข้าห้องเรียนปกติ
         window.location.href = '/student'; 
       }
     } catch (err: any) {

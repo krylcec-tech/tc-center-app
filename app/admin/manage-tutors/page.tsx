@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase'; 
 import { 
   ArrowLeft, Trash2, BookOpen, UserPlus, Image as ImageIcon, 
-  Edit2, Save, Loader2, Tag, GraduationCap, Eye, EyeOff 
+  Edit2, Save, Loader2, Tag, GraduationCap, Eye, EyeOff, Mail // ✨ เพิ่ม Mail เข้ามาตรงนี้
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -305,10 +305,17 @@ export default function ManageTutorsPage() {
                       )}
                     </div>
                     <div>
-                      <h4 className="font-black text-xl text-gray-900 mb-2 flex items-center gap-2">
+                      <h4 className="font-black text-xl text-gray-900 mb-1 flex items-center gap-2">
                         {t.name}
                         {t.is_active === false && <EyeOff size={14} className="text-red-500"/>}
                       </h4>
+                      
+                      {/* ✨ เพิ่มส่วนแสดง Email ของติวเตอร์ตรงนี้ */}
+                      {t.email && (
+                        <p className="text-[11px] text-gray-500 font-bold flex items-center gap-1 mb-2">
+                          <Mail size={12} className="text-gray-400" /> {t.email}
+                        </p>
+                      )}
                       
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {(t.grade_levels || []).map((level: string) => (

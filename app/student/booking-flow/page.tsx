@@ -75,19 +75,51 @@ function BookingContent() {
   const fetchTutors = async () => {
     setLoading(true);
     const currentTierTitle = tiers.find(t => t.id === gradeLevel)?.title;
-    const { data } = await supabase.from('tutors').select('*').contains('grade_levels', [currentTierTitle]);
-    setTutors(data || []);
+    const { data: tutorsData } = await supabase.from('tutors').select('*').contains('grade_levels', [currentTierTitle]);
+    
+    if (tutorsData && tutorsData.length > 0) {
+      const tutorIds = tutorsData.map(t => t.id);
+      const now = new Date().toISOString();
+
+      const { data: slotsData } = await supabase
+        .from('slots')
+        .select('tutor_id')
+        .in('tutor_id', tutorIds)
+        .eq('is_booked', false)
+        .eq('location_type', locationType)
+        .gte('start_time', now);
+
+      const slotCounts: any = {};
+      slotsData?.forEach(slot => {
+        slotCounts[slot.tutor_id] = (slotCounts[slot.tutor_id] || 0) + 1;
+      });
+
+      const tutorsWithAvailability = tutorsData.map(t => ({
+        ...t,
+        hasSlots: (slotCounts[t.id] || 0) > 0
+      })).sort((a, b) => {
+        if (a.hasSlots === b.hasSlots) return 0;
+        return a.hasSlots ? -1 : 1; 
+      });
+
+      setTutors(tutorsWithAvailability);
+    } else {
+      setTutors([]);
+    }
     setLoading(false);
   };
 
   const fetchTutorSlots = async () => {
     setLoading(true);
+    const now = new Date().toISOString(); 
+
     const { data } = await supabase
       .from('slots')
       .select('*')
       .eq('tutor_id', selectedTutor.id)
       .eq('is_booked', false)
       .eq('location_type', locationType)
+      .gte('start_time', now)
       .order('start_time', { ascending: true });
     
     setTutorSlots(data || []);
@@ -168,7 +200,17 @@ function BookingContent() {
             <div className="flex flex-col md:flex-row gap-6 mb-6">
                <img src={viewingTutor.image_url || '/default-avatar.png'} alt={viewingTutor.name} className="w-32 h-32 rounded-3xl object-cover shadow-sm border border-gray-100 mx-auto md:mx-0" />
                <div className="text-center md:text-left flex-1">
-                  <h2 className="text-3xl font-black text-gray-900 mb-2">{viewingTutor.name}</h2>
+                  <h2 className="text-3xl font-black text-gray-900 mb-2">
+                    {viewingTutor.name} 
+                  </h2>
+                  
+                  {/* ✨ ใส่ข้อความบอกตรงๆ ในหน้าโปรไฟล์ว่าคิวเต็ม */}
+                  {!viewingTutor.hasSlots && (
+                    <div className="mb-3 inline-flex items-center gap-1.5 bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-lg text-orange-600 text-xs font-bold">
+                      <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span> คิวในระบบเต็ม (จองคิวพิเศษผ่าน Line)
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-1.5 justify-center md:justify-start mb-4">
                      {viewingTutor.tags?.map((tag: string) => (
                        <span key={tag} className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-blue-100">#{tag}</span>
@@ -193,11 +235,19 @@ function BookingContent() {
                  </a>
                )}
             </div>
+            
             <div className="flex gap-3 pt-4 border-t border-gray-100">
-               <button onClick={() => { setSelectedTutor(viewingTutor); setViewingTutor(null); setStep(4); }} 
-                 className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl shadow-gray-200">
-                 จองเวลาเรียน <Calendar size={18} />
-               </button>
+               {viewingTutor.hasSlots ? (
+                 <button onClick={() => { setSelectedTutor(viewingTutor); setViewingTutor(null); setStep(4); }} 
+                   className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl shadow-gray-200">
+                   จองเวลาเรียน <Calendar size={18} />
+                 </button>
+               ) : (
+                 <a href="https://lin.ee/ZSDR4B3" target="_blank"
+                   className="flex-1 bg-[#00B900] text-white hover:bg-[#009900] py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95">
+                   จองคิวพิเศษ (Add Line) <MessageCircle size={18} />
+                 </a>
+               )}
             </div>
           </div>
         </div>
@@ -270,8 +320,16 @@ function BookingContent() {
             {loading ? <Loader2 className="animate-spin mx-auto text-blue-600" size={48} /> : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                 {filteredTutors.map(tutor => (
-                  <div key={tutor.id} className="bg-white rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full">
+                  <div key={tutor.id} className={`bg-white rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-gray-100 flex flex-col h-full transition-all group ${!tutor.hasSlots ? 'opacity-90 grayscale-[10%]' : 'shadow-sm hover:shadow-xl'}`}>
                     <div className="h-32 md:h-48 bg-gray-50 relative cursor-pointer overflow-hidden" onClick={() => setViewingTutor(tutor)}>
+                      
+                      {/* ✨ แปะป้าย "คิวเต็ม" มุมซ้ายบนของการ์ด */}
+                      {!tutor.hasSlots && (
+                        <div className="absolute top-2 left-2 z-10 bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm">
+                          🔥 คิวในระบบเต็ม
+                        </div>
+                      )}
+
                       <img src={tutor.image_url || '/default-avatar.png'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       <div className="absolute top-2 right-2 flex flex-col gap-1.5">
                         {tutor.video_url && <div className="bg-white/90 backdrop-blur text-red-500 p-1 md:p-1.5 rounded-md shadow-sm" title="มีวิดีโอแนะนำตัว"><PlayCircle size={14}/></div>}
@@ -284,17 +342,28 @@ function BookingContent() {
                       </div>
                     </div>
                     <div className="p-3 md:p-5 flex-1 flex flex-col">
-                      <h3 className="text-sm md:text-lg font-black mb-1 text-gray-900 line-clamp-1 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => setViewingTutor(tutor)}>{tutor.name}</h3>
+                      <h3 className="text-sm md:text-lg font-black mb-1 text-gray-900 line-clamp-1 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => setViewingTutor(tutor)}>
+                        {tutor.name}
+                      </h3>
                       <p className="text-gray-400 text-[9px] md:text-xs font-medium line-clamp-2 leading-relaxed mb-3 md:mb-4">{tutor.bio || 'ติวเตอร์คุณภาพจาก TC Center'}</p>
+                      
                       <div className="mt-auto flex flex-col gap-1.5 md:gap-2">
                         <button onClick={() => setViewingTutor(tutor)}
                           className="w-full bg-gray-50 text-gray-500 py-2 md:py-2.5 rounded-lg md:rounded-xl font-black text-[10px] md:text-xs hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
                           <Info size={14} /> โปรไฟล์
                         </button>
-                        <button onClick={() => { setSelectedTutor(tutor); setStep(4); }}
-                          className="w-full bg-gray-900 text-white py-2 md:py-2.5 rounded-lg md:rounded-xl font-black text-[10px] md:text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 whitespace-nowrap">
-                          <Calendar size={14} /> จองเรียน
-                        </button>
+                        
+                        {tutor.hasSlots ? (
+                          <button onClick={() => { setSelectedTutor(tutor); setStep(4); }}
+                            className="w-full bg-gray-900 text-white py-2 md:py-2.5 rounded-lg md:rounded-xl font-black text-[10px] md:text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 whitespace-nowrap">
+                            <Calendar size={14} /> จองเรียน
+                          </button>
+                        ) : (
+                          <a href="https://lin.ee/ZSDR4B3" target="_blank"
+                            className="w-full bg-green-50 hover:bg-green-100 text-green-600 hover:text-green-700 py-2 md:py-2.5 rounded-lg md:rounded-xl font-black text-[10px] md:text-xs flex items-center justify-center gap-1.5 border border-green-200 transition-colors whitespace-nowrap">
+                            <MessageCircle size={14} /> จองคิวพิเศษ (Line)
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -341,75 +410,105 @@ function BookingContent() {
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white p-8 md:p-10 rounded-[3rem] border border-gray-100 shadow-sm relative">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-8">
-                    <h2 className="text-2xl font-black flex items-center gap-3 text-gray-900">
-                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><MousePointer2 size={20} /></div>
-                        เลือกเวลาเรียน
-                    </h2>
-                    <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar w-full md:w-auto">
-                        {availableMonths.map(m => (
-                            <button key={m} onClick={() => { setSelectedMonth(m); setSelectedDate(''); }}
-                                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all ${selectedMonth === m ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>
-                                {monthNames[m]}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar mb-8">
-                  {availableDates.map(date => (
-                    <button key={date} onClick={() => setSelectedDate(date)}
-                      className={`flex flex-col items-center min-w-[85px] py-5 px-4 rounded-[2rem] transition-all border-2 
-                        ${selectedDate === date ? 'bg-blue-600 border-blue-600 text-white shadow-xl' : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'}`}>
-                      <span className="text-[10px] font-black uppercase mb-1 opacity-70">{new Date(date).toLocaleDateString('th-TH', { weekday: 'short' })}</span>
-                      <span className="text-2xl font-black">{new Date(date).getDate()}</span>
-                      <span className="text-[10px] font-bold opacity-70">{monthNames[new Date(date).getMonth()]}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="space-y-4 text-gray-900">
-                  {selectedDate && <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 text-center md:text-left">คิวที่ว่างในวันที่ {new Date(selectedDate).toLocaleDateString('th-TH', { dateStyle: 'long' })}</p>}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {displaySlots.map(slot => (
-                      <button 
-                        key={slot.id} 
-                        onClick={() => toggleSlotSelection(slot.id)}
-                        className={`flex items-center justify-between p-6 rounded-[1.5rem] border-2 transition-all group active:scale-95
-                          ${selectedSlotIds.includes(slot.id) 
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
-                            : 'bg-gray-50 border-transparent hover:border-blue-500 hover:bg-white hover:shadow-md text-gray-900'}`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors 
-                            ${selectedSlotIds.includes(slot.id) ? 'bg-white text-blue-600' : 'bg-white text-blue-600 group-hover:bg-blue-600 group-hover:text-white'}`}>
-                            <Clock size={18} />
-                          </div>
-                          <span className="font-black text-lg">{new Date(slot.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</span>
-                        </div>
-                        {selectedSlotIds.includes(slot.id) ? <CheckCircle2 size={20} /> : <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />}
-                      </button>
-                    ))}
-                    {!selectedDate && availableDates.length > 0 && <div className="col-span-full text-center py-10 bg-blue-50 rounded-[2rem] text-blue-600 font-bold border-2 border-dashed">กรุณาเลือกวันที่ด้านบน 👆</div>}
+              {loading ? (
+                  <div className="bg-white p-8 md:p-10 rounded-[3rem] border border-gray-100 shadow-sm flex items-center justify-center min-h-[400px]">
+                      <Loader2 className="animate-spin text-blue-600" size={48} />
                   </div>
-                </div>
-              </div>
+              ) : tutorSlots.length === 0 ? (
+                  <div className="bg-white p-8 md:p-10 rounded-[3rem] border border-gray-100 shadow-sm relative flex flex-col items-center justify-center text-center min-h-[400px] animate-in fade-in duration-500">
+                      <div className="w-24 h-24 bg-orange-50 rounded-full flex items-center justify-center mb-6 text-orange-500">
+                          <Calendar size={48} strokeWidth={1.5} />
+                      </div>
+                      <h3 className="text-2xl md:text-3xl font-black text-gray-900 mb-3">คิวในระบบเต็ม</h3>
+                      <p className="text-gray-500 font-medium leading-relaxed max-w-sm mx-auto mb-8">
+                          ติวเตอร์ท่านนี้ยังไม่มีคิวว่างสำหรับรูปแบบ <span className="font-bold text-blue-600 uppercase">{locationType}</span> ในขณะนี้ครับ<br/><br/>
+                          💡 <span className="font-bold text-gray-700">แต่ไม่ต้องห่วง!</span> คุณสามารถทักหาแอดมินเพื่อรีเควสคิวล่วงหน้า หรือจัดสรรเวลาพิเศษได้ครับ
+                      </p>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                          <a href="https://lin.ee/ZSDR4B3" target="_blank" 
+                             className="flex-1 bg-[#00B900] text-white hover:bg-[#009900] px-6 py-3.5 rounded-2xl font-black transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md">
+                              <MessageCircle size={18} /> ทักไลน์จองคิวพิเศษ
+                          </a>
+                          <button onClick={() => setStep(3)} 
+                             className="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 px-6 py-3.5 rounded-2xl font-black transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm">
+                              <ArrowLeft size={18} /> เลือกติวเตอร์ท่านอื่น
+                          </button>
+                      </div>
+                  </div>
+              ) : (
+                  <>
+                      <div className="bg-white p-8 md:p-10 rounded-[3rem] border border-gray-100 shadow-sm relative">
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-8">
+                            <h2 className="text-2xl font-black flex items-center gap-3 text-gray-900">
+                                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><MousePointer2 size={20} /></div>
+                                เลือกเวลาเรียน
+                            </h2>
+                            <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar w-full md:w-auto">
+                                {availableMonths.map(m => (
+                                    <button key={m} onClick={() => { setSelectedMonth(m); setSelectedDate(''); }}
+                                        className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all ${selectedMonth === m ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>
+                                        {monthNames[m]}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[3rem] text-white shadow-xl shadow-blue-100">
-                <label className="text-xs font-black text-blue-100 uppercase mb-4 block flex items-center gap-2"><MessageCircle size={18}/> บอกรายละเอียดที่อยากให้เน้น</label>
-                <textarea value={studentNote} onChange={(e) => setStudentNote(e.target.value)} 
-                  placeholder="เช่น อยากให้ครูช่วยสรุปเรื่องเลขยกกำลัง..." 
-                  className="w-full p-6 bg-white/10 backdrop-blur-md rounded-[2rem] border-2 border-white/20 outline-none focus:bg-white focus:text-gray-900 transition-all font-bold h-32"
-                />
-              </div>
+                        <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar mb-8">
+                          {availableDates.map(date => (
+                            <button key={date} onClick={() => setSelectedDate(date)}
+                              className={`flex flex-col items-center min-w-[85px] py-5 px-4 rounded-[2rem] transition-all border-2 
+                                ${selectedDate === date ? 'bg-blue-600 border-blue-600 text-white shadow-xl' : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'}`}>
+                              <span className="text-[10px] font-black uppercase mb-1 opacity-70">{new Date(date).toLocaleDateString('th-TH', { weekday: 'short' })}</span>
+                              <span className="text-2xl font-black">{new Date(date).getDate()}</span>
+                              <span className="text-[10px] font-bold opacity-70">{monthNames[new Date(date).getMonth()]}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="space-y-4 text-gray-900">
+                          {selectedDate && <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 text-center md:text-left">คิวที่ว่างในวันที่ {new Date(selectedDate).toLocaleDateString('th-TH', { dateStyle: 'long' })}</p>}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {displaySlots.map(slot => (
+                              <button 
+                                key={slot.id} 
+                                onClick={() => toggleSlotSelection(slot.id)}
+                                className={`flex items-center justify-between p-6 rounded-[1.5rem] border-2 transition-all group active:scale-95
+                                  ${selectedSlotIds.includes(slot.id) 
+                                    ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
+                                    : 'bg-gray-50 border-transparent hover:border-blue-500 hover:bg-white hover:shadow-md text-gray-900'}`}
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors 
+                                    ${selectedSlotIds.includes(slot.id) ? 'bg-white text-blue-600' : 'bg-white text-blue-600 group-hover:bg-blue-600 group-hover:text-white'}`}>
+                                    <Clock size={18} />
+                                  </div>
+                                  <span className="font-black text-lg">{new Date(slot.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</span>
+                                </div>
+                                {selectedSlotIds.includes(slot.id) ? <CheckCircle2 size={20} /> : <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />}
+                              </button>
+                            ))}
+                            {!selectedDate && availableDates.length > 0 && <div className="col-span-full text-center py-10 bg-blue-50 rounded-[2rem] text-blue-600 font-bold border-2 border-dashed">กรุณาเลือกวันที่ด้านบน 👆</div>}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[3rem] text-white shadow-xl shadow-blue-100">
+                        <label className="text-xs font-black text-blue-100 uppercase mb-4 block flex items-center gap-2"><MessageCircle size={18}/> บอกรายละเอียดที่อยากให้เน้น</label>
+                        <textarea value={studentNote} onChange={(e) => setStudentNote(e.target.value)} 
+                          placeholder="เช่น อยากให้ครูช่วยสรุปเรื่องเลขยกกำลัง..." 
+                          className="w-full p-6 bg-white/10 backdrop-blur-md rounded-[2rem] border-2 border-white/20 outline-none focus:bg-white focus:text-gray-900 transition-all font-bold h-32"
+                        />
+                      </div>
+                  </>
+              )}
             </div>
           </div>
         )}
       </div>
 
       {/* Floating Action Bar */}
-      {step === 4 && selectedSlotIds.length > 0 && (
+      {step === 4 && selectedSlotIds.length > 0 && tutorSlots.length > 0 && (
         <div className="fixed bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-xl z-50 animate-in slide-in-from-bottom-10 duration-500">
           <div className="bg-gray-900 text-white p-4 rounded-[2.5rem] shadow-2xl border border-white/10 flex items-center justify-between gap-4">
              <div className="flex flex-col pl-4">

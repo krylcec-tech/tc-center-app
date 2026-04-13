@@ -7,17 +7,20 @@ import {
   LayoutDashboard, Calendar, LogOut, Loader2, UserCircle, 
   ChevronRight, CalendarDays, History, CheckCircle2, Gift, 
   Menu, X, Clock, MapPin, Settings, AlertCircle, Home, 
-  BookOpen, FolderOpen, Share2, Sparkles, Store, DollarSign
+  BookOpen, FolderOpen, Share2, Sparkles, Store, DollarSign,
+  MessageCircle // ✨ เติมตัวนี้เข้ามาครับ
 } from 'lucide-react';
 
 export default function TutorDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [tutorData, setTutorData] = useState({ id: '', name: '', avatar: '' });
+  const [tutorData, setTutorData] = useState({ id: '', name: '', avatar: '', tags: [] as string[] });
   const [stats, setStats] = useState({ upcomingSlots: 0, completedHours: 0, todaySlots: 0 });
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
     fetchTutorData();
@@ -36,32 +39,49 @@ export default function TutorDashboard() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.replace('/login'); return; }
 
-      const { data: profile, error: profileError } = await supabase
-        .from('tutors')
-        .select('id, name, image_url, role') 
-        .eq('user_id', session.user.id)
+      // ✨ 1. เช็คยศ (Role) จากตาราง 'profiles' ให้ถูกต้อง
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
         .maybeSingle();
 
-      if (profileError || !profile) { 
-        router.replace('/login'); 
-        return; 
-      }
-
-      const dbRole = (profile.role || '').replace(/'/g, "").trim().toUpperCase();
-      if (dbRole !== 'TUTOR') {
+      if (!userProfile || userProfile.role !== 'TUTOR') {
         router.replace('/student');
         return;
       }
 
-      setTutorData({ id: profile.id, name: profile.name, avatar: profile.image_url });
+      // ✨ 2. ดึงข้อมูลติวเตอร์จากตาราง 'tutors' โดยใช้คอลัมน์ 'id' (ไม่ใช่ user_id)
+      const { data: tutorInfo, error: tutorError } = await supabase
+        .from('tutors')
+        .select('id, name, image_url, tags') 
+        .eq('id', session.user.id)
+        .maybeSingle();
 
+      if (tutorError || !tutorInfo) { 
+        console.error("Tutor Data Error:", tutorError);
+        router.replace('/login'); 
+        return; 
+      }
+
+      // ✨ 3. ตรวจสอบสถานะว่า "รอการอนุมัติ" หรือไม่
+      if (tutorInfo.tags && tutorInfo.tags.includes('รอการอนุมัติ')) {
+        setIsPending(true);
+        setTutorData({ id: tutorInfo.id, name: tutorInfo.name, avatar: tutorInfo.image_url, tags: tutorInfo.tags });
+        setLoading(false);
+        return; // 🛑 หยุดทำโค้ดส่วนอื่น ถ้ายังไม่อนุมัติ
+      }
+
+      setTutorData({ id: tutorInfo.id, name: tutorInfo.name, avatar: tutorInfo.image_url, tags: tutorInfo.tags });
+
+      // ✨ 4. ถ้าผ่านการอนุมัติแล้ว ถึงจะดึงข้อมูลการสอน (Bookings)
       const { data: allBookings, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
           id, status, is_completed, student_id,
           slots!inner ( id, start_time, location_type, teaching_logs ( id, created_at ) )
         `)
-        .eq('tutor_id', profile.id);
+        .eq('tutor_id', tutorInfo.id);
 
       if (bookingsError) throw new Error(bookingsError.message);
 
@@ -150,6 +170,43 @@ export default function TutorDashboard() {
     );
   }
 
+  // 🛑 หน้าจอสำหรับติวเตอร์ที่ "รอการอนุมัติ"
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 font-sans selection:bg-orange-200">
+        <div className="bg-white max-w-lg w-full p-8 md:p-12 rounded-[3rem] shadow-2xl text-center border border-orange-100/50 relative overflow-hidden">
+           
+           {/* Background Decoration */}
+           <div className="absolute top-0 right-0 w-48 h-48 bg-orange-50/80 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+           <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-50/80 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
+           
+           <div className="w-28 h-28 bg-gradient-to-tr from-orange-100 to-orange-50 text-orange-500 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 relative z-10 shadow-inner border border-white">
+              <Clock size={56} strokeWidth={1.5} className="animate-pulse" />
+           </div>
+           
+           <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-4 relative z-10 tracking-tight">
+             รอการอนุมัติ
+           </h1>
+           <p className="text-slate-500 font-bold leading-relaxed mb-10 relative z-10 text-sm md:text-base">
+             สวัสดีครับครู <span className="text-blue-600">{tutorData.name?.split(' ')[0] || ''}</span> 👋 <br/>
+             ระบบได้รับข้อมูลใบสมัครของคุณแล้ว ขณะนี้อยู่ในระหว่างการตรวจสอบข้อมูลจากทีมงานแอดมิน<br/>
+             <span className="text-orange-500 mt-4 block p-3 bg-orange-50/50 rounded-2xl border border-orange-100">เราจะรีบติดต่อกลับไปให้เร็วที่สุด ขอบคุณครับ! 🙏</span>
+           </p>
+
+           <div className="flex flex-col sm:flex-row gap-3 relative z-10">
+             <a href="https://lin.ee/ZSDR4B3" target="_blank" rel="noopener noreferrer" className="flex-1 bg-[#06C755] hover:bg-[#05b34c] text-white py-4 rounded-[1.5rem] font-black text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+               <MessageCircle size={18} /> ติดต่อทีมงาน
+             </a>
+             <button onClick={handleLogout} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-4 rounded-[1.5rem] font-black text-sm transition-all flex items-center justify-center gap-2 active:scale-95">
+               <LogOut size={18} /> ออกจากระบบ
+             </button>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ หน้า Dashboard ปกติ (ถ้าผ่านการอนุมัติแล้ว)
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex flex-col lg:flex-row font-sans text-slate-800 selection:bg-orange-200">
       
@@ -213,7 +270,6 @@ export default function TutorDashboard() {
           <div className="h-6"></div>
           <p className="px-5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">รายได้และธุรกิจ</p>
           
-          {/* ✨ เมนูใหม่: ไป Seller Hub สำหรับขายชีท */}
           <Link href="/tutor/seller-hub" className="flex items-center justify-between px-5 py-3.5 text-purple-600 bg-purple-50 border border-purple-100/50 rounded-[1.2rem] font-black hover:bg-purple-100 transition-all group">
             <div className="flex items-center gap-3"><Store size={20} className="group-hover:scale-110 transition-transform" /> ฝากขายชีททำเงิน</div>
             <ChevronRight size={14} className="opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all"/>

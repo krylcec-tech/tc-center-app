@@ -25,7 +25,7 @@ export default function SuperAdminUsers() {
 
       const formatted = (profiles || []).map((p: any) => {
         const wallet = wallets?.find(w => w.user_id === p.id);
-        const tutorInfo = tutors?.find(t => t.user_id === p.id);
+        const tutorInfo = tutors?.find(t => t.id === p.id); // ✨ เปลี่ยนจาก t.user_id เป็น t.id
 
         let rawRole = p.role || tutorInfo?.role || 'student';
         let cleanRole = rawRole.replace(/['"]/g, '').toLowerCase();
@@ -60,22 +60,20 @@ export default function SuperAdminUsers() {
     setProcessingId(payload.userId);
     try {
       if (action === 'CHANGE_ROLE') {
-        // 1. อัปเดตตาราง tutors
         const { error: tutorError } = await supabase
           .from('tutors')
           .upsert({ 
-            user_id: payload.userId, 
+            id: payload.userId, // ✨ เปลี่ยนจาก user_id เป็น id
             role: payload.newRole, 
             email: payload.email,
             name: payload.name,
             tags: ['เปลี่ยนสถานะโดยแอดมิน'] 
           }, { 
-            onConflict: 'user_id' 
+            onConflict: 'id' // ✨ เปลี่ยนจาก user_id เป็น id
           });
 
         if (tutorError) throw tutorError;
 
-        // 2. ✨ อัปเดตตาราง profiles เพื่อให้ระบบล็อกอินจำสิทธิ์ได้ถูกต้อง
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ role: payload.newRole })
@@ -100,26 +98,28 @@ export default function SuperAdminUsers() {
     }
   };
 
-  // ✨ อัปเดตฟังก์ชันนี้ ให้ส่ง userId มาด้วยเพื่อไปเปลี่ยนสิทธิ์ในตารางหลัก
-  const approveTutor = async (tutorId: string, userId: string) => {
+  // ✨ อัปเดตฟังก์ชัน approveTutor ให้รับค่า ID มาใช้ให้ถูกต้อง
+  const approveTutor = async (tutorId: string) => {
     if (!confirm('อนุมัติให้ติวเตอร์เริ่มสอน?')) return;
     setProcessingId(tutorId);
     try {
-      // 1. อัปเดตสถานะในตาราง tutors
+      // 1. อัปเดตตาราง tutors (เปลี่ยน tag เป็น 'ติวเตอร์ใหม่')
       const { error: tutorError } = await supabase.from('tutors').update({ 
         tags: ['ติวเตอร์ใหม่'],
         role: 'tutor' 
       }).eq('id', tutorId);
+      
       if (tutorError) throw tutorError;
 
-      // 2. ✨ อัปเดตตาราง profiles ทันที
+      // 2. อัปเดตตาราง profiles (เปลี่ยนยศให้ล็อกอินได้)
       const { error: profileError } = await supabase.from('profiles').update({ 
-        role: 'tutor' 
-      }).eq('id', userId);
+        role: 'TUTOR' 
+      }).eq('id', tutorId); // ✨ ใช้ tutorId ได้เลย เพราะเป็น ID เดียวกัน
+      
       if (profileError) throw profileError;
 
-      alert('✅ อนุมัติสำเร็จ'); 
-      fetchData();
+      alert('✅ อนุมัติสำเร็จ! ติวเตอร์สามารถเข้าใช้งานระบบได้แล้ว'); 
+      fetchData(); // โหลดข้อมูลใหม่
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -261,8 +261,8 @@ export default function SuperAdminUsers() {
                       </p>
                     </div>
                     <button 
-                      // ✨ ส่ง user_id พ่วงไปด้วย เพื่อให้อัปเดตตาราง profiles ได้
-                      onClick={() => approveTutor(tutor.id, tutor.user_id)} 
+                      // ✨ ส่งแค่ค่า ID ตัวเดียวพอ
+                      onClick={() => approveTutor(tutor.id)} 
                       disabled={processingId === tutor.id}
                       className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
