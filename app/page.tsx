@@ -12,22 +12,55 @@ import FloatingAIMascot from '@/components/FloatingAIMascot';
 export default function PremiumResponsiveLanding() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string>('STUDENT'); // ✨ เพิ่ม State เก็บยศ
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        setUser(session.user);
+        
+        // ✨ ดึงข้อมูลยศจากตาราง profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile) {
+          setUserRole((profile.role || 'STUDENT').toUpperCase());
+        }
+      } else {
+        setUser(null);
+      }
+      
       setLoading(false);
     };
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (!session) setUserRole('STUDENT'); // รีเซ็ตยศตอนล็อกเอาท์
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // ✨ ฟังก์ชันคำนวณลิงก์ปลายทางตามตำแหน่ง
+  const getDashboardUrl = () => {
+    if (userRole === 'ADMIN') return '/admin';
+    if (userRole === 'TUTOR') return '/tutor';
+    return '/student';
+  };
+
+  // ✨ ฟังก์ชันคำนวณชื่อปุ่มตามตำแหน่ง
+  const getDashboardText = () => {
+    if (userRole === 'ADMIN') return 'ระบบหลังบ้าน (Admin)';
+    if (userRole === 'TUTOR') return 'ระบบจัดการติวเตอร์';
+    return 'ห้องเรียนของฉัน';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 font-sans text-slate-800 selection:bg-orange-200 overflow-x-hidden relative">
@@ -73,9 +106,10 @@ export default function PremiumResponsiveLanding() {
             {!loading && (
               <>
                 {user ? (
-                  <Link href="/student" className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-full hover:bg-blue-700 shadow-[0_4px_15px_rgba(37,99,235,0.3)] hover:-translate-y-1 transition-all active:scale-95">
-                    <LayoutDashboard size={18} /> ห้องเรียนของฉัน
-                  </Link>
+                  // ✨ เปลี่ยนลิงก์ให้แปรผันตามตำแหน่ง
+                  <a href={getDashboardUrl()} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-full hover:bg-blue-700 shadow-[0_4px_15px_rgba(37,99,235,0.3)] hover:-translate-y-1 transition-all active:scale-95">
+                    <LayoutDashboard size={18} /> {getDashboardText()}
+                  </a>
                 ) : (
                   <>
                     <Link href="/login" className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-100 px-5 py-2.5 rounded-full hover:bg-blue-200 transition-all border border-blue-200">
@@ -102,9 +136,10 @@ export default function PremiumResponsiveLanding() {
             </Link>
             <div className="w-full h-px bg-slate-100"></div>
             {user ? (
-              <Link href="/student" className="w-full flex justify-center items-center gap-2 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700" onClick={() => setIsMobileMenuOpen(false)}>
-                <LayoutDashboard size={20}/> กลับเข้าสู่ห้องเรียน
-              </Link>
+              // ✨ เปลี่ยนลิงก์ให้แปรผันตามตำแหน่ง (Mobile)
+              <a href={getDashboardUrl()} className="w-full flex justify-center items-center gap-2 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700" onClick={() => setIsMobileMenuOpen(false)}>
+                <LayoutDashboard size={20}/> {getDashboardText()}
+              </a>
             ) : (
               <div className="flex flex-col gap-3">
                 <Link href="/login" className="flex justify-center items-center gap-2 w-full py-3 bg-blue-100 text-blue-700 font-bold rounded-2xl" onClick={() => setIsMobileMenuOpen(false)}>
@@ -140,9 +175,10 @@ export default function PremiumResponsiveLanding() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 justify-center px-4">
-            <Link href={user ? "/student/courses" : "/register"} className="w-full sm:w-auto px-8 md:px-10 py-4 bg-blue-600 text-white font-bold rounded-[2rem] flex items-center justify-center gap-2 hover:bg-blue-700 shadow-[0_8px_20px_rgba(37,99,235,0.3)] hover:-translate-y-1 transition-all active:scale-95 text-sm md:text-base">
-              {user ? "ลุยกันเลย!" : "ทดลองเรียนฟรี"} <Sparkles size={20} className="text-amber-300"/>
-            </Link>
+            {/* ✨ เปลี่ยนลิงก์ปุ่มนี้ให้เข้า Dashboard ตามตำแหน่งด้วย */}
+            <a href={user ? getDashboardUrl() : "/register"} className="w-full sm:w-auto px-8 md:px-10 py-4 bg-blue-600 text-white font-bold rounded-[2rem] flex items-center justify-center gap-2 hover:bg-blue-700 shadow-[0_8px_20px_rgba(37,99,235,0.3)] hover:-translate-y-1 transition-all active:scale-95 text-sm md:text-base">
+              {user ? "เข้าสู่ระบบหลังบ้าน" : "ทดลองเรียนฟรี"} <Sparkles size={20} className="text-amber-300"/>
+            </a>
             <Link href="https://lin.ee/ZSDR4B3" target="_blank" className="w-full sm:w-auto px-8 md:px-10 py-4 bg-green-50 text-green-700 font-bold rounded-[2rem] flex items-center justify-center gap-2 border border-green-200 hover:bg-green-100 hover:shadow-md hover:-translate-y-1 transition-all active:scale-95 text-sm md:text-base">
               <MessageCircle size={20} className="text-[#00B900]" /> ปรึกษาพี่แอดมิน
             </Link>

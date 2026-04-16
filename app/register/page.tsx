@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { 
   UserPlus, Mail, Lock, User, Phone, Loader2, 
   ArrowLeft, GraduationCap, Building2, Gift, CheckCircle2, 
-  MessageCircle, ChevronRight 
+  MessageCircle, ChevronRight, BookOpen // ✨ เพิ่ม BookOpen Icon
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false); // ✨ จัดการหน้าจอสมัครสำเร็จ
+  const [isSuccess, setIsSuccess] = useState(false); 
   
   // Form States
   const [email, setEmail] = useState('');
@@ -21,10 +21,18 @@ export default function RegisterPage() {
   const [studentNickname, setStudentNickname] = useState('');
   const [phone, setPhone] = useState('');
   const [schoolName, setSchoolName] = useState('');
+  const [gradeLevel, setGradeLevel] = useState(''); // ✨ เพิ่ม State เก็บระดับชั้นตอนสมัคร
   const [referralCode, setReferralCode] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ✨ ดักจับกรณียังไม่เลือกระดับชั้น
+    if (!gradeLevel) {
+      alert("กรุณาเลือกระดับชั้นของนักเรียนด้วยครับ");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -58,12 +66,13 @@ export default function RegisterPage() {
       if (authData.user) {
         const newMyReferralCode = `TC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-        // 2. บันทึก Profile (ใช้ upsert เพื่อป้องกันการสมัครซ้ำแล้ว Error)
+        // 2. บันทึก Profile (เพิ่ม grade_level เข้าไปเก็บตั้งแต่ตอนสมัคร)
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert([{
             id: authData.user.id,
             school_name: schoolName,
+            grade_level: gradeLevel, // ✨ บันทึกระดับชั้นลงฐานข้อมูล
             referred_by_id: referredById,
             referral_code: newMyReferralCode
           }], { onConflict: 'id' });
@@ -94,7 +103,6 @@ export default function RegisterPage() {
     }
   };
 
-  // ✨ ฟังก์ชันสำหรับส่งอีเมลยืนยันซ้ำ
   const handleResendEmail = async () => {
     setLoading(true);
     const { error } = await supabase.auth.resend({
@@ -178,6 +186,26 @@ export default function RegisterPage() {
                 <label className="text-[10px] font-black text-gray-400 uppercase ml-4">โรงเรียน</label>
                 <input required type="text" placeholder="ชื่อโรงเรียน" className="w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold" 
                   value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
+              </div>
+            </div>
+
+            {/* ✨ เพิ่มช่องระดับชั้น (Dropdown) ตรงนี้ */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-gray-400 uppercase ml-4">ระดับชั้นของนักเรียน</label>
+              <div className="relative">
+                <BookOpen className="absolute left-4 top-4 text-gray-400" size={18} />
+                <select 
+                  required
+                  value={gradeLevel} 
+                  onChange={(e) => setGradeLevel(e.target.value)} 
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold appearance-none cursor-pointer"
+                >
+                  <option value="" disabled>เลือกระดับชั้น...</option>
+                  <option value="ประถมศึกษา">ประถมศึกษา (ป.1 - ป.6)</option>
+                  <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น (ม.1 - ม.3)</option>
+                  <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย (ม.4 - ม.6)</option>
+                  <option value="มหาวิทยาลัย">มหาวิทยาลัย / อื่นๆ</option>
+                </select>
               </div>
             </div>
 

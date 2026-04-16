@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   User, Phone, MapPin, Save, ArrowLeft, 
-  Loader2, Camera, GraduationCap, Building2, Heart, Settings
+  Loader2, Camera, GraduationCap, Building2, Heart, Settings, BookOpen
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -18,8 +18,9 @@ export default function StudentProfilePage() {
   const [parentName, setParentName] = useState('');
   const [phone, setPhone] = useState('');
   const [school, setSchool] = useState('');
+  const [gradeLevel, setGradeLevel] = useState(''); // ✨ เพิ่ม State เก็บระดับชั้น
   const [address, setAddress] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState(''); // ✨ เพิ่ม State เก็บรูป
+  const [avatarUrl, setAvatarUrl] = useState(''); 
 
   useEffect(() => {
     fetchProfile();
@@ -43,15 +44,17 @@ export default function StudentProfilePage() {
         setAddress(wallet.address || ''); 
       }
 
+      // ✨ ดึง grade_level มาด้วย
       const { data: profile } = await supabase
         .from('profiles')
-        .select('school_name, avatar_url') // ✨ ดึง avatar_url มาด้วย
+        .select('school_name, avatar_url, grade_level') 
         .eq('id', user.id)
         .maybeSingle();
       
       if (profile) {
         setSchool(profile.school_name || '');
         setAvatarUrl(profile.avatar_url || '');
+        setGradeLevel(profile.grade_level || ''); // ✨ เซ็ตค่าระดับชั้นเดิม (ถ้ามี)
       }
 
     } catch (error) {
@@ -61,7 +64,6 @@ export default function StudentProfilePage() {
     }
   };
 
-  // ✨ ฟังก์ชันอัปโหลดรูปโปรไฟล์
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -74,7 +76,7 @@ export default function StudentProfilePage() {
       const fileName = `student_${user?.id}_${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('avatars') // ใช้ Bucket ชื่อ avatars
+        .from('avatars') 
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
@@ -108,12 +110,13 @@ export default function StudentProfilePage() {
 
       if (walletError) throw walletError;
 
-      // 2. อัปเดตข้อมูลใน profiles (ชื่อโรงเรียน & รูปโปรไฟล์)
+      // 2. อัปเดตข้อมูลใน profiles (เพิ่ม grade_level เข้าไปเซฟด้วย)
       await supabase
         .from('profiles')
         .update({ 
           school_name: school,
-          avatar_url: avatarUrl // ✨ บันทึกรูปลงฐานข้อมูล
+          avatar_url: avatarUrl,
+          grade_level: gradeLevel // ✨ บันทึกระดับชั้นลงฐานข้อมูล
         })
         .eq('id', user.id);
 
@@ -146,7 +149,7 @@ export default function StudentProfilePage() {
           {/* ข้อมูลนักเรียน & อัปโหลดรูป */}
           <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
             
-            {/* ✨ ส่วนอัปโหลดรูป */}
+            {/* ส่วนอัปโหลดรูป */}
             <div className="flex flex-col items-center gap-4 shrink-0">
               <div className="relative w-32 h-32 rounded-full bg-blue-50 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden group">
                 {avatarUrl ? (
@@ -197,6 +200,25 @@ export default function StudentProfilePage() {
                   <div className="relative">
                     <Building2 className="absolute left-4 top-4 text-gray-400" size={18} />
                     <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 font-bold border-none" />
+                  </div>
+                </div>
+
+                {/* ✨ เพิ่มช่องระดับชั้น (Dropdown) */}
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2">ระดับชั้น</label>
+                  <div className="relative">
+                    <BookOpen className="absolute left-4 top-4 text-gray-400" size={18} />
+                    <select 
+                      value={gradeLevel} 
+                      onChange={(e) => setGradeLevel(e.target.value)} 
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 font-bold border-none appearance-none cursor-pointer"
+                    >
+                      <option value="" disabled>เลือกระดับชั้นของคุณ</option>
+                      <option value="ประถมศึกษา">ประถมศึกษา (ป.1 - ป.6)</option>
+                      <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น (ม.1 - ม.3)</option>
+                      <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย (ม.4 - ม.6)</option>
+                      <option value="มหาวิทยาลัย">มหาวิทยาลัย / อื่นๆ</option>
+                    </select>
                   </div>
                 </div>
               </div>
