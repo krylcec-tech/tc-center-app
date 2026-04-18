@@ -361,16 +361,11 @@ export default function PremiumResponsiveLanding() {
           {/* Stats Row */}
           <div className="mt-16 flex items-center justify-center gap-2 sm:gap-0 flex-wrap sm:flex-nowrap">
             {[
-              { value: '5,000+', label: 'นักเรียน', icon: '🎓', color: 'blue' },
-              { value: '98%', label: 'พึงพอใจ', icon: '⭐', color: 'orange' },
-              { value: '200+', label: 'คอร์สเรียน', icon: '📚', color: 'pink' },
+              //{ value: '5,000+', label: 'นักเรียน', icon: '🎓', color: 'blue' },
+              //{ value: '98%', label: 'พึงพอใจ', icon: '⭐', color: 'orange' },
+              //{ value: '200+', label: 'คอร์สเรียน', icon: '📚', color: 'pink' },
             ].map((stat, i) => (
               <React.Fragment key={i}>
-                <div className="stat-item flex flex-col items-center px-6 py-4" style={{animationDelay: `${i * 0.15}s`}}>
-                  <span className="text-xl mb-1">{stat.icon}</span>
-                  <span className="text-2xl md:text-3xl font-black text-slate-800">{stat.value}</span>
-                  <span className="text-xs font-semibold text-slate-400 mt-0.5">{stat.label}</span>
-                </div>
                 {i < 2 && <div className="hidden sm:block w-px h-12 bg-gradient-to-b from-transparent via-slate-200 to-transparent"></div>}
               </React.Fragment>
             ))}
@@ -400,7 +395,7 @@ export default function PremiumResponsiveLanding() {
               accent: '#2563eb',
               accentLight: 'rgba(37,99,235,0.08)',
               accentBorder: 'rgba(37,99,235,0.15)',
-              tag: 'คอร์สใหม่ทุกสัปดาห์',
+              tag: 'คอร์สใหม่ หลากหลาย',
               iconBg: 'from-blue-500 to-blue-700',
             },
             {
@@ -412,7 +407,7 @@ export default function PremiumResponsiveLanding() {
               accent: '#ec4899',
               accentLight: 'rgba(236,72,153,0.07)',
               accentBorder: 'rgba(236,72,153,0.15)',
-              tag: '50+ ติวเตอร์',
+              tag: 'ติวเตอร์คุณภาพ',
               iconBg: 'from-pink-500 to-rose-600',
             },
             {
@@ -424,7 +419,7 @@ export default function PremiumResponsiveLanding() {
               accent: '#f97316',
               accentLight: 'rgba(249,115,22,0.07)',
               accentBorder: 'rgba(249,115,22,0.15)',
-              tag: '5,000+ รีวิว',
+              tag: 'รีวิวจากผู้เรียนจริง',
               iconBg: 'from-orange-500 to-amber-600',
             }
           ].map((item, idx) => (
