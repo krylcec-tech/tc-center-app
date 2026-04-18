@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Calendar, Clock, XCircle, MessageCircle, 
-  Loader2, CalendarCheck, Video, CheckCircle2, ChevronLeft, ChevronRight, LayoutGrid, Search, AlertCircle
+  Loader2, CalendarCheck, Video, CheckCircle2, ChevronLeft, ChevronRight, LayoutGrid, Search, AlertCircle, Save, Mail, Filter, X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -13,7 +13,11 @@ export default function MySchedulePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   
+  const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null);
+  const [studentNotes, setStudentNotes] = useState<{ [key: string]: string }>({});
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterDate, setFilterDate] = useState(''); // ✨ State สำหรับกรองวันที่
   const [activeStatusTab, setActiveStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
 
@@ -28,22 +32,29 @@ export default function MySchedulePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // ✨ ดึงคอลัมน์ `notes` จาก teaching_logs มาด้วย เพื่อเอามาโชว์ให้นักเรียนอ่าน
+      // ✨ ดึง tutor_note และ email ของติวเตอร์มาด้วย
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          id, status, is_completed, meeting_url, 
+          id, status, is_completed, meeting_url, student_note, tutor_note,
           slots!inner ( 
             id, start_time, location_type,
             teaching_logs ( id, created_at, notes ) 
           ),
-          tutors!inner ( name, image_url ) 
+          tutors!inner ( name, image_url, email ) 
         `)
         .eq('student_id', user.id)
         .order('id', { ascending: false });
 
       if (error) throw error;
       setBookings(data || []);
+
+      const initialNotes: { [key: string]: string } = {};
+      data?.forEach((b) => {
+        initialNotes[b.id] = b.student_note || '';
+      });
+      setStudentNotes(initialNotes);
+
     } catch (err: any) {
       console.error("🚨 Fetch Error:", err.message);
       setErrorMsg(err.message);
@@ -78,6 +89,23 @@ export default function MySchedulePage() {
     }
   };
 
+  const handleSaveNote = async (bookingId: string) => {
+    setUpdatingNoteId(bookingId);
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ student_note: studentNotes[bookingId] })
+        .eq('id', bookingId);
+
+      if (error) throw error;
+      alert('ส่งข้อความถึงติวเตอร์เรียบร้อยแล้วครับ! 💬');
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาดในการส่งข้อความ: ' + err.message);
+    } finally {
+      setUpdatingNoteId(null);
+    }
+  };
+
   const isStudentVerified = (item: any) => {
     const status = String(item.status || '').trim().toUpperCase();
     return status === 'VERIFIED' || item.is_completed === true;
@@ -90,24 +118,39 @@ export default function MySchedulePage() {
     return hasLog || isTimePassed;
   };
 
-  const upcomingCount = useMemo(() => bookings.filter(b => !isStudentVerified(b)).length, [bookings]);
-  const pastCount = useMemo(() => bookings.filter(b => isStudentVerified(b)).length, [bookings]);
-
+  // ✨ ระบบคัดกรองและเรียงลำดับข้อมูล
   const filteredBookings = useMemo(() => {
-    return bookings.filter(item => {
+    let list = bookings.filter(item => {
       if (!item.slots || !item.tutors) return false;
 
       const isFinished = isStudentVerified(item);
       const tutorName = String(item.tutors?.name || '').toLowerCase();
       const matchesSearch = tutorName.includes(searchTerm.toLowerCase());
       
+      // กรองตามวันที่
+      let matchesDate = true;
+      if (filterDate) {
+        const itemDate = new Date(item.slots.start_time).toISOString().split('T')[0];
+        matchesDate = itemDate === filterDate;
+      }
+      
       if (activeStatusTab === 'upcoming') {
-        return !isFinished && matchesSearch;
+        return !isFinished && matchesSearch && matchesDate;
       } else {
-        return isFinished && matchesSearch;
+        return isFinished && matchesSearch && matchesDate;
       }
     });
-  }, [bookings, searchTerm, activeStatusTab]);
+
+    // ✨ เรียงลำดับ: ประวัติ (ใหม่ไปเก่า), รอเรียน (เก่าไปใหม่/ตามเวลาใกล้ถึง)
+    return list.sort((a, b) => {
+      const timeA = new Date(a.slots.start_time).getTime();
+      const timeB = new Date(b.slots.start_time).getTime();
+      return activeStatusTab === 'past' ? timeB - timeA : timeA - timeB;
+    });
+  }, [bookings, searchTerm, activeStatusTab, filterDate]);
+
+  const upcomingCount = useMemo(() => bookings.filter(b => !isStudentVerified(b)).length, [bookings]);
+  const pastCount = useMemo(() => bookings.filter(b => isStudentVerified(b)).length, [bookings]);
 
   const weekDays = useMemo(() => {
     const start = new Date(currentWeekStart);
@@ -149,31 +192,48 @@ export default function MySchedulePage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans text-gray-900">
-      <div className="max-w-4xl mx-auto p-6 md:p-10">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-10">
         
         <header className="mb-8">
           <Link href="/student" className="text-gray-400 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 mb-4 hover:text-blue-600 w-max transition-colors">
             <ArrowLeft size={14} /> Back to Dashboard
           </Link>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h1 className="text-4xl font-black tracking-tight flex items-center gap-4">
-              <CalendarCheck className="text-blue-600" size={40} /> ตารางเรียน
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight flex items-center gap-3 md:gap-4">
+              <CalendarCheck className="text-blue-600 shrink-0" size={36} /> ตารางเรียน
             </h1>
             
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input 
-                type="text" 
-                placeholder="ค้นหาชื่อครู..." 
-                className="pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-2xl text-xs font-bold focus:border-blue-400 outline-none shadow-sm w-full md:w-64"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            {/* ✨ เพิ่มระบบตัวกรองแบบเต็มรูปแบบ (ชื่อ + วันที่) */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="ค้นหาชื่อครู..." 
+                  className="pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-2xl text-xs font-bold focus:border-blue-400 outline-none shadow-sm w-full transition-colors"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                  type="date" 
+                  className="pl-10 pr-8 py-2.5 bg-white border border-gray-100 rounded-2xl text-xs font-bold focus:border-blue-400 outline-none shadow-sm text-gray-600 transition-colors"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                />
+                {filterDate && (
+                  <button onClick={() => setFilterDate('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
+                    <X size={14}/>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </header>
 
-        <div className="flex gap-2 mb-8 bg-gray-100/50 p-1.5 rounded-[2rem] w-max">
+        <div className="flex gap-2 mb-8 bg-gray-100/50 p-1.5 rounded-[2rem] w-max border border-gray-100">
           <button 
             onClick={() => setActiveStatusTab('upcoming')}
             className={`px-6 py-2.5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${activeStatusTab === 'upcoming' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
@@ -190,8 +250,10 @@ export default function MySchedulePage() {
 
         <section className="space-y-4 mb-16">
           {filteredBookings.length === 0 ? (
-            <div className="bg-white p-12 rounded-[2.5rem] text-center border border-gray-50 shadow-sm">
-               <p className="text-gray-400 font-bold text-sm">ไม่มีคลาสในหมวดหมู่นี้</p>
+            <div className="bg-white py-16 px-6 rounded-[2.5rem] text-center border border-gray-50 shadow-sm flex flex-col items-center">
+               <Calendar size={48} className="text-gray-200 mb-4"/>
+               <p className="text-gray-400 font-black text-lg">ไม่พบคลาสเรียนตามเงื่อนไขที่เลือก</p>
+               <p className="text-gray-400 font-bold text-xs mt-1">ลองเปลี่ยนเงื่อนไขการค้นหา หรือดูแท็บอื่น</p>
             </div>
           ) : (
             filteredBookings.map((item) => {
@@ -201,20 +263,23 @@ export default function MySchedulePage() {
               const canJoin = !verified; 
               
               const hasTeachingLog = item.slots.teaching_logs && item.slots.teaching_logs.length > 0;
-              const tutorNote = hasTeachingLog ? item.slots.teaching_logs[0].notes : null;
+              const tutorNoteLog = hasTeachingLog ? item.slots.teaching_logs[0].notes : null;
 
               return (
-                <div key={item.id} className={`p-5 md:p-6 rounded-[2.2rem] shadow-sm border transition-all flex flex-col gap-4 ${verified ? 'bg-green-50/20 border-green-50' : 'bg-white border-gray-50'}`}>
-                  <div className="flex flex-col md:flex-row justify-between items-center gap-4 w-full">
+                <div key={item.id} className={`p-5 md:p-6 rounded-[2.5rem] shadow-sm border transition-all flex flex-col gap-5 ${verified ? 'bg-green-50/10 border-green-50' : 'bg-white border-gray-50 hover:border-blue-100'}`}>
+                  
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
                     <div className="flex items-center gap-4 w-full">
                       <img src={item.tutors?.image_url || '/placeholder-avatar.png'} className="w-14 h-14 object-cover rounded-2xl shadow-sm border-2 border-white" alt="tutor" />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-lg font-black text-gray-900 leading-none">ครู{item.tutors?.name}</h3>
-                          <span className="bg-blue-50 text-blue-600 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">{item.slots.location_type}</span>
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase ${item.slots.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{item.slots.location_type}</span>
                         </div>
+                        {/* 📧 แสดงอีเมลติวเตอร์ตรงนี้ */}
+                        <p className="text-[10px] font-bold text-gray-500 mb-1 flex items-center gap-1"><Mail size={10} className="text-gray-400"/> {item.tutors?.email || 'N/A'}</p>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                            {startTime.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} • {startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                            {startTime.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} • {startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                         </p>
                       </div>
                     </div>
@@ -224,7 +289,7 @@ export default function MySchedulePage() {
                         <a 
                           href={item.meeting_url} 
                           target="_blank" 
-                          className={`flex-1 md:flex-none py-3 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 ${canJoin ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                          className={`w-full md:w-auto py-3 px-6 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 ${canJoin ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                         >
                             <Video size={14}/> เข้าห้องเรียนออนไลน์
                         </a>
@@ -237,7 +302,44 @@ export default function MySchedulePage() {
                     </div>
                   </div>
 
-                  {/* ✨ ถ้านักเรียนยังไม่ได้กดยืนยัน (แสดงกล่องส้ม พร้อมสรุปการสอนให้อ่าน) */}
+                  {/* ✨ แสดงข้อความจากติวเตอร์ (Tutor Note) */}
+                  {item.tutor_note && item.tutor_note.trim() !== '' && (
+                    <div className="bg-purple-50 border border-purple-100 p-4 rounded-2xl flex items-start gap-3 shadow-sm">
+                      <div className="p-2 bg-white rounded-xl text-purple-600 shadow-sm shrink-0"><MessageCircle size={16}/></div>
+                      <div>
+                        <p className="text-[9px] font-black text-purple-600 uppercase tracking-widest mb-1">ข้อความจากคุณครู:</p>
+                        <p className="text-xs font-bold text-gray-700 leading-relaxed">"{item.tutor_note}"</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ✨ ถ้านักเรียนยังไม่ได้เข้าเรียน (Upcoming) จะมีกล่องสำหรับฝากข้อความถึงครู */}
+                  {!verified && !tutorDone && (
+                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50 flex flex-col gap-3">
+                      <label className="text-[10px] font-black text-blue-500 flex items-center gap-1.5 ml-1">
+                        <MessageCircle size={12} /> ฝากข้อความถึงครูผู้สอน (อยากให้เน้นเรื่องอะไรเป็นพิเศษ?)
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="เช่น อยากให้ทบทวนเรื่องเซต หรือ สรุปสูตรเคมีให้หน่อยครับ..."
+                          className="flex-1 bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
+                          value={studentNotes[item.id] || ''}
+                          onChange={(e) => setStudentNotes({ ...studentNotes, [item.id]: e.target.value })}
+                        />
+                        <button 
+                          onClick={() => handleSaveNote(item.id)}
+                          disabled={updatingNoteId === item.id}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 disabled:bg-gray-400 w-full sm:w-auto"
+                        >
+                          {updatingNoteId === item.id ? <Loader2 size={14} className="animate-spin"/> : <Save size={14}/>}
+                          บันทึก
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ถ้านักเรียนยังไม่ได้กดยืนยัน (แสดงกล่องส้ม พร้อมสรุปการสอนให้อ่าน) */}
                   {!verified && tutorDone && (
                     <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -250,13 +352,13 @@ export default function MySchedulePage() {
                         </span>
                       </div>
 
-                      {/* ✨ แสดงสรุปการสอนจากติวเตอร์ตรงนี้เลย! */}
-                      {hasTeachingLog && tutorNote && (
+                      {/* แสดงสรุปการสอนจากติวเตอร์ตรงนี้เลย! */}
+                      {hasTeachingLog && tutorNoteLog && (
                         <div className="mb-4 p-4 bg-white/60 rounded-[1.2rem] border border-orange-100/50">
                            <p className="text-[10px] font-black text-orange-600 mb-2">📝 สรุปการสอนจากติวเตอร์:</p>
-                           <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap leading-relaxed">"{tutorNote}"</p>
+                           <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap leading-relaxed">"{tutorNoteLog}"</p>
                            <p className="text-[8px] text-gray-400 text-right mt-3 font-medium uppercase tracking-tighter">
-                             ส่งรายงานเมื่อ: {new Date(item.slots.teaching_logs[0].created_at).toLocaleString('th-TH')}
+                              ส่งรายงานเมื่อ: {new Date(item.slots.teaching_logs[0].created_at).toLocaleString('th-TH')}
                            </p>
                         </div>
                       )}
@@ -272,7 +374,7 @@ export default function MySchedulePage() {
                     </div>
                   )}
 
-                  {/* ✨ ถ้านักเรียนกดยืนยันแล้ว (ย้ายมาแท็บ Past) ให้แสดงกล่องเขียว พร้อมเก็บสรุปไว้อ่านย้อนหลัง */}
+                  {/* ถ้านักเรียนกดยืนยันแล้ว (ย้ายมาแท็บ Past) ให้แสดงกล่องเขียว พร้อมเก็บสรุปไว้อ่านย้อนหลัง */}
                   {verified && (
                     <div className="flex flex-col gap-2 mt-2">
                       <div className="flex items-center justify-center gap-2 text-green-600 font-black text-[10px] bg-green-50 py-3 rounded-xl border border-green-100">
@@ -280,10 +382,10 @@ export default function MySchedulePage() {
                       </div>
                       
                       {/* เก็บสรุปการสอนไว้อ่านในประวัติได้ตลอด */}
-                      {hasTeachingLog && tutorNote && (
+                      {hasTeachingLog && tutorNoteLog && (
                         <div className="p-4 bg-gray-50 rounded-[1.2rem] border border-gray-100 mt-1">
                            <p className="text-[10px] font-black text-gray-400 mb-1">📝 สรุปการสอน:</p>
-                           <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap leading-relaxed">"{tutorNote}"</p>
+                           <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap leading-relaxed">"{tutorNoteLog}"</p>
                         </div>
                       )}
                     </div>
@@ -294,46 +396,51 @@ export default function MySchedulePage() {
           )}
         </section>
 
-        {/* --- 📅 ตารางรายสัปดาห์ (คงเดิม) --- */}
-        <section className="bg-white rounded-[3.5rem] p-6 md:p-10 border border-gray-50 shadow-xl overflow-hidden text-gray-900">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 px-2 gap-4">
+        {/* --- 📅 ตารางรายสัปดาห์ (แสดงเวลาให้สวยงาม) --- */}
+        <section className="bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-10 border border-gray-100 shadow-sm overflow-hidden text-gray-900">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 px-2 gap-4 border-b border-gray-50 pb-6">
              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner"><LayoutGrid size={20}/></div>
-                <h2 className="text-xl font-black tracking-tight text-gray-900">ภาพรวมการเรียน</h2>
+                <div>
+                  <h2 className="text-xl font-black tracking-tight text-gray-900">ภาพรวมการเรียน</h2>
+                  <p className="text-xs font-bold text-gray-400 mt-1">สรุปคิวเรียนรายสัปดาห์</p>
+                </div>
              </div>
              
-             <div className="flex items-center gap-4 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
-                <div className="flex items-center gap-2 px-3 border-r border-gray-200">
+             <div className="flex items-center gap-4 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 w-full md:w-auto">
+                <div className="flex items-center gap-2 px-3 border-r border-gray-200 flex-1 md:flex-none">
                   <Calendar size={14} className="text-gray-400"/>
                   <input 
                     type="month" 
-                    className="bg-transparent text-xs font-black outline-none text-gray-600 cursor-pointer"
+                    className="bg-transparent text-xs font-black outline-none text-gray-600 cursor-pointer w-full"
                     value={currentWeekStart.toISOString().slice(0, 7)}
                     onChange={handleMonthYearChange}
                   />
                 </div>
-                <div className="flex gap-1 pr-1">
-                  <button onClick={() => changeWeek(-1)} className="p-2 bg-white shadow-sm hover:bg-gray-100 rounded-xl transition-all text-gray-600"><ChevronLeft size={16}/></button>
-                  <button onClick={() => changeWeek(1)} className="p-2 bg-white shadow-sm hover:bg-gray-100 rounded-xl transition-all text-gray-600"><ChevronRight size={16}/></button>
+                <div className="flex gap-1 pr-1 shrink-0">
+                  <button onClick={() => changeWeek(-1)} className="p-2.5 bg-white shadow-sm hover:bg-gray-100 rounded-xl transition-all text-gray-600"><ChevronLeft size={16}/></button>
+                  <button onClick={() => changeWeek(1)} className="p-2.5 bg-white shadow-sm hover:bg-gray-100 rounded-xl transition-all text-gray-600"><ChevronRight size={16}/></button>
                 </div>
              </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 md:gap-4 border-t border-gray-50 pt-8">
+          <div className="grid grid-cols-7 gap-1 md:gap-4 pt-4">
             {weekDays.map((day, idx) => {
               const isToday = day.toDateString() === new Date().toDateString();
               const dayBookings = bookings.filter(b => new Date(b.slots.start_time).toDateString() === day.toDateString());
               return (
-                <div key={idx} className="flex flex-col items-center">
-                  <p className="text-[9px] font-black text-gray-300 uppercase mb-3 tracking-widest">{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-                  <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-xl mb-4 font-black text-[10px] md:text-xs transition-all ${isToday ? 'bg-blue-600 text-white shadow-xl shadow-blue-200' : 'bg-gray-50 text-gray-400'}`}>
+                <div key={idx} className={`flex flex-col items-center p-2 rounded-[1.5rem] transition-colors ${isToday ? 'bg-blue-50/50 border border-blue-50' : ''}`}>
+                  <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                  <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-xl mb-4 font-black text-[10px] md:text-xs transition-all ${isToday ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-gray-100 text-gray-500'}`}>
                     {day.getDate()}
                   </div>
-                  <div className="space-y-1 w-full min-h-[100px]">
+                  <div className="space-y-1.5 w-full min-h-[120px]">
                     {dayBookings.map((b) => (
-                      <div key={b.id} className="group relative flex justify-center">
-                        <div className={`w-full p-1.5 rounded-lg text-center border text-[7px] font-black uppercase transition-all ${isStudentVerified(b) ? 'bg-green-50 border-green-100 text-green-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
-                           {b.tutors?.name}
+                      <div key={b.id} className="group relative flex justify-center w-full">
+                        {/* ✨ แสดงเวลาเริ่มเรียนในปฏิทินของนักเรียนด้วย */}
+                        <div className={`w-full p-1.5 md:p-2 rounded-xl text-center border transition-all flex flex-col items-center justify-center gap-0.5 ${isStudentVerified(b) ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'}`}>
+                           <span className="text-[9px] md:text-[10px] font-black uppercase truncate w-full px-1">ครู{b.tutors?.name}</span>
+                           <span className="text-[8px] font-bold opacity-70 bg-white/50 px-1 rounded-sm">{new Date(b.slots.start_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}น.</span>
                         </div>
                       </div>
                     ))}

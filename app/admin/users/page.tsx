@@ -25,7 +25,7 @@ export default function SuperAdminUsers() {
 
       const formatted = (profiles || []).map((p: any) => {
         const wallet = wallets?.find(w => w.user_id === p.id);
-        const tutorInfo = tutors?.find(t => t.id === p.id); // ✨ เปลี่ยนจาก t.user_id เป็น t.id
+        const tutorInfo = tutors?.find(t => t.id === p.id || t.user_id === p.id); // เช็คทั้ง id และ user_id กันพลาด
 
         let rawRole = p.role || tutorInfo?.role || 'student';
         let cleanRole = rawRole.replace(/['"]/g, '').toLowerCase();
@@ -63,13 +63,13 @@ export default function SuperAdminUsers() {
         const { error: tutorError } = await supabase
           .from('tutors')
           .upsert({ 
-            id: payload.userId, // ✨ เปลี่ยนจาก user_id เป็น id
+            id: payload.userId, 
             role: payload.newRole, 
             email: payload.email,
             name: payload.name,
             tags: ['เปลี่ยนสถานะโดยแอดมิน'] 
           }, { 
-            onConflict: 'id' // ✨ เปลี่ยนจาก user_id เป็น id
+            onConflict: 'id' 
           });
 
         if (tutorError) throw tutorError;
@@ -98,30 +98,54 @@ export default function SuperAdminUsers() {
     }
   };
 
-  // ✨ อัปเดตฟังก์ชัน approveTutor ให้รับค่า ID มาใช้ให้ถูกต้อง
-  const approveTutor = async (tutorId: string) => {
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`⚠️ คำเตือน! คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ "${userName}" ออกจากระบบทั้งหมด?\n(ข้อมูลกระเป๋าเงินและโปรไฟล์จะหายไป)`)) return;
+    
+    setProcessingId(userId);
+    try {
+      // เนื่องจาก Supabase Auth จะผูกกับตารางอื่น ถ้ายกเลิก Auth ข้อมูลอาจจะ Cascade ลบเอง หรืออาจจะต้องลบทีละตาราง
+      // ในที่นี้เราจะลบข้อมูลเบื้องต้นใน profiles ก่อน
+      const { error } = await supabase.from('profiles').delete().eq('id', userId);
+      if (error) throw error;
+      
+      alert(`ลบผู้ใช้ ${userName} สำเร็จ`);
+      fetchData();
+    } catch (err: any) {
+      alert("เกิดข้อผิดพลาดในการลบผู้ใช้: " + err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // ✨ อัปเดตฟังก์ชัน approveTutor ให้รับค่า Object ไปเลย กันปัญหาหา id ไม่เจอ
+  const approveTutor = async (tutor: any) => {
     if (!confirm('อนุมัติให้ติวเตอร์เริ่มสอน?')) return;
-    setProcessingId(tutorId);
+    
+    // เช็คให้ชัวร์ว่ามีรหัส ID ไหม (ใช้ id หลัก หรือ user_id สำรอง)
+    const targetId = tutor.user_id || tutor.id;
+    if (!targetId) return alert('ข้อผิดพลาด: ไม่พบข้อมูล ID ที่ถูกต้องของติวเตอร์ท่านนี้ในระบบ');
+
+    setProcessingId(tutor.id);
     try {
       // 1. อัปเดตตาราง tutors (เปลี่ยน tag เป็น 'ติวเตอร์ใหม่')
       const { error: tutorError } = await supabase.from('tutors').update({ 
         tags: ['ติวเตอร์ใหม่'],
         role: 'tutor' 
-      }).eq('id', tutorId);
+      }).eq('id', tutor.id);
       
       if (tutorError) throw tutorError;
 
       // 2. อัปเดตตาราง profiles (เปลี่ยนยศให้ล็อกอินได้)
       const { error: profileError } = await supabase.from('profiles').update({ 
         role: 'TUTOR' 
-      }).eq('id', tutorId); // ✨ ใช้ tutorId ได้เลย เพราะเป็น ID เดียวกัน
+      }).eq('id', targetId); 
       
       if (profileError) throw profileError;
 
       alert('✅ อนุมัติสำเร็จ! ติวเตอร์สามารถเข้าใช้งานระบบได้แล้ว'); 
-      fetchData(); // โหลดข้อมูลใหม่
+      fetchData(); 
     } catch (err: any) {
-      alert(err.message);
+      alert("เกิดข้อผิดพลาด: " + err.message);
     } finally {
       setProcessingId(null);
     }
@@ -173,7 +197,7 @@ export default function SuperAdminUsers() {
                     <th className="p-6 text-center border-x bg-blue-50/20 w-48">ประถม-ม.ต้น</th>
                     <th className="p-6 text-center border-x bg-purple-50/20 w-48">สอบเข้า ม.4</th>
                     <th className="p-6 text-center border-x bg-orange-50/20 w-48">ม.ปลาย / มหาลัย</th>
-                    <th className="p-6 text-right pr-10 w-20">จัดการ</th>
+                    <th className="p-6 text-center pr-10 w-24">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -229,8 +253,15 @@ export default function SuperAdminUsers() {
                           </button>
                         </div>
                       </td>
-                      <td className="p-6 text-right pr-10">
-                        <button className="text-gray-200 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                      <td className="p-6 text-center pr-10">
+                        <button 
+                          onClick={() => handleDeleteUser(user.id, user.name)}
+                          disabled={processingId === user.id}
+                          className="p-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-colors disabled:opacity-50"
+                          title="ลบผู้ใช้นี้"
+                        >
+                          {processingId === user.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16}/>}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -261,8 +292,8 @@ export default function SuperAdminUsers() {
                       </p>
                     </div>
                     <button 
-                      // ✨ ส่งแค่ค่า ID ตัวเดียวพอ
-                      onClick={() => approveTutor(tutor.id)} 
+                      // ✨ ส่ง Object tutor ไปทั้งก้อนให้ชัวร์
+                      onClick={() => approveTutor(tutor)} 
                       disabled={processingId === tutor.id}
                       className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >

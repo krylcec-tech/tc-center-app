@@ -8,10 +8,9 @@ import {
   History, Settings, Users, Gift, Share2, Copy, 
   Check, Loader2, ArrowRight, ShoppingCart,
   LayoutDashboard, Globe, MapPin, User, Home, Sparkles, Heart,
-  Bot // ✨ เพิ่มไอคอน AI
+  Bot 
 } from 'lucide-react';
 
-// ✨ 1. นำเข้าน้องหมี AI
 import FloatingAIMascot from '@/components/FloatingAIMascot';
 
 export default function StudentDashboard() {
@@ -75,7 +74,6 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex font-sans text-slate-800 relative selection:bg-orange-200">
       
-      {/* 🪄 CSS ซ่อน Scrollbar */}
       <style dangerouslySetInnerHTML={{__html: `
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -122,34 +120,45 @@ export default function StudentDashboard() {
         </div>
       </aside>
 
-      {/* --- Mobile Bottom Navigation --- */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 px-6 py-3 flex justify-between items-center z-[100] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-[2.5rem]">
-        <Link href="/student" className="flex flex-col items-center gap-1 text-blue-600">
-          <LayoutDashboard size={22} />
-          <span className="text-[9px] font-black uppercase">Dashboard</span>
+      {/* --- ✨ Mobile Bottom Navigation (ปรับให้มาครบ 5 ปุ่มและสมดุล) --- */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 px-3 py-3 flex justify-between items-end z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-[2.5rem] pb-[env(safe-area-inset-bottom)]">
+        
+        {/* ปุ่มที่ 1 */}
+        <Link href="/student" className="flex flex-col items-center gap-1 text-blue-600 flex-1">
+          <div className="p-2 bg-blue-50 rounded-xl"><LayoutDashboard size={20} /></div>
+          <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">หน้าหลัก</span>
         </Link>
-        <Link href="/student/booking-flow" className="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors">
-          <Calendar size={22} />
-          <span className="text-[9px] font-black uppercase">จองเรียน</span>
+        
+        {/* ปุ่มที่ 2 */}
+        <Link href="/student/my-schedule" className="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors flex-1 group">
+          <div className="p-2 group-hover:bg-blue-50 rounded-xl transition-colors"><Calendar size={20} /></div>
+          <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">ตารางเรียน</span>
         </Link>
-        <Link href="/student/courses" className="flex flex-col items-center gap-1 group">
-          <div className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-3.5 rounded-[1.2rem] -mt-10 shadow-[0_8px_20px_rgba(249,115,22,0.3)] border-4 border-white group-hover:-translate-y-1 transition-transform">
-            <ShoppingCart size={22} />
+        
+        {/* ปุ่มที่ 3 (โดดเด่นตรงกลาง) */}
+        <Link href="/student/courses" className="flex flex-col items-center flex-1 relative -top-5 group">
+          <div className="bg-gradient-to-br from-orange-400 to-pink-500 text-white p-4 rounded-[1.5rem] shadow-[0_8px_20px_rgba(249,115,22,0.4)] border-4 border-white group-hover:-translate-y-2 transition-transform">
+            <ShoppingCart size={24} />
           </div>
-          <span className="text-[9px] font-black uppercase mt-1 text-slate-800">ซื้อคอร์ส</span>
+          <span className="text-[9px] font-black uppercase mt-1.5 text-slate-800 drop-shadow-sm">ซื้อคอร์ส</span>
         </Link>
-        <Link href="/student/my-schedule" className="flex flex-col items-center gap-1 text-slate-400 hover:text-pink-600 transition-colors">
-          <Clock size={22} />
-          <span className="text-[9px] font-black uppercase">ตาราง</span>
+        
+        {/* ปุ่มที่ 4 */}
+        <Link href="/student/my-books" className="flex flex-col items-center gap-1 text-slate-400 hover:text-orange-500 transition-colors flex-1 group">
+          <div className="p-2 group-hover:bg-orange-50 rounded-xl transition-colors"><BookOpen size={20} /></div>
+          <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">ชีทเรียน</span>
         </Link>
-        <Link href="/student/profile" className="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors">
-          <User size={22} />
-          <span className="text-[9px] font-black uppercase">โปรไฟล์</span>
+        
+        {/* ปุ่มที่ 5 */}
+        <Link href="/student/profile" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-800 transition-colors flex-1 group">
+          <div className="p-2 group-hover:bg-slate-100 rounded-xl transition-colors"><User size={20} /></div>
+          <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">โปรไฟล์</span>
         </Link>
+
       </div>
 
       {/* --- Main Content --- */}
-      <main className="flex-1 lg:ml-72 p-6 md:p-10 lg:p-14 pb-32 overflow-y-auto max-w-6xl hide-scrollbar relative z-10">
+      <main className="flex-1 lg:ml-72 p-6 md:p-10 lg:p-14 pb-32 lg:pb-14 overflow-y-auto max-w-6xl hide-scrollbar relative z-10">
         
         <header className="mb-10 flex items-center justify-between gap-4">
           <div className="text-left">
@@ -293,7 +302,6 @@ export default function StudentDashboard() {
               </div>
             </Link>
             
-            {/* ✨ 2. แทรกปุ่มไปหน้าพี่หมี AI เข้าไปในรายการเมนูทางลัด */}
             <Link href="/student/ai-tutor" className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white p-5 md:p-6 rounded-[2rem] shadow-lg shadow-purple-200 hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col justify-between h-36 border border-purple-400 text-left relative overflow-hidden">
               <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 blur-xl rounded-full"></div>
               <Bot size={32} className="text-purple-100 group-hover:scale-110 transition-transform relative z-10"/>
@@ -361,7 +369,6 @@ export default function StudentDashboard() {
 
       </main>
 
-      {/* ✨ 3. วางน้องหมี AI ไว้บรรทัดสุดท้าย เพื่อให้ลอยอยู่มุมขวาล่าง */}
       <FloatingAIMascot />
 
     </div>
