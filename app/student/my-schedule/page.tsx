@@ -3,7 +3,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Calendar, Clock, XCircle, MessageCircle, 
-  Loader2, CalendarCheck, Video, CheckCircle2, ChevronLeft, ChevronRight, LayoutGrid, Search, AlertCircle, Save, Mail, Filter, X
+  Loader2, CalendarCheck, Video, CheckCircle2, ChevronLeft, ChevronRight, 
+  LayoutGrid, Search, AlertCircle, Save, Mail, Filter, X,
+  RefreshCw, ExternalLink // ✨ เพิ่ม Import เพื่อแก้บั๊กและใส่ปุ่มลิงก์
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -17,7 +19,7 @@ export default function MySchedulePage() {
   const [studentNotes, setStudentNotes] = useState<{ [key: string]: string }>({});
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterDate, setFilterDate] = useState(''); // ✨ State สำหรับกรองวันที่
+  const [filterDate, setFilterDate] = useState(''); 
   const [activeStatusTab, setActiveStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
 
@@ -32,7 +34,6 @@ export default function MySchedulePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // ✨ ดึง tutor_note และ email ของติวเตอร์มาด้วย
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -118,7 +119,6 @@ export default function MySchedulePage() {
     return hasLog || isTimePassed;
   };
 
-  // ✨ ระบบคัดกรองและเรียงลำดับข้อมูล
   const filteredBookings = useMemo(() => {
     let list = bookings.filter(item => {
       if (!item.slots || !item.tutors) return false;
@@ -127,7 +127,6 @@ export default function MySchedulePage() {
       const tutorName = String(item.tutors?.name || '').toLowerCase();
       const matchesSearch = tutorName.includes(searchTerm.toLowerCase());
       
-      // กรองตามวันที่
       let matchesDate = true;
       if (filterDate) {
         const itemDate = new Date(item.slots.start_time).toISOString().split('T')[0];
@@ -141,7 +140,6 @@ export default function MySchedulePage() {
       }
     });
 
-    // ✨ เรียงลำดับ: ประวัติ (ใหม่ไปเก่า), รอเรียน (เก่าไปใหม่/ตามเวลาใกล้ถึง)
     return list.sort((a, b) => {
       const timeA = new Date(a.slots.start_time).getTime();
       const timeB = new Date(b.slots.start_time).getTime();
@@ -203,7 +201,6 @@ export default function MySchedulePage() {
               <CalendarCheck className="text-blue-600 shrink-0" size={36} /> ตารางเรียน
             </h1>
             
-            {/* ✨ เพิ่มระบบตัวกรองแบบเต็มรูปแบบ (ชื่อ + วันที่) */}
             <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -233,6 +230,27 @@ export default function MySchedulePage() {
           </div>
         </header>
 
+        {/* ✨ ✨ ✨ แถบแจ้งเตือนติดต่อ LINE (โทนสีเขียว) ✨ ✨ ✨ */}
+        <div className="mb-8 p-4 bg-[#06C755] rounded-3xl shadow-lg shadow-green-100 flex flex-col sm:flex-row items-center justify-between gap-4 border border-white/20 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white shrink-0">
+              <RefreshCw size={24} />
+            </div>
+            <div className="text-white">
+              <h4 className="text-sm font-black leading-tight">ต้องการเลื่อนเวลาเรียน?</h4>
+              <p className="text-[11px] font-bold opacity-90 mt-1">กรุณาแจ้งติดต่อทีมงานทาง LINE ได้เลยครับ</p>
+            </div>
+          </div>
+          <a 
+            href="https://lin.ee/nWGd4Bux" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto bg-white text-[#06C755] px-6 py-2.5 rounded-2xl font-black text-xs shadow-md hover:bg-green-50 transition-all flex items-center justify-center gap-2 active:scale-95"
+          >
+            <MessageCircle size={16} fill="currentColor" /> ติดต่อทาง LINE <ExternalLink size={14}/>
+          </a>
+        </div>
+
         <div className="flex gap-2 mb-8 bg-gray-100/50 p-1.5 rounded-[2rem] w-max border border-gray-100">
           <button 
             onClick={() => setActiveStatusTab('upcoming')}
@@ -253,7 +271,6 @@ export default function MySchedulePage() {
             <div className="bg-white py-16 px-6 rounded-[2.5rem] text-center border border-gray-50 shadow-sm flex flex-col items-center">
                <Calendar size={48} className="text-gray-200 mb-4"/>
                <p className="text-gray-400 font-black text-lg">ไม่พบคลาสเรียนตามเงื่อนไขที่เลือก</p>
-               <p className="text-gray-400 font-bold text-xs mt-1">ลองเปลี่ยนเงื่อนไขการค้นหา หรือดูแท็บอื่น</p>
             </div>
           ) : (
             filteredBookings.map((item) => {
@@ -270,15 +287,14 @@ export default function MySchedulePage() {
                   
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
                     <div className="flex items-center gap-4 w-full">
-                      <img src={item.tutors?.image_url || '/placeholder-avatar.png'} className="w-14 h-14 object-cover rounded-2xl shadow-sm border-2 border-white" alt="tutor" />
-                      <div className="flex-1">
+                      <img src={item.tutors?.image_url || '/placeholder-avatar.png'} className="w-14 h-14 object-cover rounded-2xl shadow-sm border-2 border-white shrink-0" alt="tutor" />
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-black text-gray-900 leading-none">ครู{item.tutors?.name}</h3>
-                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase ${item.slots.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{item.slots.location_type}</span>
+                          <h3 className="text-lg font-black text-gray-900 leading-none truncate">ครู{item.tutors?.name}</h3>
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase shrink-0 ${item.slots.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{item.slots.location_type}</span>
                         </div>
-                        {/* 📧 แสดงอีเมลติวเตอร์ตรงนี้ */}
-                        <p className="text-[10px] font-bold text-gray-500 mb-1 flex items-center gap-1"><Mail size={10} className="text-gray-400"/> {item.tutors?.email || 'N/A'}</p>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                        <p className="text-[10px] font-bold text-gray-500 mb-1 flex items-center gap-1 truncate"><Mail size={10} className="shrink-0 text-gray-400"/> {item.tutors?.email || 'ไม่มีข้อมูลอีเมล'}</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter truncate">
                             {startTime.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} • {startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                         </p>
                       </div>
@@ -302,7 +318,6 @@ export default function MySchedulePage() {
                     </div>
                   </div>
 
-                  {/* ✨ แสดงข้อความจากติวเตอร์ (Tutor Note) */}
                   {item.tutor_note && item.tutor_note.trim() !== '' && (
                     <div className="bg-purple-50 border border-purple-100 p-4 rounded-2xl flex items-start gap-3 shadow-sm">
                       <div className="p-2 bg-white rounded-xl text-purple-600 shadow-sm shrink-0"><MessageCircle size={16}/></div>
@@ -313,7 +328,6 @@ export default function MySchedulePage() {
                     </div>
                   )}
 
-                  {/* ✨ ถ้านักเรียนยังไม่ได้เข้าเรียน (Upcoming) จะมีกล่องสำหรับฝากข้อความถึงครู */}
                   {!verified && !tutorDone && (
                     <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50 flex flex-col gap-3">
                       <label className="text-[10px] font-black text-blue-500 flex items-center gap-1.5 ml-1">
@@ -339,7 +353,6 @@ export default function MySchedulePage() {
                     </div>
                   )}
 
-                  {/* ถ้านักเรียนยังไม่ได้กดยืนยัน (แสดงกล่องส้ม พร้อมสรุปการสอนให้อ่าน) */}
                   {!verified && tutorDone && (
                     <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -347,22 +360,13 @@ export default function MySchedulePage() {
                           <Clock size={16} className="animate-pulse" />
                           <span className="text-[10px] font-black uppercase tracking-wider">รอการยืนยันจากคุณ</span>
                         </div>
-                        <span className="text-[9px] bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold">
-                          เพื่อความถูกต้องของระบบการเรียน
-                        </span>
                       </div>
-
-                      {/* แสดงสรุปการสอนจากติวเตอร์ตรงนี้เลย! */}
                       {hasTeachingLog && tutorNoteLog && (
                         <div className="mb-4 p-4 bg-white/60 rounded-[1.2rem] border border-orange-100/50">
                            <p className="text-[10px] font-black text-orange-600 mb-2">📝 สรุปการสอนจากติวเตอร์:</p>
                            <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap leading-relaxed">"{tutorNoteLog}"</p>
-                           <p className="text-[8px] text-gray-400 text-right mt-3 font-medium uppercase tracking-tighter">
-                              ส่งรายงานเมื่อ: {new Date(item.slots.teaching_logs[0].created_at).toLocaleString('th-TH')}
-                           </p>
                         </div>
                       )}
-                      
                       <button 
                         onClick={() => handleVerifyLesson(item.id)}
                         disabled={verifyingId === item.id}
@@ -374,20 +378,11 @@ export default function MySchedulePage() {
                     </div>
                   )}
 
-                  {/* ถ้านักเรียนกดยืนยันแล้ว (ย้ายมาแท็บ Past) ให้แสดงกล่องเขียว พร้อมเก็บสรุปไว้อ่านย้อนหลัง */}
                   {verified && (
                     <div className="flex flex-col gap-2 mt-2">
                       <div className="flex items-center justify-center gap-2 text-green-600 font-black text-[10px] bg-green-50 py-3 rounded-xl border border-green-100">
                         <CheckCircle2 size={14}/> ยืนยันการเข้าเรียนสมบูรณ์แล้ว
                       </div>
-                      
-                      {/* เก็บสรุปการสอนไว้อ่านในประวัติได้ตลอด */}
-                      {hasTeachingLog && tutorNoteLog && (
-                        <div className="p-4 bg-gray-50 rounded-[1.2rem] border border-gray-100 mt-1">
-                           <p className="text-[10px] font-black text-gray-400 mb-1">📝 สรุปการสอน:</p>
-                           <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap leading-relaxed">"{tutorNoteLog}"</p>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -396,7 +391,6 @@ export default function MySchedulePage() {
           )}
         </section>
 
-        {/* --- 📅 ตารางรายสัปดาห์ (แสดงเวลาให้สวยงาม) --- */}
         <section className="bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-10 border border-gray-100 shadow-sm overflow-hidden text-gray-900">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 px-2 gap-4 border-b border-gray-50 pb-6">
              <div className="flex items-center gap-3">
@@ -437,7 +431,6 @@ export default function MySchedulePage() {
                   <div className="space-y-1.5 w-full min-h-[120px]">
                     {dayBookings.map((b) => (
                       <div key={b.id} className="group relative flex justify-center w-full">
-                        {/* ✨ แสดงเวลาเริ่มเรียนในปฏิทินของนักเรียนด้วย */}
                         <div className={`w-full p-1.5 md:p-2 rounded-xl text-center border transition-all flex flex-col items-center justify-center gap-0.5 ${isStudentVerified(b) ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'}`}>
                            <span className="text-[9px] md:text-[10px] font-black uppercase truncate w-full px-1">ครู{b.tutors?.name}</span>
                            <span className="text-[8px] font-bold opacity-70 bg-white/50 px-1 rounded-sm">{new Date(b.slots.start_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}น.</span>
