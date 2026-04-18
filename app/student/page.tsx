@@ -120,45 +120,42 @@ export default function StudentDashboard() {
         </div>
       </aside>
 
-      {/* --- ✨ Mobile Bottom Navigation (ปรับให้มาครบ 5 ปุ่มและสมดุล) --- */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 px-3 py-3 flex justify-between items-end z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-[2.5rem] pb-[env(safe-area-inset-bottom)]">
-        
-        {/* ปุ่มที่ 1 */}
+      {/* --- Mobile Bottom Navigation (ปรับให้ไม่ตกขอบและสมดุล 5 ปุ่ม) --- */}
+      <div 
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 flex justify-between items-center z-[100] shadow-[0_-5px_20px_rgba(0,0,0,0.05)] rounded-t-[2.5rem] px-2"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', paddingTop: '10px' }}
+      >
         <Link href="/student" className="flex flex-col items-center gap-1 text-blue-600 flex-1">
-          <div className="p-2 bg-blue-50 rounded-xl"><LayoutDashboard size={20} /></div>
-          <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">หน้าหลัก</span>
+          <LayoutDashboard size={22} />
+          <span className="text-[9px] font-black uppercase tracking-wider">หน้าหลัก</span>
         </Link>
         
-        {/* ปุ่มที่ 2 */}
-        <Link href="/student/my-schedule" className="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors flex-1 group">
-          <div className="p-2 group-hover:bg-blue-50 rounded-xl transition-colors"><Calendar size={20} /></div>
-          <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">ตารางเรียน</span>
+        <Link href="/student/my-schedule" className="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors flex-1">
+          <Calendar size={22} />
+          <span className="text-[9px] font-black uppercase tracking-wider">ตารางเรียน</span>
         </Link>
         
-        {/* ปุ่มที่ 3 (โดดเด่นตรงกลาง) */}
-        <Link href="/student/courses" className="flex flex-col items-center flex-1 relative -top-5 group">
-          <div className="bg-gradient-to-br from-orange-400 to-pink-500 text-white p-4 rounded-[1.5rem] shadow-[0_8px_20px_rgba(249,115,22,0.4)] border-4 border-white group-hover:-translate-y-2 transition-transform">
-            <ShoppingCart size={24} />
+        {/* ปุ่มกลาง (โดดเด่น) */}
+        <Link href="/student/courses" className="flex flex-col items-center flex-1 relative group">
+          <div className="absolute -top-12 bg-gradient-to-br from-orange-400 to-pink-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(249,115,22,0.4)] border-4 border-white group-hover:-translate-y-1 transition-transform">
+            <ShoppingCart size={22} />
           </div>
-          <span className="text-[9px] font-black uppercase mt-1.5 text-slate-800 drop-shadow-sm">ซื้อคอร์ส</span>
+          <span className="text-[9px] font-black uppercase mt-5 text-slate-800 drop-shadow-sm">ซื้อคอร์ส</span>
         </Link>
         
-        {/* ปุ่มที่ 4 */}
-        <Link href="/student/my-books" className="flex flex-col items-center gap-1 text-slate-400 hover:text-orange-500 transition-colors flex-1 group">
-          <div className="p-2 group-hover:bg-orange-50 rounded-xl transition-colors"><BookOpen size={20} /></div>
-          <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">ชีทเรียน</span>
+        <Link href="/student/my-books" className="flex flex-col items-center gap-1 text-slate-400 hover:text-orange-500 transition-colors flex-1">
+          <BookOpen size={22} />
+          <span className="text-[9px] font-black uppercase tracking-wider">ชีทเรียน</span>
         </Link>
         
-        {/* ปุ่มที่ 5 */}
-        <Link href="/student/profile" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-800 transition-colors flex-1 group">
-          <div className="p-2 group-hover:bg-slate-100 rounded-xl transition-colors"><User size={20} /></div>
-          <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">โปรไฟล์</span>
+        <Link href="/student/profile" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-800 transition-colors flex-1">
+          <User size={22} />
+          <span className="text-[9px] font-black uppercase tracking-wider">โปรไฟล์</span>
         </Link>
-
       </div>
 
       {/* --- Main Content --- */}
-      <main className="flex-1 lg:ml-72 p-6 md:p-10 lg:p-14 pb-32 lg:pb-14 overflow-y-auto max-w-6xl hide-scrollbar relative z-10">
+      <main className="flex-1 lg:ml-72 p-6 md:p-10 lg:p-14 pb-40 lg:pb-14 overflow-y-auto max-w-6xl hide-scrollbar relative z-10">
         
         <header className="mb-10 flex items-center justify-between gap-4">
           <div className="text-left">
@@ -202,8 +199,6 @@ export default function StudentDashboard() {
           </div>
           
           <div className="flex md:grid md:grid-cols-3 gap-4 md:gap-6 overflow-x-auto pb-6 md:pb-0 snap-x snap-mandatory hide-scrollbar -mx-6 px-6 md:mx-0 md:px-0">
-            
-            {/* ประถม-ม.ต้น */}
             <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-sm border border-blue-100 overflow-hidden flex flex-col h-full hover:shadow-[0_8px_30px_rgba(37,99,235,0.12)] transition-all duration-300 hover:-translate-y-1 min-w-[85vw] sm:min-w-[320px] md:min-w-0 snap-center shrink-0">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 md:p-5 text-center font-black text-base md:text-lg relative overflow-hidden">
                 ประถม - ม.ต้น
@@ -228,7 +223,6 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            {/* สอบเข้า ม.4 */}
             <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-sm border border-purple-100 overflow-hidden flex flex-col h-full hover:shadow-[0_8px_30px_rgba(147,51,234,0.12)] transition-all duration-300 hover:-translate-y-1 min-w-[85vw] sm:min-w-[320px] md:min-w-0 snap-center shrink-0">
               <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 md:p-5 text-center font-black text-base md:text-lg relative overflow-hidden">
                 สอบเข้า ม.4
@@ -253,7 +247,6 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            {/* ม.ปลาย/มหาลัย */}
             <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-sm border border-orange-100 overflow-hidden flex flex-col h-full hover:shadow-[0_8px_30px_rgba(249,115,22,0.12)] transition-all duration-300 hover:-translate-y-1 min-w-[85vw] sm:min-w-[320px] md:min-w-0 snap-center shrink-0">
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 md:p-5 text-center font-black text-base md:text-lg relative overflow-hidden">
                 ม.ปลาย / มหาลัย
@@ -280,10 +273,11 @@ export default function StudentDashboard() {
           </div>
         </section>
 
-        {/* Shortcuts */}
+        {/* --- 🧩 Shortcuts (เพิ่มปุ่มประวัติการสั่งซื้อ) --- */}
         <section className="mb-12">
           <h2 className="text-xl font-black mb-6 text-left text-slate-800">เมนูทางลัดสุดว้าว ✨</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* ✨ ปรับ Grid ให้รองรับ 6 ปุ่ม (3 ต่อแถวบนมือถือ / 6 ต่อแถวบนคอม) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
             
             <Link href="/student/courses" className="bg-slate-900 text-white p-5 md:p-6 rounded-[2rem] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group flex flex-col justify-between h-36 border border-slate-800 text-left relative overflow-hidden">
               <div className="absolute -right-4 -top-4 w-20 h-20 bg-orange-500/20 blur-xl rounded-full"></div>
@@ -317,6 +311,15 @@ export default function StudentDashboard() {
               <div className="text-left relative z-10">
                 <h3 className="font-black text-base md:text-lg leading-tight text-left text-white drop-shadow-sm">คลังชีทนักเรียน /<br/>ระบบขายชีท</h3>
                 <p className="text-[10px] text-orange-100 font-bold uppercase tracking-widest mt-1 text-left">My Books</p>
+              </div>
+            </Link>
+
+            {/* ✨ เพิ่มปุ่มใหม่: ประวัติการสั่งซื้อ (Order History) */}
+            <Link href="/student/orders" className="bg-white p-5 md:p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-300 transition-all group flex flex-col justify-between h-36 text-left">
+              <History size={32} className="text-slate-600 group-hover:scale-110 group-hover:rotate-6 transition-transform"/>
+              <div className="text-left">
+                <h3 className="font-black text-slate-800 text-base md:text-lg leading-tight text-left">ประวัติการซื้อ</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 text-left">Orders</p>
               </div>
             </Link>
 
