@@ -3,12 +3,13 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Toaster, toast } from 'react-hot-toast';
 import { 
   LayoutDashboard, Calendar, LogOut, Loader2, UserCircle, 
   ChevronRight, CalendarDays, History, CheckCircle2, Gift, 
   Menu, X, Clock, MapPin, Settings, AlertCircle, Home, 
   BookOpen, FolderOpen, Share2, Sparkles, Store, DollarSign,
-  MessageCircle // ✨ เติมตัวนี้เข้ามาครับ
+  MessageCircle, BellRing 
 } from 'lucide-react';
 
 export default function TutorDashboard() {
@@ -26,20 +27,65 @@ export default function TutorDashboard() {
     fetchTutorData();
   }, []);
 
+  // Listener แจ้งเตือนแบบ Realtime ในแอป
+  useEffect(() => {
+    if (!tutorData.id) return;
+
+    const bookingChannel = supabase
+      .channel('custom-insert-channel')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'bookings', filter: `tutor_id=eq.${tutorData.id}` },
+        (payload) => {
+          console.log('มีนักเรียนจองคิวใหม่!', payload);
+          
+          const audio = new Audio('/notification.mp3'); 
+          audio.play().catch(e => console.log('Auto-play prevented by browser'));
+
+          toast.custom((t) => (
+            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-orange-500 overflow-hidden`}>
+              <div className="flex-1 w-0 p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 pt-0.5 text-orange-500 animate-bounce">
+                    <BellRing size={24} />
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className="text-sm font-black text-gray-900">นักเรียนจองคิวใหม่! 🎉</p>
+                    <p className="mt-1 text-xs font-medium text-gray-500">มีคิวสอนถูกเพิ่มเข้ามาในระบบ กดเช็คตารางสอนได้เลยครับ</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex border-l border-gray-200">
+                <button onClick={() => toast.dismiss(t.id)} className="w-full border border-transparent rounded-none rounded-r-2xl p-4 flex items-center justify-center text-sm font-black text-orange-600 hover:text-orange-500 hover:bg-orange-50 focus:outline-none transition-colors">
+                  ปิด
+                </button>
+              </div>
+            </div>
+          ), { duration: 5000, position: 'top-right' });
+
+          fetchTutorData(true); 
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookingChannel);
+    };
+  }, [tutorData.id]); 
+
   const isLessonCompleted = (item: any) => {
     const status = String(item.status || '').trim().toUpperCase();
     const hasLog = item.slots?.teaching_logs && item.slots.teaching_logs.length > 0;
     return hasLog || status === 'VERIFIED' || item.is_completed === true;
   };
 
-  const fetchTutorData = async () => {
-    setLoading(true);
+  const fetchTutorData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     setErrorMsg(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.replace('/login'); return; }
 
-      // ✨ 1. เช็คยศ (Role) จากตาราง 'profiles' ให้ถูกต้อง
       const { data: userProfile } = await supabase
         .from('profiles')
         .select('role')
@@ -51,7 +97,6 @@ export default function TutorDashboard() {
         return;
       }
 
-      // ✨ 2. ดึงข้อมูลติวเตอร์จากตาราง 'tutors' โดยใช้คอลัมน์ 'id' (ไม่ใช่ user_id)
       const { data: tutorInfo, error: tutorError } = await supabase
         .from('tutors')
         .select('id, name, image_url, tags') 
@@ -64,17 +109,15 @@ export default function TutorDashboard() {
         return; 
       }
 
-      // ✨ 3. ตรวจสอบสถานะว่า "รอการอนุมัติ" หรือไม่
       if (tutorInfo.tags && tutorInfo.tags.includes('รอการอนุมัติ')) {
         setIsPending(true);
         setTutorData({ id: tutorInfo.id, name: tutorInfo.name, avatar: tutorInfo.image_url, tags: tutorInfo.tags });
         setLoading(false);
-        return; // 🛑 หยุดทำโค้ดส่วนอื่น ถ้ายังไม่อนุมัติ
+        return; 
       }
 
       setTutorData({ id: tutorInfo.id, name: tutorInfo.name, avatar: tutorInfo.image_url, tags: tutorInfo.tags });
 
-      // ✨ 4. ถ้าผ่านการอนุมัติแล้ว ถึงจะดึงข้อมูลการสอน (Bookings)
       const { data: allBookings, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
@@ -142,7 +185,7 @@ export default function TutorDashboard() {
       console.error('Fetch error:', err.message);
       setErrorMsg(err.message);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -164,19 +207,16 @@ export default function TutorDashboard() {
           <AlertCircle className="text-red-500 mx-auto mb-4" size={56} />
           <h2 className="text-2xl font-black text-slate-800 mb-2">เกิดข้อผิดพลาด</h2>
           <p className="text-sm font-bold text-gray-500 mb-8 leading-relaxed">{errorMsg}</p>
-          <button onClick={fetchTutorData} className="w-full bg-slate-900 text-white px-6 py-4 rounded-2xl font-black hover:bg-orange-500 hover:shadow-lg hover:-translate-y-1 transition-all">โหลดใหม่อีกครั้ง</button>
+          <button onClick={() => fetchTutorData()} className="w-full bg-slate-900 text-white px-6 py-4 rounded-2xl font-black hover:bg-orange-500 hover:shadow-lg hover:-translate-y-1 transition-all">โหลดใหม่อีกครั้ง</button>
         </div>
       </div>
     );
   }
 
-  // 🛑 หน้าจอสำหรับติวเตอร์ที่ "รอการอนุมัติ"
   if (isPending) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 font-sans selection:bg-orange-200">
         <div className="bg-white max-w-lg w-full p-8 md:p-12 rounded-[3rem] shadow-2xl text-center border border-orange-100/50 relative overflow-hidden">
-           
-           {/* Background Decoration */}
            <div className="absolute top-0 right-0 w-48 h-48 bg-orange-50/80 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-50/80 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
            
@@ -184,9 +224,7 @@ export default function TutorDashboard() {
               <Clock size={56} strokeWidth={1.5} className="animate-pulse" />
            </div>
            
-           <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-4 relative z-10 tracking-tight">
-             รอการอนุมัติ
-           </h1>
+           <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-4 relative z-10 tracking-tight">รอการอนุมัติ</h1>
            <p className="text-slate-500 font-bold leading-relaxed mb-10 relative z-10 text-sm md:text-base">
              สวัสดีครับครู <span className="text-blue-600">{tutorData.name?.split(' ')[0] || ''}</span> 👋 <br/>
              ระบบได้รับข้อมูลใบสมัครของคุณแล้ว ขณะนี้อยู่ในระหว่างการตรวจสอบข้อมูลจากทีมงานแอดมิน<br/>
@@ -206,10 +244,11 @@ export default function TutorDashboard() {
     );
   }
 
-  // ✅ หน้า Dashboard ปกติ (ถ้าผ่านการอนุมัติแล้ว)
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex flex-col lg:flex-row font-sans text-slate-800 selection:bg-orange-200">
       
+      <Toaster />
+
       {/* --- Mobile Header --- */}
       <div className="lg:hidden bg-white/90 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-orange-100 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-3">
@@ -345,7 +384,6 @@ export default function TutorDashboard() {
             <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-50 text-green-500 rounded-[1.5rem] flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border border-green-50"><CheckCircle2 size={28} strokeWidth={2.5}/></div>
           </div>
 
-          {/* ✨ สถิติใหม่: ทางลัดไป Seller Hub */}
           <Link href="/tutor/seller-hub" className="bg-gradient-to-br from-purple-500 to-indigo-600 p-8 rounded-[2.5rem] shadow-xl shadow-purple-200/50 flex items-center justify-between group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden sm:col-span-2 lg:col-span-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-xl"></div>
             <div className="relative z-10 text-white">
@@ -398,7 +436,7 @@ export default function TutorDashboard() {
                           <CheckCircle2 size={16}/> ส่งรายงานแล้ว
                         </div>
                       ) : (
-                        <Link href="/tutor/logs" className="w-full sm:w-auto text-center px-8 py-3.5 bg-slate-900 text-white rounded-[1.2rem] font-black text-xs hover:bg-orange-500 hover:shadow-lg hover:shadow-orange-200 transition-all flex items-center justify-center gap-2 active:scale-95 group-hover:-translate-y-1">
+                        <Link href="/tutor/my-schedule" className="w-full sm:w-auto text-center px-8 py-3.5 bg-slate-900 text-white rounded-[1.2rem] font-black text-xs hover:bg-orange-500 hover:shadow-lg hover:shadow-orange-200 transition-all flex items-center justify-center gap-2 active:scale-95 group-hover:-translate-y-1">
                           เข้าสอน / ส่งงาน <ChevronRight size={14}/>
                         </Link>
                       )}
@@ -409,7 +447,7 @@ export default function TutorDashboard() {
             </div>
           </div>
 
-          {/* ขวา: Quick Actions (ปรับสไตล์ใหม่) */}
+          {/* ขวา: Quick Actions */}
           <div className="xl:col-span-1 flex flex-col gap-6">
             
             {/* 📂 คลัง Playlist */}
@@ -425,7 +463,7 @@ export default function TutorDashboard() {
                </div>
             </Link>
 
-            {/* 💸 Affiliate (ย่อส่วนลงมาให้เข้ากับ 1 Column) */}
+            {/* 💸 Affiliate */}
             <Link href="/tutor/affiliate" className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-xl hover:shadow-pink-100/50 hover:border-pink-100 transition-all group flex items-center justify-between gap-4">
                <div>
                  <div className="flex items-center gap-2 mb-2">

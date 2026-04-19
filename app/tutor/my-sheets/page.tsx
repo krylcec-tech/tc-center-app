@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   Plus, Search, Book, User, Loader2, Trash2, ArrowLeft, ExternalLink, 
-  Share2, Mail, X, ImagePlus, ImageIcon, CheckCircle2, Save, Tag, GraduationCap, AlertCircle, Filter, Layers, BookOpen, Store, DollarSign, Upload
+  Share2, Mail, X, ImagePlus, ImageIcon, CheckCircle2, Save, Tag, GraduationCap, AlertCircle, Filter, Layers, BookOpen, Store, DollarSign, Upload, Edit, Info // ✨ เพิ่ม Info icon
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -26,13 +26,15 @@ export default function TutorMySheets() {
   const [activeSubject, setActiveSubject] = useState('ALL');
   const [activeLevel, setActiveLevel] = useState('ALL');
 
-  // Form States (เพิ่มชีทส่วนตัว)
+  // Form States (เพิ่ม/แก้ไขชีทส่วนตัว)
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('คณิตศาสตร์');
   const [level, setLevel] = useState('ม.ปลาย');
   const [docUrl, setDocUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState('');
 
   const subjects = ['คณิตศาสตร์', 'ภาษาอังกฤษ', 'ภาษาไทย', 'สังคมศึกษา', 'เคมี', 'ฟิสิกส์', 'ชีววิทยา', 'ประวัติศาสตร์', 'ทุกวิชา'];
   const levels = ['ประถม', 'ม.ต้น', 'ม.ปลาย', 'มหาวิทยาลัย'];
@@ -58,12 +60,46 @@ export default function TutorMySheets() {
     }
   };
 
-  const handleUploadSheet = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setEditingId(null);
+    setTitle('');
+    setDescription('');
+    setSubject('คณิตศาสตร์');
+    setLevel('ม.ปลาย');
+    setDocUrl('');
+    setSelectedFile(null);
+    setCurrentImageUrl('');
+  };
+
+  const handleEditClick = (sheet: any) => {
+    setEditingId(sheet.id);
+    setTitle(sheet.title);
+    setDescription(sheet.description || '');
+    setSubject(sheet.subject);
+    setLevel(sheet.level);
+    setDocUrl(sheet.document_url);
+    setCurrentImageUrl(sheet.image_url || '');
+    setSelectedFile(null);
+    setShowAddModal(true);
+  };
+
+  const handleDeleteSheet = async (id: string) => {
+    if (!confirm('🚨 ยืนยันการลบเอกสารนี้? (ลบแล้วไม่สามารถกู้คืนได้)')) return;
+    try {
+      const { error } = await supabase.from('tutor_sheets').delete().eq('id', id);
+      if (error) throw error;
+      alert('🗑️ ลบเอกสารเรียบร้อยครับ');
+      fetchTutorData();
+    } catch (err: any) { alert('Error: ' + err.message); }
+  };
+
+  const handleSaveSheet = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      let finalImgUrl = '';
+      let finalImgUrl = undefined;
+
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${Date.now()}_tutor.${fileExt}`;
@@ -71,13 +107,22 @@ export default function TutorMySheets() {
         const { data: { publicUrl } } = supabase.storage.from('rewards').getPublicUrl(`sheets/${fileName}`);
         finalImgUrl = publicUrl;
       }
-      const { error } = await supabase.from('tutor_sheets').insert([{
-        tutor_id: user?.id,
-        title, description, subject, level, document_url: docUrl, image_url: finalImgUrl
-      }]);
-      if (error) throw error;
-      alert('🟠 บันทึกเข้าคลังเรียบร้อย!');
-      setTitle(''); setDescription(''); setDocUrl(''); setSelectedFile(null);
+
+      const payload: any = { title, description, subject, level, document_url: docUrl };
+      if (finalImgUrl) payload.image_url = finalImgUrl;
+
+      if (editingId) {
+        const { error } = await supabase.from('tutor_sheets').update(payload).eq('id', editingId);
+        if (error) throw error;
+        alert('🟢 แก้ไขข้อมูลเรียบร้อย!');
+      } else {
+        payload.tutor_id = user?.id;
+        const { error } = await supabase.from('tutor_sheets').insert([payload]);
+        if (error) throw error;
+        alert('🟠 บันทึกเข้าคลังเรียบร้อย!');
+      }
+
+      resetForm();
       setShowAddModal(false);
       fetchTutorData();
     } catch (err: any) { alert(err.message); }
@@ -134,14 +179,13 @@ export default function TutorMySheets() {
             
             <div className="flex flex-wrap gap-2 w-full md:w-auto">
               <button 
-                onClick={() => setShowAddModal(true)} 
+                onClick={() => { resetForm(); setShowAddModal(true); }} 
                 className="flex-1 md:flex-none bg-white/20 text-white px-5 py-3 rounded-2xl font-black text-[13px] flex items-center justify-center gap-2 hover:bg-white/30 backdrop-blur-md transition-all border border-white/20 active:scale-95"
               >
                 <Plus size={18} strokeWidth={3}/> 
                 <span>เพิ่มชีทส่วนตัว</span>
               </button>
               
-              {/* ✅ เปลี่ยนเป็น Link ไปหน้า Seller Hub แทน Modal */}
               <Link 
                 href="/tutor/seller-hub" 
                 className="flex-1 md:flex-none bg-white text-orange-600 px-6 py-3 rounded-2xl font-black text-[13px] shadow-[0_10px_25px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 hover:scale-105 transition-all active:scale-95 border-b-4 border-orange-200"
@@ -186,11 +230,21 @@ export default function TutorMySheets() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
           {filteredSheets.map(sheet => (
-            <div key={sheet.id} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col overflow-hidden group hover:shadow-2xl hover:shadow-orange-200/40 hover:-translate-y-2 transition-all duration-500 text-left">
+            <div key={sheet.id} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col overflow-hidden group hover:shadow-2xl hover:shadow-orange-200/40 hover:-translate-y-2 transition-all duration-500 text-left relative">
               <div className="h-48 bg-orange-100 relative">
                 {sheet.image_url ? <img src={sheet.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" /> : <div className="w-full h-full flex items-center justify-center text-orange-200"><ImageIcon size={48}/></div>}
                 <div className="absolute top-4 left-4 bg-orange-500 text-white px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg"><Tag size={10}/><span className="text-[9px] font-black uppercase">{sheet.subject}</span></div>
+                
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button onClick={() => handleEditClick(sheet)} className="w-8 h-8 flex items-center justify-center bg-white/90 backdrop-blur-md text-blue-600 rounded-full hover:bg-white hover:scale-110 transition-all shadow-md">
+                    <Edit size={14}/>
+                  </button>
+                  <button onClick={() => handleDeleteSheet(sheet.id)} className="w-8 h-8 flex items-center justify-center bg-white/90 backdrop-blur-md text-red-600 rounded-full hover:bg-red-500 hover:text-white hover:scale-110 transition-all shadow-md">
+                    <Trash2 size={14}/>
+                  </button>
+                </div>
               </div>
+
               <div className="p-7 flex-1 flex flex-col text-left">
                 <span className="bg-gray-100 text-gray-400 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest w-max mb-2">{sheet.level}</span>
                 <h3 className="font-black text-xl text-gray-800 leading-tight mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">{sheet.title}</h3>
@@ -205,26 +259,61 @@ export default function TutorMySheets() {
         </div>
       </div>
 
-      {/* ➕ Modal เพิ่มชีทส่วนตัว */}
+      {/* ➕ Modal เพิ่ม/แก้ไขชีทส่วนตัว */}
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-[3rem] w-full max-w-xl p-8 md:p-10 relative shadow-2xl overflow-y-auto max-h-[90vh] text-left" onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowAddModal(false)} className="absolute top-8 right-8 text-gray-300 hover:text-red-500 transition-colors"><X size={28}/></button>
-            <h2 className="text-3xl font-black mb-2 text-gray-900 text-left">เพิ่มชีทส่วนตัว 📚</h2>
-            <p className="text-gray-400 font-bold text-sm mb-8 text-left">บันทึกเอกสารเข้า Playlist สำหรับแชร์ให้นักเรียน</p>
-            <form onSubmit={handleUploadSheet} className="space-y-5">
-              <div className="relative h-44 border-2 border-dashed border-orange-100 rounded-3xl p-4 text-center bg-orange-50/30 flex flex-col items-center justify-center group hover:border-orange-400 transition-all cursor-pointer">
-                <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                {selectedFile ? <img src={URL.createObjectURL(selectedFile)} className="h-full object-contain rounded-lg" /> : <><ImagePlus size={40} className="text-orange-300 mb-2 group-hover:scale-110 transition-transform"/><p className="text-xs font-black text-orange-400 uppercase tracking-tighter">อัปโหลดรูปปกชีท</p></>}
+            <h2 className="text-3xl font-black mb-2 text-gray-900 text-left">
+              {editingId ? 'แก้ไขข้อมูลชีท ✏️' : 'เพิ่มชีทส่วนตัว 📚'}
+            </h2>
+            
+            {/* ✨ ✨ ✨ แถบคำอธิบาย (Instruction Box) ✨ ✨ ✨ */}
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl mb-6 flex items-start gap-3">
+              <div className="bg-blue-600 text-white p-1.5 rounded-xl shrink-0"><Info size={16}/></div>
+              <div>
+                <h4 className="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-1">ขั้นตอนการเตรียมลิงก์เอกสาร:</h4>
+                <ol className="text-[11px] font-bold text-gray-600 space-y-1 list-decimal ml-4">
+                  <li>อัปโหลดไฟล์ PDF/เอกสาร ลงใน <span className="text-blue-700">Google Drive</span> ส่วนตัวของคุณ</li>
+                  <li>ตั้งค่าการแชร์ไฟล์เป็น <span className="text-blue-700">"ทุกคนที่มีลิงก์" (Anyone with the link)</span></li>
+                  <li>คัดลอกลิงก์นั้นมาวางในช่อง <span className="text-blue-700">"Link เอกสาร"</span> ด้านล่างนี้ครับ</li>
+                </ol>
               </div>
+            </div>
+
+            <form onSubmit={handleSaveSheet} className="space-y-5">
+              <div className="relative h-44 border-2 border-dashed border-orange-100 rounded-3xl p-4 text-center bg-orange-50/30 flex flex-col items-center justify-center group hover:border-orange-400 transition-all cursor-pointer overflow-hidden text-left">
+                <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-left" />
+                {selectedFile ? (
+                  <img src={URL.createObjectURL(selectedFile)} className="h-full w-full object-contain rounded-lg" />
+                ) : currentImageUrl ? (
+                  <img src={currentImageUrl} className="h-full w-full object-contain rounded-lg opacity-80" />
+                ) : (
+                  <>
+                    <ImagePlus size={40} className="text-orange-300 mb-2 group-hover:scale-110 transition-transform"/>
+                    <p className="text-xs font-black text-orange-400 uppercase tracking-tighter">อัปโหลดรูปปกชีท</p>
+                  </>
+                )}
+              </div>
+
               <input required type="text" placeholder="ชื่อชีท / หัวข้อ..." className="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold text-base border-2 border-transparent focus:border-orange-400" value={title} onChange={(e) => setTitle(e.target.value)} />
+              
               <div className="grid grid-cols-2 gap-4">
-                <select className="px-5 py-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-400" value={subject} onChange={(e) => setSubject(e.target.value)}>{subjects.filter(s => s !== 'ทุกวิชา').map(s => <option key={s} value={s}>{s}</option>)}</select>
-                <select className="px-5 py-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-400" value={level} onChange={(e) => setLevel(e.target.value)}>{levels.map(l => <option key={l} value={l}>{l}</option>)}</select>
+                <select className="px-5 py-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-400 cursor-pointer" value={subject} onChange={(e) => setSubject(e.target.value)}>{subjects.filter(s => s !== 'ทุกวิชา').map(s => <option key={s} value={s}>{s}</option>)}</select>
+                <select className="px-5 py-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-400 cursor-pointer" value={level} onChange={(e) => setLevel(e.target.value)}>{levels.map(l => <option key={l} value={l}>{l}</option>)}</select>
               </div>
+
               <textarea rows={3} placeholder="รายละเอียดเพิ่มเติม..." className="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm border-2 border-transparent focus:border-orange-400 resize-none" value={description} onChange={(e) => setDescription(e.target.value)} />
-              <input required type="url" placeholder="Link เอกสาร (Drive / PDF)" className="w-full px-6 py-4 bg-blue-50/50 rounded-2xl outline-none font-bold text-sm border-2 border-transparent focus:border-blue-400 text-blue-600" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
-              <button disabled={saving} className="w-full py-5 bg-orange-500 text-white rounded-[1.5rem] font-black text-lg hover:bg-orange-600 flex items-center justify-center gap-2 shadow-xl shadow-orange-200 active:scale-95">{saving ? <Loader2 className="animate-spin" /> : <Save size={24}/>} {saving ? 'กำลังบันทึก...' : 'บันทึกเข้า Playlist'}</button>
+              
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-blue-600 uppercase tracking-[0.1em] ml-1">วาง Link จาก Google Drive ที่นี่:</label>
+                <input required type="url" placeholder="https://drive.google.com/..." className="w-full px-6 py-4 bg-blue-50/50 rounded-2xl outline-none font-bold text-sm border-2 border-transparent focus:border-blue-400 text-blue-600 shadow-inner" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+              </div>
+              
+              <button disabled={saving} className="w-full py-5 bg-orange-500 text-white rounded-[1.5rem] font-black text-lg hover:bg-orange-600 flex items-center justify-center gap-2 shadow-xl shadow-orange-200 active:scale-95 transition-all">
+                {saving ? <Loader2 className="animate-spin" /> : <Save size={24}/>} 
+                {saving ? 'กำลังบันทึก...' : (editingId ? 'บันทึกการแก้ไข' : 'บันทึกเข้า Playlist')}
+              </button>
             </form>
           </div>
         </div>
@@ -232,7 +321,7 @@ export default function TutorMySheets() {
 
       {/* 🤝 Modal แชร์ให้นักเรียน (คงเดิม) */}
       {sharingSheet && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 text-left">
           <div className="bg-white rounded-[3rem] w-full max-w-md p-8 relative shadow-2xl flex flex-col max-h-[90vh] text-left" onClick={e => e.stopPropagation()}>
             <button onClick={() => {setSharingSheet(null); setSharingToId(''); setStudentSearch('');}} className="absolute top-6 right-6 text-gray-300 hover:text-red-500 transition-colors z-10"><X size={28}/></button>
             <div className="text-center mb-6 shrink-0">
@@ -241,22 +330,13 @@ export default function TutorMySheets() {
               <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.2em] mt-2">ITEM: {sharingSheet.title}</p>
             </div>
 
-            <div className="space-y-6 flex-1 flex flex-col overflow-hidden">
+            <div className="space-y-6 flex-1 flex flex-col overflow-hidden text-left">
               <div className="relative shrink-0">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-300" size={20}/>
-                <input 
-                  type="text" 
-                  placeholder="ค้นชื่อนักเรียน หรือ Gmail..." 
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-[1.5rem] outline-none border-2 border-transparent focus:border-orange-400 font-bold text-sm" 
-                  value={studentSearch} 
-                  onChange={(e) => {
-                    setStudentSearch(e.target.value);
-                    setSharingToId('');
-                  }} 
-                />
+                <input type="text" placeholder="ค้นชื่อนักเรียน หรือ Gmail..." className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-[1.5rem] outline-none border-2 border-transparent focus:border-orange-400 font-bold text-sm" value={studentSearch} onChange={(e) => { setStudentSearch(e.target.value); setSharingToId(''); }} />
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar border-y border-gray-50 py-4 min-h-[200px]">
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar border-y border-gray-50 py-4 min-h-[200px] text-left">
                 {studentSearch.length < 3 ? (
                   <div className="h-full flex flex-col items-center justify-center gap-2 py-10">
                     <User size={32} className="text-gray-200" />
@@ -269,12 +349,8 @@ export default function TutorMySheets() {
                   </div>
                 ) : (
                   filteredStudents.map(student => (
-                    <button 
-                      key={student.id} 
-                      onClick={() => setSharingToId(student.id)} 
-                      className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border-2 shrink-0 ${sharingToId === student.id ? 'border-orange-500 bg-orange-50 shadow-md scale-[1.02]' : 'border-gray-50 hover:border-orange-200 bg-white'}`}
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden">
+                    <button key={student.id} onClick={() => setSharingToId(student.id)} className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border-2 shrink-0 ${sharingToId === student.id ? 'border-orange-500 bg-orange-50 shadow-md scale-[1.02]' : 'border-gray-50 hover:border-orange-200 bg-white'}`}>
+                      <div className="flex items-center gap-3 overflow-hidden text-left">
                         <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black shrink-0 ${sharingToId === student.id ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
                           {student.full_name?.charAt(0)}
                         </div>
@@ -289,11 +365,7 @@ export default function TutorMySheets() {
                 )}
               </div>
 
-              <button 
-                onClick={handleDirectShare} 
-                disabled={!sharingToId || saving} 
-                className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black shadow-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:bg-gray-100 disabled:text-gray-400 shrink-0"
-              >
+              <button onClick={handleDirectShare} disabled={!sharingToId || saving} className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black shadow-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:bg-gray-100 disabled:text-gray-400 shrink-0">
                 {saving ? <Loader2 className="animate-spin"/> : <Share2 size={20}/>} 
                 {saving ? 'กำลังแชร์...' : 'ยืนยันการส่งชีท'}
               </button>
