@@ -18,7 +18,7 @@ export async function POST(req: Request) {
             const replyToken = event.replyToken;
             
             // 🔴 เอา Channel Access Token จากสเต็ป 1 มาใส่ตรงนี้ครับ
-            const CHANNEL_ACCESS_TOKEN = "ใส่_TOKEN_ของบอทตรงนี้";
+            const CHANNEL_ACCESS_TOKEN = "yFsSzXQaoTo2i0AzAbxUN1Urd/xptcgOEJpJRjgx35lzYdOpBEzBsMwzgp/1dBLXS2I5m1/b/lqNO0bdRvn4N07nmrRggCnnhLoB+WgfSu63oRbVCiB5D7jUJZ4ZY2QZiqiDsd73OtaPNCP+I4e7ugdB04t89/1O/w1cDnyilFU=";
 
             await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
