@@ -8,19 +8,21 @@ import {
   History, Settings, Users, Gift, Share2, Copy, 
   Check, Loader2, ArrowRight, ShoppingCart,
   LayoutDashboard, Globe, MapPin, User, Home, Sparkles, Heart,
-  Bot, ChevronRight, Zap
+  Bot, ChevronRight, Zap, AlertCircle
 } from 'lucide-react';
 
 import FloatingAIMascot from '@/components/FloatingAIMascot';
 
 export default function StudentDashboard() {
   const router = useRouter();
+  const [hasMounted, setHasMounted] = useState(false); // แก้ Hydration Error
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState<any>(null);
   const [wallet, setWallet] = useState<any>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true);
     fetchStudentData();
   }, []);
 
@@ -54,9 +56,20 @@ export default function StudentDashboard() {
     router.replace('/login');
   };
 
+  // ✨ ฟังก์ชันดักจับการคลิก ถ้ายังไม่ระบุระดับชั้น ให้เด้งไปหน้า Profile
+  const checkProfileBeforeAction = (e: React.MouseEvent) => {
+    if (!studentData?.grade_level) {
+      e.preventDefault(); // เบรกไม่ให้เปลี่ยนหน้า
+      alert('⚠️ กรุณาไปที่ "ตั้งค่าโปรไฟล์" เพื่อระบุ "ระดับชั้น" ของคุณให้เรียบร้อยก่อนใช้งานระบบจองเรียนครับ');
+      router.push('/student/profile');
+    }
+  };
+
+  if (!hasMounted) return null;
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{background: '#F8F9FF'}}>
+      <div className="min-h-screen flex items-center justify-center bg-[#F8F9FF]">
         <style dangerouslySetInnerHTML={{__html: `@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800;900&display=swap'); *{font-family:'Prompt',sans-serif;}`}} />
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
@@ -71,205 +84,48 @@ export default function StudentDashboard() {
     );
   }
 
+  // ตัวแปรเช็คว่าต้องแจ้งเตือนให้อัปเดตโปรไฟล์ไหม
+  const needsProfileUpdate = !studentData?.grade_level;
+
   return (
-    <div className="min-h-screen flex" style={{background: '#F8F9FF', fontFamily: "'Prompt', sans-serif"}}>
+    <div className="min-h-screen flex bg-[#F8F9FF]" style={{fontFamily: "'Prompt', sans-serif"}}>
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800;900&family=Sarabun:wght@400;500;600&display=swap');
         * { font-family: 'Prompt', sans-serif; }
-
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* === Ambient Blobs === */
-        .s-blob-1 {
-          position: fixed; width: 700px; height: 700px;
-          background: radial-gradient(circle, rgba(37,99,235,0.09) 0%, transparent 65%);
-          top: -200px; left: -150px; border-radius: 50%; pointer-events: none;
-          animation: sBlob1 14s ease-in-out infinite;
-        }
-        .s-blob-2 {
-          position: fixed; width: 550px; height: 550px;
-          background: radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 65%);
-          bottom: -150px; right: -100px; border-radius: 50%; pointer-events: none;
-          animation: sBlob2 18s ease-in-out infinite;
-        }
-        .s-blob-3 {
-          position: fixed; width: 380px; height: 380px;
-          background: radial-gradient(circle, rgba(236,72,153,0.06) 0%, transparent 65%);
-          top: 45%; right: 15%; border-radius: 50%; pointer-events: none;
-          animation: sBlob1 11s ease-in-out infinite reverse;
-        }
-        @keyframes sBlob1 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          33% { transform: translate(40px,-25px) scale(1.04); }
-          66% { transform: translate(-20px,20px) scale(0.97); }
-        }
-        @keyframes sBlob2 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          50% { transform: translate(-30px,20px) scale(1.05); }
-        }
+        .s-blob-1 { position: fixed; width: 700px; height: 700px; background: radial-gradient(circle, rgba(37,99,235,0.09) 0%, transparent 65%); top: -200px; left: -150px; border-radius: 50%; pointer-events: none; animation: sBlob1 14s ease-in-out infinite; z-index: 0; }
+        .s-blob-2 { position: fixed; width: 550px; height: 550px; background: radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 65%); bottom: -150px; right: -100px; border-radius: 50%; pointer-events: none; animation: sBlob2 18s ease-in-out infinite; z-index: 0; }
+        @keyframes sBlob1 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(40px,-25px) scale(1.04); } 66% { transform: translate(-20px,20px) scale(0.97); } }
+        @keyframes sBlob2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,20px) scale(1.05); } }
 
-        .dot-bg {
-          background-image: radial-gradient(circle, rgba(37,99,235,0.10) 1px, transparent 1px);
-          background-size: 30px 30px;
-        }
-
-        /* === Sidebar === */
-        .sidebar-glass {
-          background: rgba(255,255,255,0.88);
-          backdrop-filter: blur(32px);
-          -webkit-backdrop-filter: blur(32px);
-          border-right: 1px solid rgba(255,255,255,0.9);
-          box-shadow: 4px 0 40px rgba(37,99,235,0.05);
-        }
-
-        .logo-ring {
-          background: conic-gradient(from 0deg, #2563eb, #f97316, #ec4899, #2563eb);
-          animation: spinRing 6s linear infinite;
-          border-radius: 1.2rem;
-          padding: 2px;
-        }
+        .dot-bg { background-image: radial-gradient(circle, rgba(37,99,235,0.10) 1px, transparent 1px); background-size: 30px 30px; }
+        .sidebar-glass { background: rgba(255,255,255,0.88); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border-right: 1px solid rgba(255,255,255,0.9); box-shadow: 4px 0 40px rgba(37,99,235,0.05); }
+        .logo-ring { background: conic-gradient(from 0deg, #2563eb, #f97316, #ec4899, #2563eb); animation: spinRing 6s linear infinite; border-radius: 1.2rem; padding: 2px; }
         @keyframes spinRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-
-        .nav-item {
-          transition: all 0.2s cubic-bezier(0.34,1.4,0.64,1);
-          border-radius: 1rem;
-        }
-        .nav-item:hover { transform: translateX(3px); }
-
-        /* === Cards === */
-        .card-glass {
-          background: rgba(255,255,255,0.78);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255,255,255,0.9);
-          box-shadow: 0 4px 24px rgba(37,99,235,0.06), 0 1px 4px rgba(0,0,0,0.03);
-          transition: all 0.35s cubic-bezier(0.34,1.4,0.64,1);
-        }
-        .card-glass:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 16px 48px rgba(37,99,235,0.11), 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .tier-card {
-          background: rgba(255,255,255,0.82);
-          backdrop-filter: blur(16px);
-          border: 1px solid rgba(255,255,255,0.95);
-          box-shadow: 0 4px 20px rgba(37,99,235,0.05);
-          transition: all 0.35s cubic-bezier(0.34,1.4,0.64,1);
-          overflow: hidden;
-        }
-        .tier-card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 50px rgba(37,99,235,0.10);
-        }
-
-        /* Tier header bars */
+        .card-glass { background: rgba(255,255,255,0.78); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 4px 24px rgba(37,99,235,0.06); }
+        .tier-card { background: rgba(255,255,255,0.82); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.95); }
+        .hero-wallet { background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #7c3aed 100%); }
+        .fade-up { animation: fadeUp 0.6s ease both; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
         .tier-blue  { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
         .tier-purple{ background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); }
         .tier-orange{ background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-
-        /* === Shortcut Cards === */
-        .shortcut-card {
-          transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1);
-        }
-        .shortcut-card:hover {
-          transform: translateY(-6px) scale(1.02);
-        }
-        .shortcut-card:active { transform: scale(0.97); }
-
-        /* === Hero Wallet Card === */
-        .hero-wallet {
-          background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #7c3aed 100%);
-          position: relative; overflow: hidden;
-        }
-        .hero-wallet::before {
-          content: '';
-          position: absolute; top: -40%; right: -15%;
-          width: 280px; height: 280px;
-          background: radial-gradient(circle, rgba(255,255,255,0.13) 0%, transparent 60%);
-          border-radius: 50%;
-          animation: heroShine 7s ease-in-out infinite;
-        }
-        .hero-wallet::after {
-          content: '';
-          position: absolute; bottom: -30%; left: -5%;
-          width: 220px; height: 220px;
-          background: radial-gradient(circle, rgba(249,115,22,0.28) 0%, transparent 60%);
-          border-radius: 50%;
-        }
-        @keyframes heroShine {
-          0%,100% { transform: translate(0,0); }
-          50% { transform: translate(-15px,10px); }
-        }
-
-        /* === Referral Card === */
-        .ref-card {
-          background: rgba(255,255,255,0.82);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255,255,255,0.95);
-          box-shadow: 0 4px 24px rgba(37,99,235,0.06);
-        }
-
-        /* === Reward Banner === */
-        .reward-banner {
-          background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
-          position: relative; overflow: hidden;
-          transition: all 0.3s ease;
-        }
+        .shortcut-card { transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1); }
+        .shortcut-card:hover { transform: translateY(-6px) scale(1.02); }
+        .ref-card { background: rgba(255,255,255,0.82); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.95); box-shadow: 0 4px 24px rgba(37,99,235,0.06); }
+        .reward-banner { background: linear-gradient(135deg, #f97316 0%, #ec4899 100%); transition: all 0.3s ease; }
         .reward-banner:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(249,115,22,0.35); }
-
-        /* === Mobile Nav === */
-        .mobile-nav-glass {
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(28px);
-          -webkit-backdrop-filter: blur(28px);
-          border-top: 1px solid rgba(255,255,255,0.9);
-          box-shadow: 0 -8px 32px rgba(37,99,235,0.07);
-        }
-
-        /* === Fade-in animations === */
-        .fade-up {
-          animation: fadeUp 0.6s ease both;
-        }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(18px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .fade-up:nth-child(1) { animation-delay: 0.05s; }
-        .fade-up:nth-child(2) { animation-delay: 0.10s; }
-        .fade-up:nth-child(3) { animation-delay: 0.15s; }
-        .fade-up:nth-child(4) { animation-delay: 0.20s; }
-        .fade-up:nth-child(5) { animation-delay: 0.25s; }
-        .fade-up:nth-child(6) { animation-delay: 0.30s; }
-
-        .shimmer-inner {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-          background-size: 200% 100%;
-          animation: shimmer 3s infinite;
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-
-        .greeting-text {
-          background: linear-gradient(135deg, #2563eb, #7c3aed 50%, #ec4899);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .avatar-ring {
-          box-shadow: 0 0 0 3px white, 0 0 0 5px rgba(37,99,235,0.2), 0 8px 24px rgba(37,99,235,0.15);
-        }
+        .mobile-nav-glass { background: rgba(255,255,255,0.92); backdrop-filter: blur(28px); border-top: 1px solid rgba(255,255,255,0.9); box-shadow: 0 -8px 32px rgba(37,99,235,0.07); }
+        .greeting-text { background: linear-gradient(135deg, #2563eb, #7c3aed 50%, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .avatar-ring { box-shadow: 0 0 0 3px white, 0 0 0 5px rgba(37,99,235,0.2), 0 8px 24px rgba(37,99,235,0.15); }
       `}} />
 
       {/* Ambient */}
       <div className="s-blob-1"></div>
       <div className="s-blob-2"></div>
-      <div className="s-blob-3"></div>
       <div className="fixed inset-0 dot-bg opacity-25 pointer-events-none"></div>
 
       {/* ===== SIDEBAR (Desktop) ===== */}
@@ -285,10 +141,7 @@ export default function StudentDashboard() {
             </div>
             <div>
               <p className="font-black text-xl text-slate-900 leading-none">TC Center</p>
-              <p className="text-[9px] font-bold tracking-[0.2em] uppercase mt-0.5" style={{
-                background: 'linear-gradient(90deg, #2563eb, #f97316)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              }}>Student Portal</p>
+              <p className="text-[9px] font-bold tracking-[0.2em] uppercase mt-0.5 text-blue-600">Student Portal</p>
             </div>
           </div>
 
@@ -317,7 +170,8 @@ export default function StudentDashboard() {
 
           <p className="px-3 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-5 mb-2">การเรียน</p>
 
-          <Link href="/student/booking-flow" className="nav-item flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-[1rem] font-bold text-sm transition-all">
+          {/* ✨ ดักจับการคลิกจองเรียน */}
+          <Link href="/student/booking-flow" onClick={checkProfileBeforeAction} className="nav-item flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-[1rem] font-bold text-sm transition-all">
             <Calendar size={17}/> จองคิวเรียน
           </Link>
           <Link href="/student/my-schedule" className="nav-item flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-pink-50 hover:text-pink-600 rounded-[1rem] font-bold text-sm transition-all">
@@ -332,7 +186,8 @@ export default function StudentDashboard() {
 
           <p className="px-3 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-5 mb-2">ร้านค้า & บัญชี</p>
 
-          <Link href="/student/courses" className="nav-item flex items-center gap-3 px-4 py-3 bg-slate-900 text-white hover:bg-orange-500 rounded-[1rem] font-bold text-sm transition-all shadow-md">
+          {/* ✨ ดักจับการคลิกซื้อคอร์ส */}
+          <Link href="/student/courses" onClick={checkProfileBeforeAction} className="nav-item flex items-center gap-3 px-4 py-3 bg-slate-900 text-white hover:bg-orange-500 rounded-[1rem] font-bold text-sm transition-all shadow-md">
             <ShoppingCart size={17} className="text-orange-400"/> ซื้อคอร์ส / เพิ่มชั่วโมง
           </Link>
           <Link href="/student/orders" className="nav-item flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-[1rem] font-bold text-sm transition-all">
@@ -340,6 +195,7 @@ export default function StudentDashboard() {
           </Link>
           <Link href="/student/profile" className="nav-item flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-[1rem] font-bold text-sm transition-all">
             <Settings size={17}/> ตั้งค่าโปรไฟล์
+            {needsProfileUpdate && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse ml-auto"></div>}
           </Link>
           <Link href="/student/affiliate/shop" className="nav-item flex items-center gap-3 px-4 py-3 text-pink-500 hover:bg-pink-50 rounded-[1rem] font-bold text-sm transition-all">
             <Gift size={17}/> ร้านค้าแลกของรางวัล
@@ -372,8 +228,8 @@ export default function StudentDashboard() {
           <span className="text-[9px] font-black uppercase tracking-wide">ตาราง</span>
         </Link>
 
-        {/* Center hero button */}
-        <Link href="/student/courses" className="flex flex-col items-center flex-1 relative pb-1">
+        {/* ✨ ดักจับการคลิกซื้อคอร์ส (มือถือ) */}
+        <Link href="/student/courses" onClick={checkProfileBeforeAction} className="flex flex-col items-center flex-1 relative pb-1">
           <div className="absolute -top-10 w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center shadow-[0_8px_24px_rgba(249,115,22,0.4)] border-4 border-white">
             <ShoppingCart size={20} className="text-white"/>
           </div>
@@ -387,9 +243,10 @@ export default function StudentDashboard() {
           <span className="text-[9px] font-black uppercase tracking-wide">ชีทเรียน</span>
         </Link>
 
-        <Link href="/student/profile" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-800 flex-1 pb-1 transition-colors">
-          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
+        <Link href="/student/profile" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-800 flex-1 pb-1 transition-colors relative">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center relative">
             <User size={17}/>
+            {needsProfileUpdate && <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-white rounded-full animate-pulse"></div>}
           </div>
           <span className="text-[9px] font-black uppercase tracking-wide">โปรไฟล์</span>
         </Link>
@@ -407,7 +264,7 @@ export default function StudentDashboard() {
               </div>
               <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight">
                 สวัสดี,{' '}
-                <span className="greeting-text">{wallet?.student_name || 'นักเรียน'}</span>{' '}👋
+                <span className="text-blue-600">{wallet?.student_name || 'นักเรียน'}</span>{' '}👋
               </h1>
               <p className="text-slate-400 font-semibold text-sm mt-2" style={{fontFamily: 'Sarabun, sans-serif'}}>
                 พร้อมจะเรียนรู้และสนุกไปด้วยกันหรือยัง?
@@ -423,7 +280,7 @@ export default function StudentDashboard() {
                 <LogOut size={13}/>
               </button>
 
-              <Link href="/student/profile">
+              <Link href="/student/profile" className="relative">
                 {studentData?.avatar_url ? (
                   <img src={studentData.avatar_url} alt="" className="w-14 h-14 rounded-2xl object-cover avatar-ring"/>
                 ) : (
@@ -431,12 +288,32 @@ export default function StudentDashboard() {
                     {wallet?.student_name?.charAt(0) || 'TC'}
                   </div>
                 )}
+                {needsProfileUpdate && <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full animate-pulse"></div>}
               </Link>
             </div>
           </header>
 
+          {/* ✨ BANNER แจ้งเตือนให้ตั้งค่าโปรไฟล์ */}
+          {needsProfileUpdate && (
+            <div className="fade-up bg-orange-50 border border-orange-200 rounded-[1.5rem] p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 relative overflow-hidden shadow-sm">
+              <div className="absolute -right-4 -top-4 w-20 h-20 bg-orange-200/30 rounded-full blur-xl pointer-events-none"></div>
+              <div className="bg-orange-100 p-3 rounded-xl text-orange-600 shrink-0">
+                 <AlertCircle size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-black text-orange-800">กรุณาตั้งค่าโปรไฟล์ก่อนเริ่มใช้งาน</h3>
+                <p className="text-xs font-bold text-orange-600 mt-1" style={{fontFamily: 'Sarabun, sans-serif'}}>
+                  ระบบจำเป็นต้องทราบ <strong>"ระดับชั้น"</strong> ของคุณ เพื่อให้ติวเตอร์จัดเตรียมเนื้อหาได้อย่างถูกต้องครับ
+                </p>
+              </div>
+              <Link href="/student/profile" className="w-full sm:w-auto text-center bg-orange-500 text-white px-5 py-3 rounded-xl text-xs font-black hover:bg-orange-600 active:scale-95 transition-all whitespace-nowrap shadow-md">
+                ไปตั้งค่าโปรไฟล์
+              </Link>
+            </div>
+          )}
+
           {/* ── TIER HOURS SECTION ── */}
-          <section>
+          <section className="fade-up">
             <div className="flex items-center gap-2.5 mb-5">
               <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
                 <Wallet size={16} className="text-blue-600"/>
@@ -499,13 +376,13 @@ export default function StudentDashboard() {
                       </div>
                     </div>
 
-                    {/* Book Buttons */}
+                    {/* ✨ ดักจับการคลิกจองเรียนรายคอร์ส */}
                     <div className="grid grid-cols-2 gap-2 mt-auto">
-                      <Link href={`/student/booking-flow?tier=${t.tier}&type=Online`}
+                      <Link href={`/student/booking-flow?tier=${t.tier}&type=Online`} onClick={checkProfileBeforeAction}
                         className={`${t.onlineBtnClass} py-3 rounded-xl font-black text-[11px] text-center transition-colors`}>
                         จอง Online
                       </Link>
-                      <Link href={`/student/booking-flow?tier=${t.tier}&type=Onsite`}
+                      <Link href={`/student/booking-flow?tier=${t.tier}&type=Onsite`} onClick={checkProfileBeforeAction}
                         className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 py-3 rounded-xl font-black text-[11px] text-center transition-colors">
                         จอง Onsite
                       </Link>
@@ -517,7 +394,7 @@ export default function StudentDashboard() {
           </section>
 
           {/* ── SHORTCUTS BENTO ── */}
-          <section>
+          <section className="fade-up">
             <div className="flex items-center gap-2.5 mb-5">
               <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
                 <Zap size={16} className="text-orange-500"/>
@@ -527,8 +404,8 @@ export default function StudentDashboard() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
 
-              {/* Buy Course — Hero dark */}
-              <Link href="/student/courses"
+              {/* ✨ ดักจับการซื้อคอร์ส */}
+              <Link href="/student/courses" onClick={checkProfileBeforeAction}
                 className="shortcut-card xl:col-span-2 bg-slate-900 text-white p-6 rounded-[2rem] flex flex-col justify-between h-40 relative overflow-hidden shadow-lg">
                 <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-orange-500/20 blur-2xl"></div>
                 <div className="absolute -left-4 -bottom-4 w-20 h-20 rounded-full bg-blue-500/20 blur-xl"></div>
@@ -539,9 +416,10 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* Book Class */}
-              <Link href="/student/booking-flow"
-                className="shortcut-card card-glass rounded-[2rem] p-6 flex flex-col justify-between h-40 border-0">
+              {/* ✨ ดักจับการจองคิว */}
+              <Link href="/student/booking-flow" onClick={checkProfileBeforeAction}
+                className="shortcut-card card-glass rounded-[2rem] p-6 flex flex-col justify-between h-40 border-0 relative overflow-hidden">
+                {needsProfileUpdate && <div className="absolute top-0 right-0 w-0 h-0 border-[20px] border-transparent border-t-red-500 border-r-red-500"></div>}
                 <Calendar size={26} className="text-blue-500"/>
                 <div>
                   <h3 className="font-black text-slate-800 text-sm leading-tight">จองคิวเรียน</h3>
@@ -549,7 +427,7 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* AI Tutor — Purple gradient */}
+              {/* AI Tutor */}
               <Link href="/student/ai-tutor"
                 className="shortcut-card p-6 rounded-[2rem] flex flex-col justify-between h-40 relative overflow-hidden shadow-lg"
                 style={{background: 'linear-gradient(135deg, #7c3aed, #4f46e5)'}}>
@@ -561,7 +439,7 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* Books — Orange gradient */}
+              {/* Books */}
               <Link href="/student/my-books"
                 className="shortcut-card p-6 rounded-[2rem] flex flex-col justify-between h-40 relative overflow-hidden shadow-lg"
                 style={{background: 'linear-gradient(135deg, #f97316, #fb923c)'}}>
@@ -597,7 +475,7 @@ export default function StudentDashboard() {
           </section>
 
           {/* ── REFERRAL + REWARD (side by side on desktop) ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 fade-up">
 
             {/* Referral — 3 cols */}
             <div className="ref-card lg:col-span-3 rounded-[2rem] p-7 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden">

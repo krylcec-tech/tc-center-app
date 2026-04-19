@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, Wallet, Clock, CheckCircle2, ArrowDownToLine, ArrowUpFromLine, BadgeDollarSign, Mail, ArrowLeft, Landmark } from 'lucide-react';
+import { Loader2, Wallet, Clock, CheckCircle2, ArrowDownToLine, ArrowUpFromLine, BadgeDollarSign, Mail, ArrowLeft, Landmark, X} from 'lucide-react';
 
 export default function TutorEarnings() {
   const router = useRouter();
