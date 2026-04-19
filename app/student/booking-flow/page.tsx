@@ -153,6 +153,7 @@ function BookingContent() {
     );
   };
 
+  // ✨ ฟังก์ชันจัดการการจองเรียนพร้อมยิง LINE
   const handleBulkBooking = async () => {
     if (selectedSlotIds.length === 0) return alert("กรุณาเลือกเวลาเรียนอย่างน้อย 1 ช่วงเวลาครับ");
     
@@ -167,16 +168,57 @@ function BookingContent() {
       setLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        await supabase.from('student_wallets').update({ [columnName]: userBalance - requiredHours }).eq('user_id', user?.id);
+        if (!user) throw new Error("ไม่พบข้อมูลผู้ใช้");
+
+        // 1. หักเงินใน Wallet
+        await supabase.from('student_wallets').update({ [columnName]: userBalance - requiredHours }).eq('user_id', user.id);
+        
+        // 2. อัปเดต Slot ว่าถูกจองแล้ว
         await supabase.from('slots').update({ is_booked: true }).in('id', selectedSlotIds);
+        
+        // 3. บันทึกข้อมูลการจอง
         const bookingData = selectedSlotIds.map(slotId => ({
-          slot_id: slotId, student_id: user?.id, tutor_id: selectedTutor.id,
+          slot_id: slotId, student_id: user.id, tutor_id: selectedTutor.id,
           status: 'confirmed', student_note: `[${locationType}] ${studentNote}`, is_completed: false
         }));
         await supabase.from('bookings').insert(bookingData);
+
+        // 🚀 ✨ เริ่มโค้ดแจ้งเตือน LINE เข้ากลุ่มแอดมิน ✨ 🚀
+        try {
+          // ดึงข้อมูลวันและเวลาของ Slot แรกมาแสดงใน LINE เพื่อเป็นตัวอย่าง
+          const firstSlot = tutorSlots.find(s => s.id === selectedSlotIds[0]);
+          const displayDate = firstSlot ? new Date(firstSlot.start_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+          
+          const notifyMessage = `
+🎉 มีรายการจองเรียนใหม่!
+---------------------------
+👨‍🎓 นักเรียน: น้อง${allWalletData?.student_name || 'ไม่ระบุชื่อ'}
+👨‍🏫 ติวเตอร์: ครู${selectedTutor.name}
+📚 ระดับ: ${tiers.find(t => t.id === gradeLevel)?.title}
+📍 รูปแบบ: ${locationType}
+⏳ จำนวน: ${requiredHours} ชั่วโมง
+📅 เริ่มวันที่: ${displayDate}
+💬 โน้ต: ${studentNote || '-'}
+---------------------------
+แอดมินรบกวนแจ้งครู และเตรียมลิงก์ห้องเรียน (ถ้ามี) ด้วยนะครับ! 🚀`;
+
+          await fetch('/api/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: notifyMessage })
+          });
+        } catch (lineErr) {
+          console.error("LINE Notify Error:", lineErr);
+          // ไม่ต้อง Throw error เพื่อให้นักเรียนจองสำเร็จต่อได้แม้ LINE จะเสีย
+        }
+
         alert(`🎉 จองสำเร็จทั้งหมด ${requiredHours} ช่วงเวลาแล้วครับ!`);
         router.push('/student');
-      } catch (err: any) { alert(err.message); } finally { setLoading(false); }
+      } catch (err: any) { 
+        alert("เกิดข้อผิดพลาด: " + err.message); 
+      } finally { 
+        setLoading(false); 
+      }
     }
   };
 
@@ -204,7 +246,6 @@ function BookingContent() {
                     {viewingTutor.name} 
                   </h2>
                   
-                  {/* ✨ ใส่ข้อความบอกตรงๆ ในหน้าโปรไฟล์ว่าคิวเต็ม */}
                   {!viewingTutor.hasSlots && (
                     <div className="mb-3 inline-flex items-center gap-1.5 bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-lg text-orange-600 text-xs font-bold">
                       <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span> คิวในระบบเต็ม (จองคิวพิเศษผ่าน Line)
@@ -322,14 +363,11 @@ function BookingContent() {
                 {filteredTutors.map(tutor => (
                   <div key={tutor.id} className={`bg-white rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-gray-100 flex flex-col h-full transition-all group ${!tutor.hasSlots ? 'opacity-90 grayscale-[10%]' : 'shadow-sm hover:shadow-xl'}`}>
                     <div className="h-32 md:h-48 bg-gray-50 relative cursor-pointer overflow-hidden" onClick={() => setViewingTutor(tutor)}>
-                      
-                      {/* ✨ แปะป้าย "คิวเต็ม" มุมซ้ายบนของการ์ด */}
                       {!tutor.hasSlots && (
                         <div className="absolute top-2 left-2 z-10 bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm">
                           🔥 คิวในระบบเต็ม
                         </div>
                       )}
-
                       <img src={tutor.image_url || '/default-avatar.png'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       <div className="absolute top-2 right-2 flex flex-col gap-1.5">
                         {tutor.video_url && <div className="bg-white/90 backdrop-blur text-red-500 p-1 md:p-1.5 rounded-md shadow-sm" title="มีวิดีโอแนะนำตัว"><PlayCircle size={14}/></div>}
@@ -514,7 +552,6 @@ function BookingContent() {
              <div className="flex flex-col pl-4">
                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">เลือกไว้</p>
                <p className="text-2xl font-black leading-none">{selectedSlotIds.length} <span className="text-xs font-bold opacity-60">ชม.</span></p>
-               {/* ✨ ปุ่มยกเลิกทั้งหมด */}
                <button 
                  onClick={() => setSelectedSlotIds([])}
                  className="text-[10px] font-black text-red-400 mt-2 hover:text-red-300 flex items-center gap-1 transition-colors"
