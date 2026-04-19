@@ -11,7 +11,8 @@ export default function AdminWithdrawalsPage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'PENDING' | 'COMPLETED' | 'REJECTED' | 'ALL'>('PENDING');
-  const [userTypeFilter, setUserTypeFilter] = useState<'student' | 'tutor'>('student'); 
+  // ✨ ตั้งค่าให้แท็บ "ติวเตอร์" เป็นค่าเริ่มต้น เพราะคุณกำลังเทสต์ติวเตอร์อยู่
+  const [userTypeFilter, setUserTypeFilter] = useState<'student' | 'tutor'>('tutor'); 
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function AdminWithdrawalsPage() {
       const { data: withdrawData, error: withdrawError } = await query.order('created_at', { ascending: false });
       if (withdrawError) throw withdrawError;
 
+      // ดึงข้อมูล 3 ตารางเพื่อเอามาประกอบเป็นชื่อ
       const { data: profiles } = await supabase.from('profiles').select('id, full_name, email');
       const { data: tutors } = await supabase.from('tutors').select('user_id, name');
       const { data: studentWallets } = await supabase.from('student_wallets').select('user_id, student_name');
@@ -36,9 +38,33 @@ export default function AdminWithdrawalsPage() {
         const profile = profiles?.find(p => p.id === req.user_id);
         const tutorInfo = tutors?.find(t => t.user_id === req.user_id);
         const studentInfo = studentWallets?.find(s => s.user_id === req.user_id);
-        const displayName = tutorInfo?.name || studentInfo?.student_name || profile?.full_name || 'ไม่ระบุชื่อ';
-        const role = tutorInfo ? 'tutor' : 'student';
-        return { ...req, displayName, email: profile?.email, userRole: role };
+        
+        const isTutor = !!tutorInfo; 
+        
+        // ✨ ดึงชื่อแบบปลอดภัย 100% ถ้าไม่มีชื่อให้โชว์รหัส User_id แทน จะได้รู้ว่าตารางไหนมีปัญหา
+        const displayName = isTutor 
+          ? (tutorInfo.name || profile?.full_name || req.user_id) 
+          : (studentInfo?.student_name || profile?.full_name || req.user_id);
+          
+        const role = isTutor ? 'tutor' : 'student';
+
+        // ✨ แปลงข้อมูล JSON ธนาคารแบบป้องกัน Error หน้าเว็บพัง
+        let safeBankInfo = { bank: 'ไม่ระบุ', number: req.bank_account || '-', name: '-' };
+        if (req.bank_info) {
+          if (typeof req.bank_info === 'string') {
+            try { safeBankInfo = JSON.parse(req.bank_info); } catch (e) {}
+          } else {
+            safeBankInfo = req.bank_info;
+          }
+        }
+
+        return { 
+          ...req, 
+          displayName, 
+          email: profile?.email || 'ไม่มีอีเมล', 
+          userRole: role,
+          bank_info_safe: safeBankInfo 
+        };
       });
 
       setRequests(enrichedData.filter(item => item.userRole === userTypeFilter));
@@ -60,26 +86,24 @@ export default function AdminWithdrawalsPage() {
     } catch (err: any) { alert(err.message); } finally { setProcessingId(null); }
   };
 
-  // ✅ ฟังก์ชัน handleReject แบบแก้ไขสมบูรณ์: คืนเงิน + เปลี่ยนสถานะ + หายจากหน้าจอ
   const handleReject = async (request: any) => {
     const reason = prompt('ระบุเหตุผลที่ปฏิเสธ (ผู้ถอนจะเห็นข้อความนี้):');
     if (reason === null || reason.trim() === '') return;
 
     setProcessingId(request.id);
     try {
-      // 1. คืนเงินเข้า sales_balance ให้ถูกตาราง
-      const table = request.userRole === 'tutor' ? 'affiliate_wallets' : 'student_wallets';
-      const { data: wallet, error: walletError } = await supabase.from(table).select('sales_balance').eq('user_id', request.user_id).single();
-      
-      if (walletError) throw new Error("ไม่สามารถเข้าถึงข้อมูลกระเป๋าเงินได้");
+      // คืนเงินเข้ากระเป๋าให้ถูกประเภท
+      if (request.userRole === 'tutor') {
+        const { data: tutorWallet } = await supabase.from('tutors').select('balance').eq('user_id', request.user_id).single();
+        const currentBalance = tutorWallet?.balance || 0;
+        await supabase.from('tutors').update({ balance: currentBalance + request.amount }).eq('user_id', request.user_id);
+      } else {
+        const { data: studentWallet } = await supabase.from('student_wallets').select('sales_balance').eq('user_id', request.user_id).single();
+        const currentBalance = studentWallet?.sales_balance || 0;
+        await supabase.from('student_wallets').update({ sales_balance: currentBalance + request.amount }).eq('user_id', request.user_id);
+      }
 
-      const { error: refundError } = await supabase.from(table)
-        .update({ sales_balance: (wallet?.sales_balance || 0) + request.amount })
-        .eq('user_id', request.user_id);
-      
-      if (refundError) throw refundError;
-
-      // 2. อัปเดตสถานะคำขอในฐานข้อมูลเป็น REJECTED (จุดสำคัญที่ทำให้ปุ่มหาย)
+      // เปลี่ยนสถานะเป็นปฏิเสธ
       const { error: requestUpdateError } = await supabase
         .from('withdraw_requests')
         .update({ 
@@ -91,9 +115,7 @@ export default function AdminWithdrawalsPage() {
 
       if (requestUpdateError) throw requestUpdateError;
 
-      alert('❌ ปฏิเสธและคืนเงินเข้ากระเป๋าให้ผู้ขายเรียบร้อยครับ');
-      
-      // 3. ดึงข้อมูลใหม่จาก DB ทันทีเพื่อให้รายการหายไปจากหน้า PENDING
+      alert('❌ ปฏิเสธและคืนเงินเข้ากระเป๋าให้ผู้ทำรายการเรียบร้อยครับ');
       fetchRequests();
 
     } catch (err: any) { 
@@ -114,7 +136,7 @@ export default function AdminWithdrawalsPage() {
             <h1 className="text-4xl font-black tracking-tight">Withdrawals 💸</h1>
           </div>
           <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border w-full md:w-auto">
-            <button onClick={() => setUserTypeFilter('student')} className={`flex-1 md:w-36 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${userTypeFilter === 'student' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-gray-400'}`}><Users size={16}/> นักเรียน</button>
+            <button onClick={() => setUserTypeFilter('student')} className={`flex-1 md:w-36 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${userTypeFilter === 'student' ? 'bg-orange-50 text-orange-600 shadow-sm' : 'text-gray-400'}`}><Users size={16}/> นักเรียน / นายหน้า</button>
             <button onClick={() => setUserTypeFilter('tutor')} className={`flex-1 md:w-36 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${userTypeFilter === 'tutor' ? 'bg-purple-50 text-purple-600 shadow-sm' : 'text-gray-400'}`}><GraduationCap size={16}/> ติวเตอร์</button>
           </div>
         </header>
@@ -140,22 +162,32 @@ export default function AdminWithdrawalsPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-black">฿{req.amount.toLocaleString()}</span>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${req.status === 'PENDING' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>{req.status}</span>
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${req.status === 'PENDING' ? 'bg-orange-100 text-orange-600' : req.status === 'REJECTED' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{req.status}</span>
                     </div>
-                    <p className="text-sm font-bold text-slate-700 mt-1">{req.displayName}</p>
+                    <p className="text-sm font-bold text-slate-700 mt-1">{req.userRole === 'tutor' ? 'ครู' : 'คุณ'}{req.displayName}</p>
                     <p className="text-[10px] font-bold text-gray-400">{req.email} • {new Date(req.created_at).toLocaleString('th-TH')}</p>
                   </div>
                 </div>
+                
+                {/* ✨ แสดงข้อมูลธนาคารอย่างปลอดภัย ใส่ Fallback ไว้ครบถ้วน */}
                 <div className="bg-slate-50 p-4 rounded-2xl border w-full md:w-72">
                    <p className="text-[9px] font-black text-gray-400 uppercase mb-1">บัญชีปลายทาง</p>
-                   <p className="text-xs font-black text-blue-600">{req.bank_info?.bank}</p>
-                   <p className="text-sm font-black tracking-widest">{req.bank_info?.number}</p>
-                   <p className="text-xs font-bold text-slate-500">{req.bank_info?.name}</p>
+                   <p className="text-xs font-black text-blue-600">{req.bank_info_safe?.bank || 'ไม่ระบุธนาคาร'}</p>
+                   <p className="text-sm font-black tracking-widest">{req.bank_info_safe?.number || req.bank_account || 'ไม่มีเลขบัญชี'}</p>
+                   <p className="text-xs font-bold text-slate-500">{req.bank_info_safe?.name || 'ไม่มีชื่อบัญชี'}</p>
+                   {req.status === 'REJECTED' && req.reject_reason && (
+                     <div className="mt-2 p-2 bg-red-50 text-red-500 rounded text-[10px] font-bold border border-red-100">
+                       เหตุผลที่ปฏิเสธ: {req.reject_reason}
+                     </div>
+                   )}
                 </div>
+                
                 {req.status === 'PENDING' && (
                   <div className="flex gap-2 w-full md:w-auto">
                     <button onClick={() => handleReject(req)} disabled={processingId === req.id} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><X size={20}/></button>
-                    <button onClick={() => handleApprove(req.id)} disabled={processingId === req.id} className={`flex-1 md:w-32 py-4 rounded-xl font-black text-xs text-white shadow-lg ${userTypeFilter === 'tutor' ? 'bg-purple-600' : 'bg-orange-600'}`}>โอนเงินแล้ว</button>
+                    <button onClick={() => handleApprove(req.id)} disabled={processingId === req.id} className={`flex-1 md:w-32 py-4 rounded-xl font-black text-xs text-white shadow-lg ${userTypeFilter === 'tutor' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                      {processingId === req.id ? <Loader2 size={16} className="animate-spin mx-auto"/> : 'โอนเงินแล้ว'}
+                    </button>
                   </div>
                 )}
               </div>

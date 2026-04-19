@@ -25,7 +25,8 @@ import {
   Landmark,
   ShieldCheck,
   MoreHorizontal,
-  RefreshCw // ✨ เพิ่มไอคอนนี้สำหรับระบบย้ายเวลา
+  RefreshCw,
+  DollarSign // ✨ เพิ่มไอคอนนี้สำหรับหน้าจ่ายเงินติวเตอร์
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -146,7 +147,6 @@ export default function AdminDashboard() {
           <Link href="/admin/my-books" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all"><Book size={20} /> คลังหนังสือรายคน</Link>
           <Link href="/admin/wallets" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all"><Wallet size={20} /> จัดการกระเป๋าเงิน (6-Tier)</Link>
           
-          {/* ✨ เมนู: ย้ายเวลาเรียนใน Sidebar */}
           <Link href="/admin/reschedule" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-orange-50 hover:text-orange-600 rounded-[1.2rem] font-bold transition-all">
             <RefreshCw size={20} /> ระบบย้ายเวลาเรียน
           </Link>
@@ -157,6 +157,11 @@ export default function AdminDashboard() {
           <Link href="/admin/withdrawals" className="flex items-center justify-between px-4 py-3.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-[1.2rem] font-bold transition-all relative">
             <div className="flex items-center gap-3"><Landmark size={20} /> ตรวจสอบถอนเงิน</div>
             {stats.pendingWithdraws > 0 && <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">{stats.pendingWithdraws}</span>}
+          </Link>
+
+          {/* ✨ เมนู: เพิ่มเงินให้ติวเตอร์ */}
+          <Link href="/admin/tutor-payouts" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-green-50 hover:text-green-600 rounded-[1.2rem] font-bold transition-all">
+            <DollarSign size={20} /> เพิ่มเงินให้ติวเตอร์
           </Link>
 
           <Link href="/admin/orders" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-green-50 hover:text-green-600 rounded-[1.2rem] font-bold transition-all"><Receipt size={20} /> ตรวจสอบแจ้งโอน</Link>
@@ -173,6 +178,7 @@ export default function AdminDashboard() {
 
           <Link href="/admin/manage-tutors" className="flex items-center gap-3 px-4 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-bold rounded-[1.2rem] transition-all"><Users size={20} /> จัดการติวเตอร์</Link>
           <Link href="/admin/manage-courses" className="flex items-center gap-3 px-4 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-bold rounded-[1.2rem] transition-all"><BookOpen size={20} /> จัดการคอร์สเรียน</Link>
+          <Link href="/admin/calendar-slots" className="flex items-center gap-3 px-4 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-bold rounded-[1.2rem] transition-all"><CalendarDays size={20} /> จัดการเวลาว่างติวเตอร์</Link>
         </nav>
 
         <div className="p-6 border-t border-slate-100">
@@ -274,6 +280,19 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
+            {/* ✨ เพิ่มกล่อง: เพิ่มเงินติวเตอร์ (Tutor Payouts) */}
+            <Link href="/admin/tutor-payouts" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-green-300 hover:shadow-lg hover:shadow-green-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
+              <div>
+                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><DollarSign size={24}/></div>
+                <h3 className="text-2xl font-black text-slate-800 leading-tight mb-2">เพิ่มเงิน<br/>ติวเตอร์</h3>
+                <p className="text-slate-500 text-xs font-bold">กำหนดค่าสอนให้คลาสที่สำเร็จแล้ว</p>
+              </div>
+              <div className="flex items-center justify-between mt-8">
+                <span className="text-green-600 font-black text-sm">จัดการค่าสอน</span>
+                <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-colors"><ChevronRight size={20}/></div>
+              </div>
+            </Link>
+
             <Link href="/admin/shop" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-orange-300 hover:shadow-lg hover:shadow-orange-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
               <div>
                 <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><Store size={24}/></div>
@@ -310,7 +329,6 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
-            {/* ✨ ปรับ Layout แถวล่างสุด (Orders 2 ช่อง + Reschedule 1 ช่อง) เพื่อให้เต็ม 3 ช่องพอดี */}
             <Link href="/admin/orders" className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 border-2 border-slate-100 hover:border-green-400 hover:shadow-xl hover:shadow-green-100/50 transition-all group flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative overflow-hidden">
               <div className="absolute right-0 top-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform"></div>
               <div className="flex items-center gap-6 relative z-10">
@@ -325,7 +343,6 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
-            {/* ✨ เพิ่มกล่อง: ระบบย้ายเวลาเรียน (Reschedule) */}
             <Link href="/admin/reschedule" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-orange-300 hover:shadow-lg hover:shadow-orange-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
               <div>
                 <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><RefreshCw size={24}/></div>
@@ -335,6 +352,18 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mt-8">
                 <span className="text-orange-600 font-black text-sm">จัดการเวลาเรียน</span>
                 <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-colors"><ChevronRight size={20}/></div>
+              </div>
+            </Link>
+
+            <Link href="/admin/calendar-slots" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
+              <div>
+                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><CalendarDays size={24}/></div>
+                <h3 className="text-2xl font-black text-slate-800 leading-tight mb-2">จัดการเวลาว่าง<br/>ติวเตอร์</h3>
+                <p className="text-slate-500 text-xs font-bold">ดูและแก้ไขตารางเวลา (Slots) ของติวเตอร์ทุกคนในระบบ</p>
+              </div>
+              <div className="flex items-center justify-between mt-8">
+                <span className="text-blue-600 font-black text-sm">ดูตารางเวลา</span>
+                <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors"><ChevronRight size={20}/></div>
               </div>
             </Link>
 
