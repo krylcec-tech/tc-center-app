@@ -267,8 +267,8 @@ function CatalogContent() {
         </div>
       )}
 
-      {/* ✨ ส่วนหัว ย้ายมาอยู่ Layer บนสุดด้วย relative z-20 */}
-      <div className="relative z-20">
+      {/* ✨ ดัน Header และ Navbar ให้ลอยอยู่ชั้นบนสุด ทับทุก Element ของ Background */}
+      <div className="relative z-50">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 pt-2">
           <div>
             <Link href={!isLoggedIn ? "/" : (isAdmin ? "/admin" : "/student")} className="text-blue-600 font-black text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2 mb-2 group w-max">
@@ -290,7 +290,7 @@ function CatalogContent() {
           </div>
         </div>
 
-        {/* ✨ แถบหมวดหมู่หลัก ยกขึ้นมา Layer บนสุดและบังคับ Touch Action */}
+        {/* ✨ แถบหมวดหมู่หลัก */}
         <div className="w-full overflow-x-auto hide-scrollbar mb-4" style={{ touchAction: 'pan-x' }}>
           <div className="flex gap-2 sm:gap-3 items-center pb-2 pr-4 w-max min-w-full">
             <button onClick={() => setActiveTab('all')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
@@ -311,7 +311,7 @@ function CatalogContent() {
           </div>
         </div>
 
-        {/* ✨ แถบกรองประเภทคนขาย ยกขึ้นมา Layer บนสุดเช่นกัน */}
+        {/* ✨ แถบกรองประเภทคนขาย */}
         <div className="w-full overflow-x-auto hide-scrollbar mb-8" style={{ touchAction: 'pan-x' }}>
           <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 w-max min-w-full pr-4">
              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
@@ -326,7 +326,7 @@ function CatalogContent() {
       </div>
 
       {/* Grid สินค้า */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 relative z-10">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 relative z-10 pb-24">
         {filteredItems.map((item) => {
           const hasPromo = item.original_price > item.price;
           const discountPercent = hasPromo ? Math.round(((item.original_price - item.price) / item.original_price) * 100) : 0;
