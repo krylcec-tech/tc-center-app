@@ -92,7 +92,8 @@ export default function LandingPage() {
 
   const HeroIllustration = () => (
     <div style={{position:'relative',width:'100%',maxWidth:480}}>
-      <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:380,height:380,borderRadius:'50%',background:'linear-gradient(135deg,rgba(37,99,235,0.08),rgba(249,115,22,0.06))',border:'2px dashed rgba(37,99,235,0.15)',animation:'bd2 8s ease-in-out infinite'}}/>
+      {/* 📌 ปรับ z-index ตรงนี้ให้เป็น 0 เพื่อให้อยู่หลังกล่องขาวในมือถือ */}
+      <div className="hero-deco-circle-bg" style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:380,height:380,borderRadius:'50%',background:'linear-gradient(135deg,rgba(37,99,235,0.08),rgba(249,115,22,0.06))',border:'2px dashed rgba(37,99,235,0.15)',animation:'bd2 8s ease-in-out infinite', zIndex: 0}}/>
       <svg viewBox="0 0 400 380" style={{width:'100%',maxWidth:440,position:'relative',zIndex:5}} xmlns="http://www.w3.org/2000/svg">
         <rect x="80" y="280" width="240" height="14" rx="7" fill="#e2e8f0"/>
         <rect x="100" y="260" width="200" height="22" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1.5"/>
@@ -130,8 +131,6 @@ export default function LandingPage() {
         <ellipse cx="76" cy="244" rx="12" ry="9" fill="#fbbf24"/>
         <path d="M100 185 Q115 220 110 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
         <path d="M160 185 Q145 220 150 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
-
-        {/* AI / ROBOT CHARACTER */}
         <rect x="235" y="175" width="85" height="100" rx="22" fill="#7c3aed"/>
         <rect x="248" y="195" width="58" height="42" rx="10" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
         <circle cx="263" cy="208" r="4" fill="#34d399"/>
@@ -214,9 +213,7 @@ export default function LandingPage() {
           transition: all .4s ease;
           padding: 16px 24px;
         }
-        .nav-bar.scrolled {
-          padding: 8px 24px;
-        }
+        .nav-bar.scrolled { padding: 8px 24px; }
         .nav-inner {
           max-width: 1240px; margin: 0 auto;
           display: flex; align-items: center; justify-content: space-between;
@@ -228,10 +225,7 @@ export default function LandingPage() {
           box-shadow: 0 4px 32px rgba(37,99,235,0.08), 0 1px 4px rgba(0,0,0,0.04);
           transition: all .4s ease;
         }
-        .nav-inner.scrolled {
-          border-radius: 16px;
-          box-shadow: 0 8px 40px rgba(37,99,235,0.12);
-        }
+        .nav-inner.scrolled { border-radius: 16px; box-shadow: 0 8px 40px rgba(37,99,235,0.12); }
 
         .logo-ring {
           background: conic-gradient(from 0deg,#2563eb,#f97316,#ec4899,#7c3aed,#2563eb);
@@ -323,9 +317,9 @@ export default function LandingPage() {
           background: rgba(255,255,255,0.9); border: 1.5px solid rgba(37,99,235,0.12);
           border-radius: 100px; box-shadow: 0 4px 16px rgba(37,99,235,0.08);
           margin-bottom: 28px;
+          position: relative; z-index: 10; /* ✨ ให้กล่องวิชาลอยอยู่เหนือวงกลม */
         }
         .subject-ticker-inner { display: flex; gap: 6px; }
-
         .subject-item-pill {
           padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 800; transition: all .4s ease;
         }
@@ -499,8 +493,8 @@ export default function LandingPage() {
         .stat-val { font-size: 28px; font-weight: 900; color: #0f172a; line-height: 1; margin-bottom: 4px; }
         .stat-lbl { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; }
 
-        /* ✨ MOBILE OPTIMIZATIONS ✨ */
-        .mobile-illo-only { display: none; }
+        /* ✨ MOBILE OPTIMIZATIONS (เฉพาะมือถือ) ✨ */
+        .mobile-hero-center { display: none; }
         .desktop-illo-only { display: flex; align-items: center; justify-content: center; position: relative; }
 
         @media(max-width: 900px) {
@@ -508,47 +502,72 @@ export default function LandingPage() {
           .hero-text-col { align-items: center; }
           .hero-ctas { justify-content: center; }
           .desktop-illo-only { display: none; }
-          /* ✨ แสดงรูปภาพคั่นกลางเฉพาะในมือถือ */
           .mobile-illo-only { display: flex; justify-content: center; margin: 24px 0 32px; width: 100%; }
-          .edu-grid { grid-template-columns: repeat(2,1fr); }
-          .ai-inner { grid-template-columns: 1fr !important; }
         }
 
         @media(max-width: 640px) {
-          /* Navbar adjustments (เล็กลง กระทัดรัดขึ้น) */
+          .md-show { display: none !important; }
+          .md-hide { display: flex !important; }
+
+          /* Navbar มินิมอล & แคบลง */
           .nav-bar { padding: 8px 12px !important; }
-          .nav-inner { padding: 6px 10px !important; border-radius: 14px !important; }
+          .nav-inner { padding: 6px 10px !important; border-radius: 16px !important; }
           .logo-box { width: 28px !important; height: 28px !important; border-radius: 8px !important; }
           .logo-img { height: 18px !important; }
-          .logo-title { font-size: 13px !important; }
-          .logo-sub { font-size: 7px !important; letter-spacing: 0.1em !important; margin-top: 1px !important; }
+          .logo-title { font-size: 14px !important; }
+          .logo-sub { display: none !important; }
           
-          /* Buttons in Navbar */
-          .nav-login-btn { padding: 6px 10px !important; font-size: 11px !important; gap: 4px !important; border-radius: 8px !important; }
-          .nav-register-btn { padding: 6px 12px !important; font-size: 11px !important; gap: 4px !important; border-radius: 8px !important; }
-          .nav-btn-icon { width: 12px !important; height: 12px !important; }
-          .mobile-menu-btn { width: 30px !important; height: 30px !important; border-radius: 8px !important; }
-
-          /* Hero adjustments */
-          .hero { padding: 110px 16px 40px; }
+          /* Hero Section */
+          .hero { padding: 110px 16px 40px !important; }
           .hero-title { font-size: 32px !important; line-height: 1.2 !important; margin-bottom: 16px !important; }
-          
-          /* Subject Ticker adjustments (Wrap และเล็กลง) */
-          .subject-ticker-wrap {
-            flex-direction: row !important; flex-wrap: wrap !important; justify-content: center !important;
-            padding: 8px 12px !important; border-radius: 16px !important; gap: 6px !important;
-            margin-bottom: 20px !important;
+          .hero-eyebrow { padding: 6px 14px !important; font-size: 11px !important; margin-bottom: 16px !important; }
+
+          /* ✨ Block รวมรูปภาพ + กล่องวิชา (เฉพาะมือถือ) ✨ */
+          .mobile-hero-center {
+            display: flex !important; flex-direction: column; align-items: center; justify-content: center;
+            width: 100%; position: relative; margin: 16px 0 24px;
           }
-          .subject-ticker-inner { flex-wrap: wrap; justify-content: center; gap: 4px !important; }
+
+          /* ✨ วงกลมด้านหลัง (ยืดครอบทั้งรูปและกล่องวิชา) ✨ */
+          .mobile-hero-center .hero-deco-circle-mobile {
+            position: absolute !important; top: 48% !important; left: 50% !important; transform: translate(-50%, -50%) !important;
+            width: 320px !important; height: 460px !important; border-radius: 160px !important;
+            background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(249,115,22,0.06)) !important;
+            border: 2px dashed rgba(37,99,235,0.15) !important; animation: bd2 8s ease-in-out infinite !important; 
+            z-index: 0 !important; /* ✨ ส่งไปอยู่หลังสุด ✨ */
+          }
+
+          /* ซ่อนวงกลมเดิมที่อยู่ใน Component ซะ */
+          .hero-deco-circle-bg { display: none !important; }
+
+          .mobile-illo-wrapper {
+            width: 100%; max-width: 320px; position: relative; z-index: 5; transform: scale(0.85); margin-bottom: -30px;
+          }
+
+          /* กล่องวิชา (ดึง z-index ให้สูงกว่าวงกลม) */
+          .mobile-hero-center .subject-ticker-wrap {
+            background: rgba(255,255,255,0.95) !important;
+            border: 1.5px solid rgba(37,99,235,0.12) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 10px 30px rgba(37,99,235,0.08) !important;
+            padding: 16px !important;
+            flex-direction: column !important;
+            width: 100%; max-width: 330px;
+            position: relative; z-index: 10 !important; /* ✨ อยู่เหนือวงกลม ✨ */
+            margin-bottom: 0 !important;
+          }
+          .mobile-hero-center .subject-ticker-inner {
+            flex-wrap: wrap !important; justify-content: center !important; gap: 8px !important;
+          }
           .subject-item-pill { padding: 4px 8px !important; font-size: 11px !important; }
 
-          /* Stats Box Grid */
-          .stats-bar { display: grid; grid-template-columns: 1fr 1fr; border-radius: 16px; }
+          /* Stats Box Grid 2x2 */
+          .stats-bar { display: grid; grid-template-columns: 1fr 1fr; border-radius: 16px; margin-top: 32px !important; }
           .stat-item { padding: 16px 12px; border-bottom: 1px solid rgba(37,99,235,0.05); border-right: 1px solid rgba(37,99,235,0.05); }
           .stat-item:nth-child(2n) { border-right: none; }
           .stat-item:nth-last-child(-n+2) { border-bottom: none; }
           .stat-item::after { display: none !important; }
-          .stat-val { font-size: 22px; }
+          .stat-val { font-size: 24px; }
 
           .edu-grid { grid-template-columns: 1fr; }
           .ai-banner { padding: 24px 20px; }
@@ -559,14 +578,11 @@ export default function LandingPage() {
       {/* Ambient blobs */}
       <div className="blob b1"/><div className="blob b2"/><div className="blob b3"/><div className="blob b4"/>
 
-      {/* ═══════════════ NAVBAR ═══════════════ */}
+      {/* NAVBAR */}
       <nav className={`nav-bar ${scrolled ? 'scrolled' : ''}`}>
         <div className={`nav-inner ${scrolled ? 'scrolled' : ''}`}>
-
-          {/* Logo */}
           <Link href="/" style={{display:'flex',alignItems:'center',gap:10,textDecoration:'none'}}>
             <div className="logo-ring">
-              {/* ✨ เพิ่ม class logo-box และ logo-img เพื่อควบคุมขนาดใน CSS มือถือ */}
               <div className="logo-box" style={{width:34,height:34,background:'white',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <img src="/icon.png" alt="TC" className="logo-img" style={{height:24,width:'auto',objectFit:'contain'}}
                   onError={(e:any)=>{e.target.style.display='none';e.target.parentNode.innerHTML='<span style="font-weight:900;font-size:12px;color:#2563eb">TC</span>';}}
@@ -579,7 +595,6 @@ export default function LandingPage() {
             </div>
           </Link>
 
-          {/* Desktop nav links */}
           <div style={{display:'none',alignItems:'center',gap:4,background:'rgba(248,250,255,0.8)',padding:'6px',borderRadius:14,border:'1px solid rgba(37,99,235,0.08)'}} className="lg-show">
             <Link href="/student/courses" className="nav-link">
               <BookOpen size={15} color="#2563eb"/> คอร์สเรียน
@@ -590,7 +605,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Right CTA */}
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             {!loading && (user ? (
               <a href={getDashboardUrl()} className="btn-primary nav-register-btn">
@@ -613,7 +627,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Mobile menu */}
         {isMobileMenuOpen && (
           <div className="mobile-menu">
             <Link href="/student/courses" className="mobile-link" onClick={()=>setIsMobileMenuOpen(false)}>
@@ -642,13 +655,10 @@ export default function LandingPage() {
       {/* ═══════════════ HERO ═══════════════ */}
       <section className="hero page-bg">
         <div className="hero-layout">
-
-          {/* Left/Top: Text Content */}
           <div className="hero-text-col" style={{position:'relative',zIndex:10}}>
             <div className="hero-eyebrow">
               <span>🎓</span>
               <span>TC แพลตฟอร์มติวครบจบในที่เดียว</span>
-              <span style={{width:6,height:6,borderRadius:'50%',background:'#22c55e',display:'inline-block',animation:'pulse 1.5s infinite'}}/>
             </div>
 
             <h1 className="hero-title">
@@ -660,20 +670,35 @@ export default function LandingPage() {
               {' '}🎯
             </h1>
 
-            {/* ✨ โชว์รูปภาพแทรกตรงกลาง (เฉพาะมือถือ) */}
-            <div className="mobile-illo-only">
-              <HeroIllustration />
+            {/* ✨ MOBILE ONLY: รูปภาพแทรกกลาง + กล่องวิชาอยู่รวมกันในวงกลมไข่ปลา ✨ */}
+            <div className="mobile-hero-center md-hide">
+              <div className="hero-deco-circle-mobile"></div>
+              <div className="mobile-illo-wrapper"><HeroIllustration /></div>
+              <div className="subject-ticker-wrap">
+                <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'4px',display:'block',textAlign:'center'}}>ติวได้ทุกวิชา:</span>
+                <div className="subject-ticker-inner">
+                  {subjects.map((s,i) => (
+                    <div key={i} className="subject-item-pill" style={{
+                      background: i === activeSubject ? s.color : 'rgba(248,250,255,0.8)',
+                      color: i === activeSubject ? 'white' : '#64748b',
+                      border: `1.5px solid ${i === activeSubject ? s.color : 'rgba(37,99,235,0.1)'}`
+                    }}>
+                      {s.emoji} {s.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Subject ticker (Mobile Optimized) */}
-            <div className="subject-ticker-wrap">
-              <span style={{fontSize:10,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>ติวได้ทุกวิชา:</span>
+            {/* ✨ DESKTOP ONLY ✨ */}
+            <div className="subject-ticker-wrap md-show">
+              <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em'}}>ติวได้ทุกวิชา:</span>
               <div className="subject-ticker-inner">
                 {subjects.map((s,i) => (
                   <div key={i} className="subject-item-pill" style={{
-                    background: i === activeSubject ? s.color : 'rgba(248,250,255,0.8)',
+                    background: i === activeSubject ? s.color : 'rgba(255,255,255,0.9)',
                     color: i === activeSubject ? 'white' : '#64748b',
-                    border: `1.5px solid ${i === activeSubject ? s.color : 'rgba(37,99,235,0.1)'}`
+                    border: `1px solid ${i === activeSubject ? s.color : 'rgba(37,99,235,0.1)'}`
                   }}>
                     {s.emoji} {s.label}
                   </div>
@@ -697,13 +722,11 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right: Illustration (เฉพาะ Desktop) */}
           <div className="desktop-illo-only">
             <HeroIllustration />
           </div>
         </div>
 
-        {/* Stats bar */}
         <div style={{position:'relative',zIndex:10,maxWidth:1240,margin:'48px auto 0',padding:'0 24px'}}>
           <div className="stats-bar">
             {[
@@ -796,7 +819,6 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* AI character preview */}
             <div style={{position:'relative',display:'none',flexDirection:'column',alignItems:'center'}} className="ai-char-show">
               <svg width="180" height="220" viewBox="0 0 180 220" xmlns="http://www.w3.org/2000/svg">
                 <rect x="45" y="130" width="90" height="80" rx="20" fill="#7c3aed"/>
@@ -826,11 +848,11 @@ export default function LandingPage() {
                 <p style={{margin:'4px 0 0',fontSize:11,color:'#64748b',fontFamily:"'Sarabun',sans-serif"}}>น้องมิน ม.5 สอบได้ A</p>
               </div>
             </div>
+            <style>{`.ai-char-show{display:none!important;} @media(min-width:900px){.ai-char-show{display:flex!important;}} .ai-inner{grid-template-columns:1fr!important;} @media(min-width:900px){.ai-inner{grid-template-columns:1fr auto!important;}}`}</style>
           </div>
         </div>
       </div>
 
-      {/* ═══════════════ FOOTER ═══════════════ */}
       <footer className="footer">
         <div style={{maxWidth:600,margin:'0 auto'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:12}}>
