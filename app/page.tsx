@@ -1,24 +1,32 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { 
-  User, Sparkles, ChevronRight, GraduationCap, Users, Star, MessageCircle, Menu, X, LayoutDashboard, Heart, Rocket, Zap, Trophy, BookOpen
+import {
+  User, Sparkles, ChevronRight, GraduationCap, Users, Star,
+  MessageCircle, Menu, X, LayoutDashboard, Heart, Rocket,
+  BookOpen, Zap, Trophy, Brain, Calculator, FlaskConical,
+  Globe, Music, Palette, ArrowRight
 } from 'lucide-react';
-
 import FloatingAIMascot from '@/components/FloatingAIMascot';
 
-export default function PremiumResponsiveLanding() {
+export default function LandingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('STUDENT');
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [activeSubject, setActiveSubject] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => setScrolled(window.scrollY > 30);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setActiveSubject(p => (p + 1) % 4), 2500);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -26,24 +34,16 @@ export default function PremiumResponsiveLanding() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .maybeSingle();
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
         if (profile) setUserRole((profile.role || 'STUDENT').toUpperCase());
-      } else {
-        setUser(null);
-      }
+      } else { setUser(null); }
       setLoading(false);
     };
     checkUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
       if (!session) setUserRole('STUDENT');
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -52,433 +52,816 @@ export default function PremiumResponsiveLanding() {
     if (userRole === 'TUTOR') return '/tutor';
     return '/student';
   };
-
   const getDashboardText = () => {
-    if (userRole === 'ADMIN') return 'ระบบหลังบ้าน (Admin)';
-    if (userRole === 'TUTOR') return 'ระบบจัดการติวเตอร์';
+    if (userRole === 'ADMIN') return 'Admin Panel';
+    if (userRole === 'TUTOR') return 'Tutor Dashboard';
     return 'ห้องเรียนของฉัน';
   };
 
+  const subjects = [
+    { label: 'คณิตศาสตร์', emoji: '🔢', color: '#2563eb' },
+    { label: 'วิทยาศาสตร์', emoji: '🔬', color: '#059669' },
+    { label: 'ภาษาต่างประเทศ', emoji: '📝', color: '#7c3aed' },
+    { label: 'ฟิสิกส์-เคมี-ชีวะ', emoji: '⚡', color: '#f97316' },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#F8F9FF] font-sans text-slate-800 overflow-x-hidden relative">
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800;900&family=Sarabun:wght@400;500;600&display=swap');
+    <div style={{ minHeight: '100vh', background: '#FAFBFF', fontFamily: "'Prompt', sans-serif", overflowX: 'hidden', position: 'relative' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+        body { margin: 0; }
 
-        * { font-family: 'Prompt', sans-serif; }
-
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        .gradient-text {
-          background: linear-gradient(135deg, #f97316, #ec4899);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .gradient-text-blue {
-          background: linear-gradient(135deg, #2563eb, #7c3aed);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .mesh-bg {
-          background-color: #F8F9FF;
+        /* ── Grid paper background ── */
+        .page-bg {
+          background-color: #FAFBFF;
           background-image:
-            radial-gradient(ellipse 80% 60% at 20% -10%, rgba(37,99,235,0.08) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 50% at 80% 10%, rgba(249,115,22,0.07) 0%, transparent 55%),
-            radial-gradient(ellipse 50% 40% at 50% 90%, rgba(236,72,153,0.06) 0%, transparent 50%);
+            linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px);
+          background-size: 40px 40px;
+          min-height: 100vh;
         }
 
-        .card-glass {
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255,255,255,0.9);
-          box-shadow: 0 8px 32px rgba(37,99,235,0.06), 0 2px 8px rgba(0,0,0,0.04);
+        /* ── Ambient blobs ── */
+        .blob { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
+        .b1 { width:700px;height:700px;top:-200px;left:-180px; background:radial-gradient(circle,rgba(37,99,235,0.09) 0%,transparent 65%); animation:bd1 16s ease-in-out infinite; }
+        .b2 { width:550px;height:550px;bottom:-150px;right:-130px; background:radial-gradient(circle,rgba(249,115,22,0.10) 0%,transparent 65%); animation:bd2 19s ease-in-out infinite; }
+        .b3 { width:400px;height:400px;top:40%;right:8%; background:radial-gradient(circle,rgba(236,72,153,0.07) 0%,transparent 65%); animation:bd1 13s ease-in-out infinite reverse; }
+        .b4 { width:300px;height:300px;top:60%;left:5%; background:radial-gradient(circle,rgba(5,150,105,0.07) 0%,transparent 65%); animation:bd2 10s ease-in-out infinite; }
+        @keyframes bd1 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(35px,-25px)} 66%{transform:translate(-20px,22px)} }
+        @keyframes bd2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,22px)} }
+
+        /* ── Navbar ── */
+        .nav-bar {
+          position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+          transition: all .4s ease;
+          padding: 16px 24px;
+        }
+        .nav-bar.scrolled {
+          padding: 8px 24px;
+        }
+        .nav-inner {
+          max-width: 1240px; margin: 0 auto;
+          display: flex; align-items: center; justify-content: space-between;
+          background: rgba(255,255,255,0.88);
+          backdrop-filter: blur(28px);
+          border: 1.5px solid rgba(255,255,255,0.95);
+          border-radius: 20px;
+          padding: 10px 20px;
+          box-shadow: 0 4px 32px rgba(37,99,235,0.08), 0 1px 4px rgba(0,0,0,0.04);
+          transition: all .4s ease;
+        }
+        .nav-inner.scrolled {
+          border-radius: 16px;
+          box-shadow: 0 8px 40px rgba(37,99,235,0.12);
         }
 
-        .pill-nav {
-          background: rgba(255,255,255,0.85);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
+        .logo-ring {
+          background: conic-gradient(from 0deg,#2563eb,#f97316,#ec4899,#7c3aed,#2563eb);
+          animation: spin 6s linear infinite;
+          border-radius: 14px; padding: 2.5px;
         }
+        @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
 
-        .hero-blob-1 {
-          position: absolute;
-          width: 600px; height: 600px;
-          background: radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 70%);
-          top: -100px; left: -150px;
-          border-radius: 50%;
-          animation: floatBlob1 8s ease-in-out infinite;
+        .nav-link {
+          display: flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border-radius: 12px;
+          font-weight: 700; font-size: 13.5px; color: #475569;
+          text-decoration: none; transition: all .2s ease;
         }
-        .hero-blob-2 {
-          position: absolute;
-          width: 500px; height: 500px;
-          background: radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%);
-          top: 0px; right: -100px;
-          border-radius: 50%;
-          animation: floatBlob2 10s ease-in-out infinite;
-        }
-        .hero-blob-3 {
-          position: absolute;
-          width: 400px; height: 400px;
-          background: radial-gradient(circle, rgba(236,72,153,0.08) 0%, transparent 70%);
-          bottom: -50px; left: 40%;
-          border-radius: 50%;
-          animation: floatBlob1 12s ease-in-out infinite reverse;
-        }
+        .nav-link:hover { background: rgba(37,99,235,0.06); color: #2563eb; }
 
-        @keyframes floatBlob1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -20px) scale(1.05); }
-          66% { transform: translate(-20px, 15px) scale(0.97); }
+        /* ── Buttons ── */
+        .btn-primary {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 11px 24px; border-radius: 14px;
+          background: linear-gradient(135deg,#2563eb,#1d4ed8);
+          color: white; font-weight: 800; font-size: 14px;
+          text-decoration: none; border: none; cursor: pointer;
+          box-shadow: 0 6px 20px rgba(37,99,235,0.32);
+          transition: all .3s cubic-bezier(.34,1.56,.64,1);
+          position: relative; overflow: hidden;
         }
-        @keyframes floatBlob2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-25px, 20px) scale(1.04); }
-        }
+        .btn-primary:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 32px rgba(37,99,235,0.4); }
+        .btn-primary:active { transform: scale(.97); }
 
-        .badge-pulse {
-          animation: badgePulse 2s ease-in-out infinite;
+        .btn-orange {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 11px 24px; border-radius: 14px;
+          background: linear-gradient(135deg,#f97316,#ec4899);
+          color: white; font-weight: 800; font-size: 14px;
+          text-decoration: none; border: none; cursor: pointer;
+          box-shadow: 0 6px 20px rgba(249,115,22,0.32);
+          transition: all .3s cubic-bezier(.34,1.56,.64,1);
+          position: relative; overflow: hidden;
         }
-        @keyframes badgePulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.3); }
-          50% { box-shadow: 0 0 0 8px rgba(249,115,22,0); }
-        }
+        .btn-orange:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 32px rgba(249,115,22,0.42); }
+        .btn-orange:active { transform: scale(.97); }
 
-        .cta-btn-primary {
-          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-          box-shadow: 0 8px 24px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
-          transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        .btn-line {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 11px 24px; border-radius: 14px;
+          background: rgba(240,253,244,0.95);
+          color: #15803d; font-weight: 800; font-size: 14px;
+          text-decoration: none; border: 1.5px solid rgba(34,197,94,0.3);
+          transition: all .3s cubic-bezier(.34,1.56,.64,1);
         }
-        .cta-btn-primary:hover {
-          transform: translateY(-3px) scale(1.02);
-          box-shadow: 0 16px 36px rgba(37,99,235,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
-        }
+        .btn-line:hover { transform: translateY(-2px); background: rgba(220,252,231,1); box-shadow: 0 10px 28px rgba(34,197,94,0.2); }
 
-        .cta-btn-green {
-          background: rgba(240,253,244,0.9);
-          border: 1.5px solid rgba(34,197,94,0.3);
-          transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        .cta-btn-green:hover {
-          transform: translateY(-3px) scale(1.02);
-          background: rgba(220,252,231,0.95);
-          box-shadow: 0 12px 28px rgba(34,197,94,0.15);
-        }
-
-        .feature-card {
-          transition: all 0.4s cubic-bezier(0.34,1.4,0.64,1);
-        }
-        .feature-card:hover {
-          transform: translateY(-10px);
-        }
-
-        .stat-item {
-          animation: fadeInUp 0.6s ease both;
-        }
-
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .nav-link-pill {
-          position: relative;
-          transition: color 0.2s;
-        }
-        .nav-link-pill::after {
-          content: '';
-          position: absolute;
-          bottom: -2px; left: 50%; right: 50%;
-          height: 2px;
-          background: linear-gradient(90deg, #f97316, #ec4899);
-          border-radius: 2px;
-          transition: all 0.3s ease;
-        }
-        .nav-link-pill:hover::after {
-          left: 0; right: 0;
-        }
-
-        .shimmer {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+        .shimmer-overlay {
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
           background-size: 200% 100%;
           animation: shimmer 3s infinite;
         }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
+        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+
+        /* ── Hero ── */
+        .hero { position: relative; padding: 160px 24px 80px; overflow: hidden; }
+        @media(max-width:768px) { .hero { padding: 130px 20px 60px; } }
+
+        .hero-eyebrow {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 8px 18px; border-radius: 100px;
+          background: rgba(255,255,255,0.9);
+          border: 1.5px solid rgba(249,115,22,0.25);
+          font-size: 12px; font-weight: 700; color: #ea580c;
+          backdrop-filter: blur(12px);
+          box-shadow: 0 4px 16px rgba(249,115,22,0.12);
+          animation: eyebrowPulse 2.5s ease-in-out infinite;
+          margin-bottom: 24px;
+        }
+        @keyframes eyebrowPulse { 0%,100%{box-shadow:0 4px 16px rgba(249,115,22,0.12)} 50%{box-shadow:0 4px 24px rgba(249,115,22,0.28)} }
+
+        .hero-title {
+          font-size: clamp(40px, 7vw, 76px);
+          font-weight: 900;
+          line-height: 1.12;
+          color: #0f172a;
+          letter-spacing: -0.03em;
+          margin: 0 0 24px;
+        }
+        .grad-orange { background: linear-gradient(135deg,#f97316,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .grad-blue   { background: linear-gradient(135deg,#2563eb,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+        .subject-ticker {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 6px 16px 6px 8px;
+          background: rgba(255,255,255,0.9);
+          border: 1.5px solid rgba(37,99,235,0.15);
+          border-radius: 100px;
+          box-shadow: 0 4px 16px rgba(37,99,235,0.1);
+          transition: all .4s ease;
+          min-width: 190px;
+        }
+        .ticker-dot { width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:.7} }
+
+        /* ── Floating edu elements (pure CSS/SVG decorations) ── */
+        .edu-float {
+          position: absolute; pointer-events: none;
+          animation: eduFloat 4s ease-in-out infinite;
+        }
+        @keyframes eduFloat { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-14px) rotate(4deg)} }
+
+        /* ── Hero illustration container ── */
+        .hero-illo { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
+
+        /* ── Features section ── */
+        .section { position: relative; z-index: 10; padding: 0 24px 80px; max-width: 1240px; margin: 0 auto; }
+        .section-tag {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 6px 16px; border-radius: 100px;
+          background: rgba(37,99,235,0.07);
+          border: 1px solid rgba(37,99,235,0.15);
+          font-size: 11px; font-weight: 800; color: #2563eb;
+          text-transform: uppercase; letter-spacing: .08em;
+          margin-bottom: 12px;
+        }
+        .section-title { font-size: clamp(28px,4vw,40px); font-weight: 900; color: #0f172a; margin: 0 0 40px; }
+
+        /* ── Edu card grid ── */
+        .edu-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+        @media(max-width:900px) { .edu-grid { grid-template-columns: repeat(2,1fr); } }
+        @media(max-width:600px) { .edu-grid { grid-template-columns: 1fr; } }
+
+        .edu-card {
+          border-radius: 28px; padding: 32px;
+          background: rgba(255,255,255,0.85);
+          backdrop-filter: blur(20px);
+          border: 1.5px solid rgba(255,255,255,0.95);
+          box-shadow: 0 4px 24px rgba(37,99,235,0.06);
+          text-decoration: none; color: inherit;
+          display: flex; flex-direction: column;
+          transition: all .4s cubic-bezier(.34,1.4,.64,1);
+          position: relative; overflow: hidden;
+        }
+        .edu-card:hover { transform: translateY(-10px); box-shadow: 0 20px 56px rgba(37,99,235,0.13); }
+        .edu-card .card-bg-accent {
+          position: absolute; top:-40px; right:-40px;
+          width: 120px; height: 120px; border-radius: 50%;
+          transition: transform .6s ease;
+        }
+        .edu-card:hover .card-bg-accent { transform: scale(2); }
+
+        .card-icon-wrap {
+          width: 60px; height: 60px; border-radius: 18px;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 20px; position: relative; z-index: 1;
+          transition: all .3s cubic-bezier(.34,1.56,.64,1);
+        }
+        .edu-card:hover .card-icon-wrap { transform: scale(1.12) rotate(-4deg); }
+
+        .card-emoji { font-size: 36px; position: absolute; top:-12px; right:-4px; z-index: 2; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15)); }
+
+        .card-tag {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 12px; border-radius: 100px;
+          font-size: 10px; font-weight: 800;
+          text-transform: uppercase; letter-spacing: .08em;
+          margin-bottom: 14px; width: fit-content;
         }
 
-        .tag-chip {
-          background: rgba(37,99,235,0.06);
-          border: 1px solid rgba(37,99,235,0.12);
+        .card-title { font-size: 20px; font-weight: 900; color: #0f172a; margin: 0 0 10px; line-height: 1.3; }
+        .card-desc { font-size: 13px; color: #64748b; line-height: 1.65; margin: 0 0 24px; font-family:'Sarabun',sans-serif; flex: 1; }
+        .card-cta { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; margin-top: auto; }
+        .cta-arrow {
+          width: 28px; height: 28px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          transition: transform .25s ease;
         }
-      `}} />
+        .edu-card:hover .cta-arrow { transform: translateX(4px); }
 
-      {/* ✨ Navbar */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled 
-          ? 'py-2 shadow-[0_4px_40px_rgba(37,99,235,0.08)]' 
-          : 'py-3'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className={`flex items-center justify-between px-4 sm:px-6 transition-all duration-500 rounded-2xl ${
-            scrolled 
-              ? 'pill-nav h-16 shadow-sm border border-white/80' 
-              : 'h-20 md:h-24 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/70'
-          }`}>
-            
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-orange-400 rounded-2xl blur-md opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                <div className="relative p-2 bg-white rounded-2xl shadow-sm border border-slate-100">
-                  <img src="/icon.png" alt="TC Center" className="h-9 md:h-11 w-auto object-contain" />
-                </div>
+        /* ── AI Section ── */
+        .ai-section {
+          position: relative; z-index: 10; padding: 0 24px 80px;
+          max-width: 1240px; margin: 0 auto;
+        }
+        .ai-banner {
+          border-radius: 32px; overflow: hidden; position: relative;
+          background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+          padding: 56px 48px;
+          box-shadow: 0 24px 80px rgba(15,23,42,0.3);
+        }
+        @media(max-width:768px) { .ai-banner { padding: 36px 28px; } }
+
+        .ai-grid-bg {
+          position: absolute; inset: 0; pointer-events: none;
+          background-image: linear-gradient(rgba(99,102,241,0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(99,102,241,0.08) 1px, transparent 1px);
+          background-size: 32px 32px;
+        }
+        .ai-glow-1 { position: absolute; top:-100px; left:-100px; width:400px; height:400px; border-radius:50%; background:radial-gradient(circle,rgba(99,102,241,0.2) 0%,transparent 65%); pointer-events:none; }
+        .ai-glow-2 { position: absolute; bottom:-100px; right:-50px; width:350px; height:350px; border-radius:50%; background:radial-gradient(circle,rgba(249,115,22,0.15) 0%,transparent 65%); pointer-events:none; }
+
+        /* ── Subject pills row ── */
+        .subject-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 40px; }
+        .subject-pill {
+          display: inline-flex; align-items: center; gap: 7px;
+          padding: 8px 16px; border-radius: 100px;
+          font-size: 13px; font-weight: 700;
+          border: 1.5px solid; cursor: default;
+          transition: all .25s ease;
+          background: rgba(255,255,255,0.06);
+          color: rgba(255,255,255,0.75);
+          border-color: rgba(255,255,255,0.1);
+        }
+        .subject-pill:hover { background: rgba(255,255,255,0.12); color: white; }
+
+        /* ── Testimonial floating cards ── */
+        .testimonial-float {
+          position: absolute;
+          background: rgba(255,255,255,0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 16px 20px;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+          border: 1.5px solid rgba(255,255,255,1);
+          min-width: 200px; max-width: 240px;
+          pointer-events: none;
+        }
+        .tf-top { top: 24px; right: 24px; animation: tfFloat1 5s ease-in-out infinite; }
+        .tf-bot { bottom: 32px; right: 40px; animation: tfFloat2 6s ease-in-out infinite; }
+        @keyframes tfFloat1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes tfFloat2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+
+        /* ── Mobile nav ── */
+        .mobile-menu {
+          position: fixed; top: 80px; left: 16px; right: 16px; z-index: 99;
+          background: rgba(255,255,255,0.97);
+          backdrop-filter: blur(32px);
+          border-radius: 24px;
+          border: 1.5px solid rgba(255,255,255,0.95);
+          box-shadow: 0 20px 60px rgba(37,99,235,0.12);
+          padding: 20px; display: flex; flex-direction: column; gap: 10px;
+          animation: menuDrop .3s cubic-bezier(.34,1.4,.64,1) both;
+        }
+        @keyframes menuDrop { from{opacity:0;transform:translateY(-12px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .mobile-link {
+          display: flex; align-items: center; gap: 12px;
+          padding: 13px 16px; border-radius: 16px;
+          font-weight: 700; font-size: 14px; color: #1e293b;
+          text-decoration: none; background: rgba(248,250,255,0.8);
+          border: 1.5px solid rgba(37,99,235,0.08);
+          transition: all .2s ease;
+        }
+        .mobile-link:hover { background: rgba(37,99,235,0.06); border-color: rgba(37,99,235,0.2); }
+
+        /* ── Footer ── */
+        .footer { background: white; border-top: 1.5px solid rgba(37,99,235,0.08); padding: 48px 24px; text-align: center; }
+
+        /* ── Scroll snap cards on mobile ── */
+        .card-scroll {
+          display: flex; gap: 16px; overflow-x: auto;
+          scroll-snap-type: x mandatory; padding-bottom: 8px;
+          margin: 0 -24px; padding-left: 24px; padding-right: 24px;
+        }
+        .card-scroll::-webkit-scrollbar { display: none; }
+        .card-scroll .edu-card { min-width: min(80vw,320px); scroll-snap-align: start; flex-shrink: 0; }
+        @media(min-width:601px) { .card-scroll { display: grid; grid-template-columns: repeat(3,1fr); margin: 0; padding: 0; } .card-scroll .edu-card { min-width: auto; } }
+
+        /* ── Hero layout ── */
+        .hero-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; max-width: 1240px; margin: 0 auto; }
+        @media(max-width:900px) { .hero-layout { grid-template-columns: 1fr; text-align: center; } .hero-ctas { justify-content: center; } }
+        .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+
+        /* ── Stats bar ── */
+        .stats-bar {
+          display: flex; align-items: center; gap: 0;
+          background: rgba(255,255,255,0.88);
+          backdrop-filter: blur(20px);
+          border: 1.5px solid rgba(255,255,255,0.95);
+          border-radius: 20px;
+          box-shadow: 0 4px 24px rgba(37,99,235,0.08);
+          margin: 48px auto 0; max-width: 700px;
+          overflow: hidden;
+        }
+        .stat-item { flex: 1; padding: 20px 24px; text-align: center; position: relative; }
+        .stat-item:not(:last-child)::after { content:''; position:absolute; right:0; top:20%; bottom:20%; width:1px; background:rgba(37,99,235,0.1); }
+        .stat-val { font-size: 28px; font-weight: 900; color: #0f172a; line-height: 1; margin-bottom: 4px; }
+        .stat-lbl { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; }
+      `}</style>
+
+      {/* Ambient blobs */}
+      <div className="blob b1"/><div className="blob b2"/><div className="blob b3"/><div className="blob b4"/>
+
+      {/* ═══════════════ NAVBAR ═══════════════ */}
+      <nav className={`nav-bar ${scrolled ? 'scrolled' : ''}`}>
+        <div className={`nav-inner ${scrolled ? 'scrolled' : ''}`}>
+
+          {/* Logo */}
+          <Link href="/" style={{display:'flex',alignItems:'center',gap:12,textDecoration:'none'}}>
+            <div className="logo-ring">
+              <div style={{width:38,height:38,background:'white',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <img src="/icon.png" alt="TC" style={{height:28,width:'auto',objectFit:'contain'}}
+                  onError={(e:any)=>{e.target.style.display='none';e.target.parentNode.innerHTML='<span style="font-weight:900;font-size:13px;color:#2563eb">TC</span>';}}
+                />
               </div>
-              <div className="flex flex-col">
-                <span className="text-lg md:text-xl font-black tracking-widest gradient-text-blue leading-none">TC CENTER</span>
-                <span className="text-[9px] md:text-[10px] font-semibold tracking-[0.15em] text-orange-400 mt-0.5">The Convergence</span>
-              </div>
+            </div>
+            <div>
+              <p style={{fontWeight:900,fontSize:17,background:'linear-gradient(135deg,#2563eb,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1,margin:0,letterSpacing:'0.05em'}}>TC CENTER</p>
+              <p style={{fontSize:9,fontWeight:700,color:'#f97316',letterSpacing:'0.18em',textTransform:'uppercase',margin:'3px 0 0'}}>The Convergence</p>
+            </div>
+          </Link>
+
+          {/* Desktop nav links */}
+          <div style={{display:'none',alignItems:'center',gap:4,background:'rgba(248,250,255,0.8)',padding:'6px',borderRadius:14,border:'1px solid rgba(37,99,235,0.08)'}} className="lg-show">
+            <Link href="/student/courses" className="nav-link">
+              <BookOpen size={15} color="#2563eb"/> คอร์สเรียน
             </Link>
+            <div style={{width:1,height:16,background:'rgba(37,99,235,0.12)',margin:'0 4px'}}/>
+            <Link href="#" className="nav-link">
+              <Users size={15} color="#ec4899"/> ทีมติวเตอร์
+            </Link>
+          </div>
 
-            {/* Center Nav */}
-            <div className="hidden lg:flex items-center gap-1 bg-slate-50/80 px-3 py-2 rounded-2xl border border-slate-100">
-              <Link href="/student/courses" className="nav-link-pill flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 hover:text-blue-600 rounded-xl hover:bg-white transition-all">
-                <BookOpen size={16} className="text-blue-500"/> คอร์สเรียน
-              </Link>
-              <div className="w-px h-4 bg-slate-200 mx-1"></div>
-              <Link href="#" className="nav-link-pill flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 hover:text-pink-600 rounded-xl hover:bg-white transition-all">
-                <Users size={16} className="text-pink-500"/> ทีมติวเตอร์
-              </Link>
-            </div>
-
-            {/* Right Actions */}
-            <div className="hidden md:flex items-center gap-3">
-              {!loading && (
-                user ? (
-                  <a href={getDashboardUrl()} className="cta-btn-primary flex items-center gap-2 px-6 py-2.5 text-white font-bold text-sm rounded-2xl active:scale-95">
-                    <LayoutDashboard size={16} /> {getDashboardText()}
-                  </a>
-                ) : (
-                  <>
-                    <Link href="/login" className="flex items-center gap-2 text-sm font-semibold text-blue-600 px-5 py-2.5 rounded-2xl hover:bg-blue-50 transition-all border border-blue-100">
-                      <User size={16} /> เข้าสู่ระบบ
-                    </Link>
-                    <Link href="/register" className="relative overflow-hidden flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold text-sm rounded-2xl shadow-[0_4px_16px_rgba(249,115,22,0.35)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(249,115,22,0.4)] transition-all active:scale-95">
-                      <div className="absolute inset-0 shimmer"></div>
-                      <Rocket size={16}/> <span className="relative">เริ่มเรียนฟรี!</span>
-                    </Link>
-                  </>
-                )
-              )}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button className="md:hidden flex items-center justify-center w-10 h-10 rounded-2xl bg-white border border-slate-100 shadow-sm text-slate-500 hover:text-blue-500 transition-colors" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-              {isMobileMenuOpen ? <X size={20} className="text-orange-500" /> : <Menu size={20} />}
+          {/* Right CTA */}
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            {!loading && (user ? (
+              <a href={getDashboardUrl()} className="btn-primary">
+                <LayoutDashboard size={16}/> {getDashboardText()}
+              </a>
+            ) : (
+              <>
+                <Link href="/login" style={{display:'flex',alignItems:'center',gap:7,padding:'9px 18px',borderRadius:12,background:'rgba(37,99,235,0.07)',color:'#2563eb',fontWeight:700,fontSize:13.5,textDecoration:'none',border:'1.5px solid rgba(37,99,235,0.15)',transition:'all .2s ease'}} className="md-show">
+                  <User size={15}/> เข้าสู่ระบบ
+                </Link>
+                <Link href="/register" className="btn-orange">
+                  <div className="shimmer-overlay"/>
+                  <Rocket size={15}/> <span style={{position:'relative'}}>เริ่มเรียนฟรี!</span>
+                </Link>
+              </>
+            ))}
+            <button onClick={()=>setIsMobileMenuOpen(!isMobileMenuOpen)} style={{width:38,height:38,borderRadius:12,border:'1.5px solid rgba(37,99,235,0.12)',background:'rgba(255,255,255,0.9)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#475569'}} className="md-hide">
+              {isMobileMenuOpen ? <X size={19} color="#f97316"/> : <Menu size={19}/>}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile menu */}
         {isMobileMenuOpen && (
-          <div className="mx-4 mt-2 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.1)] rounded-3xl p-5 flex flex-col gap-3 z-40 animate-in slide-in-from-top-5 duration-300">
-            <Link href="/student/courses" className="flex items-center gap-3 p-3.5 bg-blue-50 rounded-2xl text-blue-600 font-semibold text-sm border border-blue-100/80" onClick={() => setIsMobileMenuOpen(false)}>
-              <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center"><GraduationCap size={16}/></div>
+          <div className="mobile-menu">
+            <Link href="/student/courses" className="mobile-link" onClick={()=>setIsMobileMenuOpen(false)}>
+              <span style={{width:36,height:36,borderRadius:10,background:'rgba(37,99,235,0.1)',display:'flex',alignItems:'center',justifyContent:'center'}}>📖</span>
               คอร์สเรียนทั้งหมด
             </Link>
-            <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-100 to-transparent"></div>
+            <div style={{height:1,background:'rgba(37,99,235,0.07)',margin:'4px 0'}}/>
             {user ? (
-              <a href={getDashboardUrl()} className="w-full flex justify-center items-center gap-2 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-sm rounded-2xl shadow-lg" onClick={() => setIsMobileMenuOpen(false)}>
+              <a href={getDashboardUrl()} className="mobile-link" onClick={()=>setIsMobileMenuOpen(false)} style={{background:'linear-gradient(135deg,#2563eb,#1d4ed8)',color:'white',border:'none',justifyContent:'center'}}>
                 <LayoutDashboard size={18}/> {getDashboardText()}
               </a>
             ) : (
-              <div className="flex flex-col gap-2">
-                <Link href="/login" className="flex justify-center items-center gap-2 w-full py-3 bg-slate-50 text-slate-700 font-semibold text-sm rounded-2xl border border-slate-100" onClick={() => setIsMobileMenuOpen(false)}>
-                  <User size={16} /> เข้าสู่ระบบ
+              <>
+                <Link href="/login" className="mobile-link" onClick={()=>setIsMobileMenuOpen(false)} style={{justifyContent:'center'}}>
+                  <User size={16}/> เข้าสู่ระบบ
                 </Link>
-                <Link href="/register" className="flex justify-center items-center gap-2 w-full py-3.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold text-sm rounded-2xl shadow-[0_4px_16px_rgba(249,115,22,0.3)]" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link href="/register" className="mobile-link" onClick={()=>setIsMobileMenuOpen(false)} style={{background:'linear-gradient(135deg,#f97316,#ec4899)',color:'white',border:'none',justifyContent:'center'}}>
                   <Rocket size={16}/> สมัครเรียนออนไลน์ ✨
                 </Link>
-              </div>
+              </>
             )}
           </div>
         )}
       </nav>
 
-      {/* ✨ Hero Section */}
-      <section className="relative pt-36 md:pt-52 pb-24 md:pb-36 px-6 mesh-bg overflow-hidden">
-        <div className="hero-blob-1"></div>
-        <div className="hero-blob-2"></div>
-        <div className="hero-blob-3"></div>
+      <style>{`
+        .lg-show { display: none!important; }
+        @media(min-width:900px){ .lg-show { display: flex!important; } }
+        .md-show { display: none!important; }
+        @media(min-width:640px){ .md-show { display: flex!important; } }
+        .md-hide { display: flex!important; }
+        @media(min-width:640px){ .md-hide { display: none!important; } }
+      `}</style>
 
-        {/* Decorative Grid */}
-        <div className="absolute inset-0 opacity-[0.015]" style={{backgroundImage: 'linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px)', backgroundSize: '60px 60px'}}></div>
+      {/* ═══════════════ HERO ═══════════════ */}
+      <section className="hero page-bg">
+        <div className="hero-layout">
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-white/80 border border-orange-200/80 rounded-full text-xs font-semibold text-orange-600 mb-10 badge-pulse cursor-default shadow-sm backdrop-blur-sm">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-              <Heart size={13} className="text-pink-500 fill-pink-500" />
-            </span>
-            เรียนสนุก เข้าใจง่าย สไตล์ TC Center
-            <ChevronRight size={13} className="text-orange-400"/>
+          {/* Left: text */}
+          <div style={{position:'relative',zIndex:10}}>
+            <div className="hero-eyebrow">
+              <span>🎓</span>
+              <span>TC แพลตฟอร์มติวครบจบในที่เดียว</span>
+              <span style={{width:6,height:6,borderRadius:'50%',background:'#22c55e',display:'inline-block',animation:'pulse 1.5s infinite'}}/>
+            </div>
+
+            <h1 className="hero-title">
+              เก่งขึ้น{' '}
+              <span className="grad-orange">รอบด้าน!</span>
+              <br/>
+              สอบติด{' '}
+              <span className="grad-blue">คณะในฝัน</span>
+              {' '}🎯
+            </h1>
+
+            {/* Subject ticker */}
+            <div style={{marginBottom:28}}>
+              <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 5px 5px 10px',background:'rgba(255,255,255,0.9)',border:'1.5px solid rgba(37,99,235,0.12)',borderRadius:100,boxShadow:'0 4px 16px rgba(37,99,235,0.08)'}}>
+                <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em'}}>ติวได้ทุกวิชา:</span>
+                <div style={{display:'flex',gap:6}}>
+                  {subjects.map((s,i) => (
+                    <div key={i} style={{padding:'5px 12px',borderRadius:100,fontSize:12,fontWeight:800,transition:'all .4s ease',background:i===activeSubject?s.color:'rgba(248,250,255,0.8)',color:i===activeSubject?'white':'#64748b',border:`1.5px solid ${i===activeSubject?s.color:'rgba(37,99,235,0.1)'}`}}>
+                      {s.emoji} {s.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <p style={{fontSize:16,color:'#64748b',lineHeight:1.7,maxWidth:480,margin:'0 0 8px',fontFamily:"'Sarabun',sans-serif",fontWeight:500}}>
+              จัดตารางเรียนเองได้ มีคอร์สตั้งแต่ประถมถึงมหาลัย พร้อมติวเตอร์ระดับท็อปคอยดูแลทุกก้าว 🚀
+            </p>
+
+            <div className="hero-ctas">
+              <a href={user ? getDashboardUrl() : "/register"} className="btn-primary">
+                <div className="shimmer-overlay"/>
+                <Sparkles size={17} color="#fcd34d"/>
+                <span style={{position:'relative'}}>{user ? "เข้าห้องเรียน" : "เริ่มเรียนฟรีวันนี้!"}</span>
+              </a>
+              <Link href="https://lin.ee/ZSDR4B3" target="_blank" className="btn-line">
+                <MessageCircle size={17} color="#16a34a"/> ปรึกษาแอดมิน LINE
+              </Link>
+            </div>
           </div>
 
-          {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl md:text-[4.5rem] font-black leading-[1.15] mb-6 text-slate-900 tracking-tight">
-            เก่งขึ้น{' '}
-            <span className="gradient-text">จนครูทัก!</span>
-            <br />
-            <span className="relative inline-block">
-              สอบติดคณะในฝัน
-              <span className="ml-3">🎯</span>
-            </span>
-          </h1>
+          {/* Right: Illustration */}
+          <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            {/* Main SVG illustration */}
+            <div style={{position:'relative',width:'100%',maxWidth:480}}>
 
-          {/* Subheading */}
-          <p className="text-slate-500 text-base md:text-lg max-w-xl mx-auto mb-12 font-medium leading-relaxed" style={{fontFamily: 'Sarabun, sans-serif'}}>
-            แพลตฟอร์มเรียนออนไลน์ที่เข้าใจวัยรุ่นที่สุด จัดตารางเรียนเองได้ มีคอร์สตั้งแต่ประถมถึงมหาลัย พร้อมติวเตอร์ระดับท็อปคอยดูแล!
-          </p>
+              {/* Big decorative circle */}
+              <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:380,height:380,borderRadius:'50%',background:'linear-gradient(135deg,rgba(37,99,235,0.08),rgba(249,115,22,0.06))',border:'2px dashed rgba(37,99,235,0.15)',animation:'bd2 8s ease-in-out infinite'}}/>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
-            <a href={user ? getDashboardUrl() : "/register"} className="cta-btn-primary w-full sm:w-auto px-8 py-4 text-white font-bold rounded-2xl flex items-center justify-center gap-2.5 text-sm active:scale-95">
-              {user ? "เข้าสู่ระบบหลังบ้าน" : "ทดลองเรียนฟรี"} <Sparkles size={18} className="text-amber-300"/>
-            </a>
-            <Link href="https://lin.ee/ZSDR4B3" target="_blank" className="cta-btn-green w-full sm:w-auto px-8 py-4 text-green-700 font-bold rounded-2xl flex items-center justify-center gap-2.5 text-sm active:scale-95">
-              <MessageCircle size={18} className="text-[#00B900]" /> ปรึกษาพี่แอดมิน
-            </Link>
+              {/* Center: SVG Student + AI character */}
+              <svg viewBox="0 0 400 380" style={{width:'100%',maxWidth:440,position:'relative',zIndex:5}} xmlns="http://www.w3.org/2000/svg">
+
+                {/* Book / desk */}
+                <rect x="80" y="280" width="240" height="14" rx="7" fill="#e2e8f0"/>
+                <rect x="100" y="260" width="200" height="22" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1.5"/>
+                {/* Book pages */}
+                <rect x="104" y="263" width="92" height="16" rx="3" fill="#eff6ff"/>
+                <rect x="200" y="263" width="92" height="16" rx="3" fill="#fff7ed"/>
+                <line x1="200" y1="263" x2="200" y2="279" stroke="#e2e8f0" strokeWidth="1"/>
+                {/* Book lines */}
+                <line x1="112" y1="268" x2="188" y2="268" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="112" y1="273" x2="170" y2="273" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="208" y1="268" x2="284" y2="268" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="208" y1="273" x2="260" y2="273" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
+
+                {/* ── STUDENT CHARACTER (left) ── */}
+                {/* Body */}
+                <rect x="90" y="180" width="80" height="90" rx="20" fill="#2563eb"/>
+                {/* Collar/collar stripe */}
+                <path d="M130 180 L118 195 L130 200 L142 195 Z" fill="white"/>
+                {/* Neck */}
+                <rect x="120" y="160" width="20" height="24" rx="8" fill="#fbbf24"/>
+                {/* Head */}
+                <ellipse cx="130" cy="145" rx="36" ry="34" fill="#fbbf24"/>
+                {/* Hair */}
+                <path d="M96 130 Q98 105 130 100 Q162 105 164 130 Q155 118 130 116 Q105 118 96 130Z" fill="#1e293b"/>
+                {/* Eyes */}
+                <ellipse cx="118" cy="140" rx="6" ry="7" fill="white"/>
+                <ellipse cx="142" cy="140" rx="6" ry="7" fill="white"/>
+                <circle cx="120" cy="141" r="4" fill="#1e293b"/>
+                <circle cx="144" cy="141" r="4" fill="#1e293b"/>
+                <circle cx="121" cy="139" r="1.5" fill="white"/>
+                <circle cx="145" cy="139" r="1.5" fill="white"/>
+                {/* Smile */}
+                <path d="M120 153 Q130 162 140 153" stroke="#1e293b" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+                {/* Cheeks */}
+                <ellipse cx="108" cy="152" rx="8" ry="5" fill="#f87171" opacity="0.4"/>
+                <ellipse cx="152" cy="152" rx="8" ry="5" fill="#f87171" opacity="0.4"/>
+                {/* Glasses */}
+                <rect x="109" y="134" width="16" height="12" rx="4" fill="none" stroke="#1e293b" strokeWidth="2"/>
+                <rect x="133" y="134" width="16" height="12" rx="4" fill="none" stroke="#1e293b" strokeWidth="2"/>
+                <line x1="125" y1="140" x2="133" y2="140" stroke="#1e293b" strokeWidth="2"/>
+                <line x1="93" y1="138" x2="109" y2="138" stroke="#1e293b" strokeWidth="1.5"/>
+                <line x1="149" y1="138" x2="163" y2="138" stroke="#1e293b" strokeWidth="1.5"/>
+                {/* Arm holding pencil */}
+                <path d="M168 205 Q190 215 195 230" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" fill="none"/>
+                {/* Pencil */}
+                <rect x="188" y="225" width="8" height="36" rx="4" fill="#fcd34d" transform="rotate(-30,192,243)"/>
+                <polygon points="192,255 196,255 194,265" fill="#f97316"/>
+                <rect x="188" y="223" width="8" height="6" rx="2" fill="#94a3b8" transform="rotate(-30,192,226)"/>
+                {/* Left arm */}
+                <path d="M92 205 Q70 215 75 240" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" fill="none"/>
+                {/* Hand on book */}
+                <ellipse cx="76" cy="244" rx="12" ry="9" fill="#fbbf24"/>
+                {/* Backpack strap hint */}
+                <path d="M100 185 Q115 220 110 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
+                <path d="M160 185 Q145 220 150 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
+
+                {/* ── AI / ROBOT CHARACTER (right) ── */}
+                {/* Body */}
+                <rect x="235" y="175" width="85" height="100" rx="22" fill="#7c3aed"/>
+                {/* Chest panel */}
+                <rect x="248" y="195" width="58" height="42" rx="10" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
+                {/* Chest dots (LEDs) */}
+                <circle cx="263" cy="208" r="4" fill="#34d399"/>
+                <circle cx="278" cy="208" r="4" fill="#fbbf24" opacity="0.9"/>
+                <circle cx="293" cy="208" r="4" fill="#f87171" opacity="0.9"/>
+                {/* Chest bar */}
+                <rect x="258" y="220" width="40" height="6" rx="3" fill="rgba(255,255,255,0.3)"/>
+                <rect x="258" y="220" width="26" height="6" rx="3" fill="#34d399"/>
+
+                {/* Neck */}
+                <rect x="265" y="155" width="24" height="22" rx="5" fill="#6d28d9"/>
+
+                {/* Head */}
+                <rect x="230" y="100" width="95" height="60" rx="22" fill="#6d28d9"/>
+                {/* Antenna */}
+                <line x1="277" y1="100" x2="277" y2="78" stroke="#6d28d9" strokeWidth="4" strokeLinecap="round"/>
+                <circle cx="277" cy="72" r="8" fill="#f97316"/>
+                <circle cx="277" cy="72" r="4" fill="white" opacity="0.7"/>
+                {/* Ear panels */}
+                <rect x="225" y="112" width="8" height="30" rx="4" fill="#5b21b6"/>
+                <rect x="322" y="112" width="8" height="30" rx="4" fill="#5b21b6"/>
+                {/* Eye screens */}
+                <rect x="242" y="112" rx="10" width="32" height="28" fill="#0f172a"/>
+                <rect x="280" y="112" rx="10" width="32" height="28" fill="#0f172a"/>
+                {/* Eye glow */}
+                <rect x="246" y="116" rx="7" width="24" height="20" fill="#38bdf8" opacity="0.9"/>
+                <rect x="284" y="116" rx="7" width="24" height="20" fill="#38bdf8" opacity="0.9"/>
+                {/* Eye pupils (scan line) */}
+                <line x1="246" y1="126" x2="270" y2="126" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round"/>
+                <line x1="284" y1="126" x2="308" y2="126" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round"/>
+                {/* Smile LED strip */}
+                <path d="M252 147 Q278 158 308 147" stroke="#34d399" strokeWidth="3" fill="none" strokeLinecap="round"/>
+
+                {/* Arms */}
+                <rect x="318" y="185" width="20" height="60" rx="10" fill="#6d28d9"/>
+                <ellipse cx="328" cy="250" rx="12" ry="10" fill="#5b21b6"/>
+                <rect x="212" y="185" width="20" height="60" rx="10" fill="#6d28d9"/>
+                <ellipse cx="222" cy="250" rx="12" ry="10" fill="#5b21b6"/>
+
+                {/* Speech bubble from AI */}
+                <rect x="300" y="55" width="85" height="44" rx="14" fill="white" stroke="rgba(37,99,235,0.2)" strokeWidth="1.5"/>
+                <path d="M310 99 L305 112 L320 99Z" fill="white"/>
+                <text x="342" y="73" textAnchor="middle" fontSize="11" fontWeight="700" fill="#0f172a">TC AI</text>
+                <text x="342" y="88" textAnchor="middle" fontSize="10" fill="#64748b">พร้อมช่วย!</text>
+
+                {/* Floating elements */}
+                {/* Star 1 */}
+                <g style={{animation:'eduFloat 3s ease-in-out infinite'}}>
+                  <text x="45" y="155" fontSize="22">⭐</text>
+                </g>
+                {/* Star 2 */}
+                <g style={{animation:'eduFloat 4s ease-in-out 1s infinite'}}>
+                  <text x="350" y="310" fontSize="18">✨</text>
+                </g>
+                {/* Formula */}
+                <g style={{animation:'eduFloat 5s ease-in-out .5s infinite'}}>
+                  <text x="30" y="230" fontSize="13" fill="#7c3aed" fontWeight="700">E=mc²</text>
+                </g>
+                {/* Plus sign */}
+                <g style={{animation:'eduFloat 3.5s ease-in-out 1.5s infinite'}}>
+                  <text x="355" y="170" fontSize="26" fill="#2563eb" fontWeight="900">+</text>
+                </g>
+                {/* Light bulb */}
+                <g style={{animation:'eduFloat 4.5s ease-in-out .2s infinite'}}>
+                  <text x="48" y="295" fontSize="22">💡</text>
+                </g>
+                {/* Atom */}
+                <g style={{animation:'eduFloat 4s ease-in-out 2s infinite'}}>
+                  <text x="355" y="235" fontSize="18">⚛️</text>
+                </g>
+              </svg>
+
+              {/* Floating badge: AI */}
+              <div style={{position:'absolute',top:10,left:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(124,58,237,0.2)',border:'1.5px solid rgba(124,58,237,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat1 4s ease-in-out infinite',zIndex:10}}>
+                <span style={{fontSize:20}}>🤖</span>
+                <div>
+                  <p style={{margin:0,fontSize:11,fontWeight:900,color:'#6d28d9'}}>TC AI Tutor</p>
+                  <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>ตอบทุกคำถาม Ai TC พี่หมี</p>
+                </div>
+              </div>
+
+              {/* Floating badge: streak */}
+              <div style={{position:'absolute',bottom:40,right:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(249,115,22,0.2)',border:'1.5px solid rgba(249,115,22,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat2 5s ease-in-out infinite',zIndex:10}}>
+                <span style={{fontSize:20}}>🔥</span>
+                <div>
+                  <p style={{margin:0,fontSize:11,fontWeight:900,color:'#ea580c'}}>Streak 14 วัน!</p>
+                  <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>เก่งมากเลย ต่อไปเลย</p>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
 
-          {/* Stats Row */}
-          <div className="mt-16 flex items-center justify-center gap-2 sm:gap-0 flex-wrap sm:flex-nowrap">
+        {/* Stats bar */}
+        <div style={{position:'relative',zIndex:10,maxWidth:1240,margin:'48px auto 0',padding:'0 24px'}}>
+          <div className="stats-bar">
             {[
-              //{ value: '5,000+', label: 'นักเรียน', icon: '🎓', color: 'blue' },
-              //{ value: '98%', label: 'พึงพอใจ', icon: '⭐', color: 'orange' },
-              //{ value: '200+', label: 'คอร์สเรียน', icon: '📚', color: 'pink' },
-            ].map((stat, i) => (
-              <React.Fragment key={i}>
-                {i < 2 && <div className="hidden sm:block w-px h-12 bg-gradient-to-b from-transparent via-slate-200 to-transparent"></div>}
-              </React.Fragment>
+              {val:'100+',lbl:'นักเรียน',emoji:'🎓'},
+              {val:'98%',lbl:'ผ่านสอบ',emoji:'⭐'},
+              {val:'50+',lbl:'ติวเตอร์',emoji:'👨‍🏫'},
+              {val:'พี่หมี TC',lbl:'AI ช่วยสอน',emoji:'🤖'},
+            ].map((s,i) => (
+              <div className="stat-item" key={i}>
+                <div style={{fontSize:22,marginBottom:6}}>{s.emoji}</div>
+                <div className="stat-val">{s.val}</div>
+                <div className="stat-lbl">{s.lbl}</div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ✨ Features Section */}
-      <section className="relative z-20 max-w-7xl mx-auto pb-36 px-6">
-        
-        {/* Section Label */}
-        <div className="text-center mb-12">
-          <span className="tag-chip inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold text-blue-600 mb-4">
-            <Zap size={12} /> ทำไมต้อง TC Center
-          </span>
-          <h2 className="text-2xl md:text-3xl font-black text-slate-800">ครบ จบ ที่เดียว</h2>
+      {/* ═══════════════ FEATURES ═══════════════ */}
+      <div style={{position:'relative',zIndex:10,maxWidth:1240,margin:'0 auto',padding:'60px 24px 80px'}}>
+        <div style={{textAlign:'center',marginBottom:40}}>
+          <div className="section-tag"><Zap size={11}/> ทำไมต้อง TC Center</div>
+          <h2 className="section-title">ครบ จบ ที่เดียว 🏆</h2>
         </div>
 
-        <div className="flex lg:grid lg:grid-cols-3 gap-5 overflow-x-auto snap-x snap-mandatory pb-4 lg:pb-0 hide-scrollbar scroll-pl-6 -mx-6 px-6 lg:mx-0 lg:px-0">
+        <div className="card-scroll">
           {[
-            {
-              icon: GraduationCap,
-              emoji: '📖',
-              title: 'คอร์สเรียนครบสูตร',
-              desc: 'เนื้อหาแน่นแต่ย่อยง่าย พร้อมลุยทุกสนามสอบ ตั้งแต่ประถมจนถึงมหาลัย',
-              link: '/student/courses',
-              accent: '#2563eb',
-              accentLight: 'rgba(37,99,235,0.08)',
-              accentBorder: 'rgba(37,99,235,0.15)',
-              tag: 'คอร์สใหม่ หลากหลาย',
-              iconBg: 'from-blue-500 to-blue-700',
-            },
-            {
-              icon: Users,
-              emoji: '👨‍🏫',
-              title: 'ติวเตอร์สุดปัง',
-              desc: 'เรียนกับพี่ๆ ใจดี จากมหาลัยดัง สอนสนุกไม่น่าเบื่อ เข้าถึงได้ตลอด',
-              link: '#',
-              accent: '#ec4899',
-              accentLight: 'rgba(236,72,153,0.07)',
-              accentBorder: 'rgba(236,72,153,0.15)',
-              tag: 'ติวเตอร์คุณภาพ',
-              iconBg: 'from-pink-500 to-rose-600',
-            },
-            {
-              icon: Trophy,
-              emoji: '🏆',
-              title: 'รีวิวเพียบ!',
-              desc: 'พิสูจน์แล้วจากน้องๆ ที่เกรดพุ่ง สอบติดคณะในฝันจริง ไม่ใช่แค่โฆษณา',
-              link: '#',
-              accent: '#f97316',
-              accentLight: 'rgba(249,115,22,0.07)',
-              accentBorder: 'rgba(249,115,22,0.15)',
-              tag: 'รีวิวจากผู้เรียนจริง',
-              iconBg: 'from-orange-500 to-amber-600',
-            }
-          ].map((item, idx) => (
-            <Link
-              key={idx}
-              href={item.link}
-              className="feature-card group relative card-glass p-7 md:p-9 rounded-[2rem] flex flex-col min-w-[82vw] sm:min-w-[320px] lg:min-w-0 snap-start shrink-0 overflow-hidden"
-              style={{background: `linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 100%)`, borderColor: item.accentBorder}}
-            >
-              {/* Card Background Accent */}
-              <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full opacity-60 transition-transform group-hover:scale-150 duration-700"
-                style={{background: `radial-gradient(circle, ${item.accentLight} 0%, transparent 70%)`}}></div>
-
-              {/* Icon */}
-              <div className="relative mb-6">
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.iconBg} flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300`}>
-                  <item.icon size={26} className="text-white" strokeWidth={2.5} />
+            {emoji:'📚',icon:GraduationCap,title:'คอร์สเรียนครบสูตร',desc:'เนื้อหาแน่น ย่อยง่าย พร้อมลุยทุกสนามสอบ ตั้งแต่ป.1 จนถึงมหาวิทยาลัย ออกแบบโดยครูผู้เชี่ยวชาญ',link:'/student/courses',accent:'#2563eb',accentLight:'rgba(37,99,235,0.08)',tag:'คอร์สใหม่ทุกสัปดาห์',iconGrad:'linear-gradient(135deg,#2563eb,#1d4ed8)'},
+            {emoji:'👨‍🏫',icon:Users,title:'ติวเตอร์สุดปัง',desc:'เรียนกับพี่ๆ ใจดีจากมหาลัยชั้นนำ สอนสนุก เข้าใจง่าย ดูแลรายบุคคล ไม่ทิ้งกัน',link:'#',accent:'#ec4899',accentLight:'rgba(236,72,153,0.08)',tag:'50+ ติวเตอร์คุณภาพ',iconGrad:'linear-gradient(135deg,#ec4899,#be185d)'},
+            {emoji:'🤖',icon:Brain,title:'AI ติวเตอร์ พี่หมี TC',desc:'พี่หมี TC AI พร้อมตอบทุกคำถาม ส่งรูปโจทย์มาได้เลย อธิบายทีละขั้นตอน ไม่มีเบื่อ',link:'/student/ai-tutor',accent:'#7c3aed',accentLight:'rgba(124,58,237,0.08)',tag:'ตอบได้ทุกวิชา',iconGrad:'linear-gradient(135deg,#7c3aed,#4f46e5)'},
+          ].map((c,i) => (
+            <Link key={i} href={c.link} className="edu-card">
+              <div className="card-bg-accent" style={{background:`radial-gradient(circle,${c.accentLight},transparent)`}}/>
+              <div style={{position:'relative',marginBottom:8}}>
+                <div className="card-icon-wrap" style={{background:c.iconGrad,boxShadow:`0 8px 24px ${c.accentLight.replace('.08','0.3')}`}}>
+                  <c.icon size={28} color="white" strokeWidth={2.5}/>
                 </div>
-                <span className="absolute -top-2 -right-2 text-xl">{item.emoji}</span>
+                <span className="card-emoji">{c.emoji}</span>
               </div>
-
-              {/* Tag */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold mb-4 w-fit"
-                style={{background: item.accentLight, color: item.accent, border: `1px solid ${item.accentBorder}`}}>
-                <Star size={9} fill={item.accent} color={item.accent}/> {item.tag}
+              <div className="card-tag" style={{background:c.accentLight,color:c.accent,border:`1px solid ${c.accentLight.replace('.08','0.2')}`}}>
+                <Star size={9} fill={c.accent} color={c.accent}/> {c.tag}
               </div>
-
-              <h3 className="text-xl md:text-2xl font-black mb-3 text-slate-800 group-hover:text-slate-900 transition-colors">{item.title}</h3>
-              <p className="text-slate-500 text-sm mb-8 leading-relaxed font-medium flex-1" style={{fontFamily: 'Sarabun, sans-serif'}}>{item.desc}</p>
-
-              <div className="flex items-center gap-2 text-sm font-bold mt-auto" style={{color: item.accent}}>
+              <h3 className="card-title">{c.title}</h3>
+              <p className="card-desc">{c.desc}</p>
+              <div className="card-cta" style={{color:c.accent}}>
                 ดูรายละเอียด
-                <div className="w-7 h-7 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform"
-                  style={{background: item.accentLight}}>
-                  <ChevronRight size={14} />
+                <div className="cta-arrow" style={{background:c.accentLight}}>
+                  <ChevronRight size={14} color={c.accent}/>
                 </div>
               </div>
             </Link>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* ✨ Footer */}
-      <footer className="py-14 border-t border-slate-100 bg-white/60 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2.5">
-            <span className="font-black text-slate-800 text-lg tracking-wide">TC CENTER</span>
-            <Heart size={14} className="text-pink-500 fill-pink-500" />
+      {/* ═══════════════ AI SECTION ═══════════════ */}
+      <div className="ai-section">
+        <div className="ai-banner">
+          <div className="ai-grid-bg"/>
+          <div className="ai-glow-1"/>
+          <div className="ai-glow-2"/>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:40,alignItems:'center',position:'relative',zIndex:10}} className="ai-inner">
+
+            <div>
+              <div style={{display:'inline-flex',alignItems:'center',gap:8,padding:'6px 16px',borderRadius:100,background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.25)',marginBottom:20}}>
+                <span style={{width:6,height:6,borderRadius:'50%',background:'#34d399',display:'inline-block',animation:'pulse 1.5s infinite'}}/>
+                <span style={{fontSize:11,fontWeight:700,color:'#a5b4fc',textTransform:'uppercase',letterSpacing:'0.1em'}}>New Feature</span>
+              </div>
+
+              <h2 style={{fontSize:'clamp(28px,4vw,42px)',fontWeight:900,color:'white',margin:'0 0 16px',lineHeight:1.2}}>
+                พี่หมี{' '}
+                <span style={{background:'linear-gradient(135deg,#f97316,#ec4899)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>TC AI</span>
+                {' '}พร้อมช่วยสอน 🐻🤖
+              </h2>
+              <p style={{fontSize:15,color:'rgba(255,255,255,0.65)',lineHeight:1.7,margin:'0 0 28px',maxWidth:480,fontFamily:"'Sarabun',sans-serif"}}>
+                ถามได้ทุกวิชา ส่งรูปโจทย์มา AI จะอธิบายทีละขั้นตอน ไม่มีวันหยุด ไม่มีเบื่อ!
+              </p>
+
+              <div className="subject-row">
+                {['🔢 คณิต','🔬 วิทย์','📝 อังกฤษ','⚡ ฟิสิกส์','🧪 เคมี','📐 เรขา','📊 สถิติ','🌏 คอร์สพิเศษ'].map((s,i) => (
+                  <div key={i} className="subject-pill">{s}</div>
+                ))}
+              </div>
+
+              <Link href="/student/ai-tutor" className="btn-orange" style={{display:'inline-flex'}}>
+                <div className="shimmer-overlay"/>
+                <Brain size={17}/>
+                <span style={{position:'relative'}}>ลองคุยกับพี่หมี AI เลย!</span>
+              </Link>
+            </div>
+
+            {/* AI character preview */}
+            <div style={{position:'relative',display:'none',flexDirection:'column',alignItems:'center'}} className="ai-char-show">
+              <svg width="180" height="220" viewBox="0 0 180 220" xmlns="http://www.w3.org/2000/svg">
+                {/* Body */}
+                <rect x="45" y="130" width="90" height="80" rx="20" fill="#7c3aed"/>
+                <rect x="58" y="148" width="64" height="44" rx="10" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5"/>
+                <circle cx="72" cy="160" r="4" fill="#34d399"/>
+                <circle cx="90" cy="160" r="4" fill="#fbbf24"/>
+                <rect x="68" y="173" width="44" height="6" rx="3" fill="rgba(255,255,255,0.25)"/>
+                <rect x="68" y="173" width="30" height="6" rx="3" fill="#34d399"/>
+                {/* Neck */}
+                <rect x="78" y="108" width="24" height="24" rx="5" fill="#6d28d9"/>
+                {/* Head */}
+                <rect x="35" y="50" width="110" height="62" rx="24" fill="#6d28d9"/>
+                <line x1="90" y1="50" x2="90" y2="28" stroke="#6d28d9" strokeWidth="4" strokeLinecap="round"/>
+                <circle cx="90" cy="20" r="10" fill="#f97316"/>
+                <circle cx="90" cy="20" r="5" fill="white" opacity=".7"/>
+                <rect x="30" y="62" width="8" height="32" rx="4" fill="#5b21b6"/>
+                <rect x="142" y="62" width="8" height="32" rx="4" fill="#5b21b6"/>
+                <rect x="50" y="60" rx="10" width="34" height="28" fill="#0f172a"/>
+                <rect x="96" y="60" rx="10" width="34" height="28" fill="#0f172a"/>
+                <rect x="54" y="64" rx="7" width="26" height="20" fill="#38bdf8" opacity=".9"/>
+                <rect x="100" y="64" rx="7" width="26" height="20" fill="#38bdf8" opacity=".9"/>
+                <path d="M56 95 Q90 108 124 95" stroke="#34d399" strokeWidth="3" fill="none" strokeLinecap="round"/>
+                {/* Arms */}
+                <rect x="133" y="140" width="18" height="55" rx="9" fill="#6d28d9"/>
+                <rect x="29" y="140" width="18" height="55" rx="9" fill="#6d28d9"/>
+              </svg>
+
+              <div className="testimonial-float" style={{position:'relative',margin:'12px 0',animation:'tfFloat1 4s ease-in-out infinite'}}>
+                <p style={{margin:0,fontSize:12,fontWeight:700,color:'#0f172a'}}>💬 "พี่หมีอธิบายดีมาก!"</p>
+                <p style={{margin:'4px 0 0',fontSize:11,color:'#64748b',fontFamily:"'Sarabun',sans-serif"}}>น้องมิน ม.5 สอบได้ A</p>
+              </div>
+            </div>
+            <style>{`.ai-char-show{display:none!important;} @media(min-width:900px){.ai-char-show{display:flex!important;}} .ai-inner{grid-template-columns:1fr!important;} @media(min-width:900px){.ai-inner{grid-template-columns:1fr auto!important;}}`}</style>
           </div>
-          <p className="text-slate-400 text-xs font-medium tracking-wider uppercase" style={{fontFamily: 'Sarabun, sans-serif'}}>The Convergence of Academic Excellence</p>
-          <div className="flex gap-3 mt-2">
-            <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
-            <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" style={{animationDelay: '0.3s'}}></div>
-            <div className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" style={{animationDelay: '0.6s'}}></div>
+        </div>
+      </div>
+
+      {/* ═══════════════ FOOTER ═══════════════ */}
+      <footer className="footer">
+        <div style={{maxWidth:600,margin:'0 auto'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:12}}>
+            <div className="logo-ring" style={{animation:'spin 8s linear infinite'}}>
+              <div style={{width:32,height:32,background:'white',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <span style={{fontSize:10,fontWeight:900,color:'#2563eb'}}>TC</span>
+              </div>
+            </div>
+            <span style={{fontWeight:900,fontSize:18,color:'#0f172a',letterSpacing:'0.05em'}}>TC CENTER</span>
+            <Heart size={14} color="#ec4899" fill="#ec4899"/>
+          </div>
+          <p style={{fontSize:11,color:'#94a3b8',fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',fontFamily:"'Sarabun',sans-serif",margin:'0 0 16px'}}>The Convergence of Academic Excellence</p>
+          <div style={{display:'flex',gap:8,justifyContent:'center'}}>
+            {['#2563eb','#f97316','#ec4899','#7c3aed','#059669'].map((c,i) => (
+              <div key={i} style={{width:8,height:8,borderRadius:'50%',background:c,animation:`pulse ${1.5+i*.2}s ease-in-out infinite`,animationDelay:`${i*0.2}s`}}/>
+            ))}
           </div>
         </div>
       </footer>
 
-      <FloatingAIMascot />
+      <FloatingAIMascot/>
     </div>
   );
 }
