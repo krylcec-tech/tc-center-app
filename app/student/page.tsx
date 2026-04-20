@@ -116,7 +116,8 @@ export default function StudentDashboard() {
         .tier-purple{ background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
         .tier-orange{ background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
         
-        .shortcut-card { transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1); background: #ffffff; border: 1px solid rgba(241, 245, 249, 1); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05); }
+        /* ✨ เอา background: #ffffff; ออกไป เพื่อไม่ให้ทับกับ Tailwind */
+        .shortcut-card { transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05); }
         .shortcut-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 12px 30px -10px rgba(37,99,235,0.15); }
         
         .ref-card { background: #ffffff; border: 1px solid rgba(241, 245, 249, 1); box-shadow: 0 10px 30px -10px rgba(37,99,235,0.05); }
@@ -230,7 +231,6 @@ export default function StudentDashboard() {
           <span className="text-[9px] font-black uppercase tracking-wide">ตาราง</span>
         </Link>
 
-        {/* ✨ ดักจับการคลิกซื้อคอร์ส (มือถือ) */}
         <Link href="/student/courses" onClick={checkProfileBeforeAction} className="flex flex-col items-center flex-1 relative pb-1">
           <div className="absolute -top-12 w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center shadow-lg shadow-orange-500/40 border-[4px] border-white">
             <ShoppingCart size={24} className="text-white"/>
@@ -258,7 +258,7 @@ export default function StudentDashboard() {
       <main className="flex-1 lg:ml-72 overflow-y-auto hide-scrollbar min-h-screen relative z-10">
         <div className="p-4 sm:p-7 md:p-9 lg:p-10 pb-40 lg:pb-12 max-w-[1200px] mx-auto space-y-8 md:space-y-10">
 
-          {/* ── ✨ NEW BEAUTIFUL HEADER (Mobile Friendly) ── */}
+          {/* ── HEADER ── */}
           <header className="fade-up pt-4 lg:pt-2">
             <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative overflow-hidden">
               <div className="absolute right-0 top-0 w-40 h-40 bg-blue-100/50 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
@@ -293,7 +293,7 @@ export default function StudentDashboard() {
             </div>
           </header>
 
-          {/* ✨ BANNER แจ้งเตือนให้ตั้งค่าโปรไฟล์ */}
+          {/* BANNER แจ้งเตือนให้ตั้งค่าโปรไฟล์ */}
           {needsProfileUpdate && (
             <div className="fade-up bg-orange-50 border border-orange-200 rounded-[2rem] p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5 relative overflow-hidden shadow-sm">
               <div className="absolute -right-4 -top-4 w-32 h-32 bg-orange-200/30 rounded-full blur-2xl pointer-events-none"></div>
@@ -312,7 +312,7 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {/* ── ✨ TIER HOURS SECTION (ปรับแก้ความเหลี่ยม) ── */}
+          {/* ── TIER HOURS SECTION ── */}
           <section className="fade-up">
             <div className="flex items-center justify-between mb-5 px-1">
               <div className="flex items-center gap-3">
@@ -357,13 +357,11 @@ export default function StudentDashboard() {
                 },
               ].map((t, i) => (
                 <div key={i} className="tier-card rounded-[2.5rem] flex flex-col min-w-[85vw] sm:min-w-[320px] lg:min-w-0 snap-start shrink-0 relative">
-                  {/* Header แบบโค้งมนดูนุ่มนวล */}
                   <div className={`${t.headerClass} px-6 py-5 flex items-center justify-between`}>
                     <span className="text-white font-black text-base">{t.label}</span>
                     <Sparkles size={18} className="text-white/40"/>
                   </div>
 
-                  {/* พื้นที่แสดงชั่วโมง */}
                   <div className="p-6 md:p-8 flex-1 flex flex-col gap-6">
                     <div className="flex items-center justify-between px-2">
                       <div className="text-center flex-1">
@@ -383,7 +381,6 @@ export default function StudentDashboard() {
                       </div>
                     </div>
 
-                    {/* ✨ ปุ่มจองเรียนทรงแคปซูล (Pill Shape) ดูทันสมัย ไม่เหลี่ยม */}
                     <div className="grid grid-cols-2 gap-3 mt-auto">
                       <Link href={`/student/booking-flow?tier=${t.tier}&type=Online`} onClick={checkProfileBeforeAction}
                         className={`${t.onlineBtnClass} py-3.5 rounded-full font-black text-[11px] text-center transition-all active:scale-95`}>
@@ -400,7 +397,7 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          {/* ── ✨ SHORTCUTS BENTO (โค้งมนเข้ากับธีม) ── */}
+          {/* ── SHORTCUTS BENTO ── */}
           <section className="fade-up pt-4">
             <div className="flex items-center gap-3 mb-6 px-1">
               <div className="w-10 h-10 rounded-[1.2rem] bg-orange-100 flex items-center justify-center shadow-sm">
@@ -411,7 +408,7 @@ export default function StudentDashboard() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
 
-              {/* ซื้อคอร์ส — Hero card */}
+              {/* ✨ เอา background: #ffffff; ออกไปแล้ว สีจะขึ้นแบบถูกต้อง */}
               <Link href="/student/courses" onClick={checkProfileBeforeAction}
                 className="shortcut-card xl:col-span-2 bg-slate-900 text-white p-7 rounded-[2.5rem] flex flex-col justify-between h-44 relative overflow-hidden group border-none">
                 <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl group-hover:bg-orange-500/30 transition-colors"></div>
@@ -424,9 +421,8 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* จองคิว */}
               <Link href="/student/booking-flow" onClick={checkProfileBeforeAction}
-                className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden group">
+                className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden group">
                 {needsProfileUpdate && <div className="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>}
                 <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Calendar size={24} className="text-blue-500"/>
@@ -436,7 +432,6 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* AI Tutor */}
               <Link href="/student/ai-tutor"
                 className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden shadow-lg border-none group"
                 style={{background: 'linear-gradient(135deg, #7c3aed, #4f46e5)'}}>
@@ -449,7 +444,6 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* คลังชีท */}
               <Link href="/student/my-books"
                 className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden shadow-lg border-none group"
                 style={{background: 'linear-gradient(135deg, #f97316, #fb923c)'}}>
@@ -462,9 +456,8 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* ประวัติการซื้อ */}
               <Link href="/student/orders"
-                className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 group">
+                className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 group">
                 <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <History size={24} className="text-slate-500"/>
                 </div>
@@ -479,7 +472,6 @@ export default function StudentDashboard() {
           {/* ── REFERRAL + REWARD ── */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 pt-4 fade-up">
 
-            {/* Referral — 3 cols */}
             <div className="ref-card lg:col-span-3 rounded-[2.5rem] p-8 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden border-none shadow-sm">
               <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full pointer-events-none" style={{background: 'radial-gradient(circle, rgba(37,99,235,0.05) 0%, transparent 65%)'}}></div>
               <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 shrink-0">
@@ -499,7 +491,6 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            {/* Reward Banner — 2 cols */}
             <Link href="/student/affiliate/shop"
               className="reward-banner lg:col-span-2 rounded-[2.5rem] p-8 text-white flex flex-col justify-between min-h-[200px] shadow-[0_8px_32px_rgba(249,115,22,0.28)] group border-none">
               <div className="absolute inset-0 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity" style={{background: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.15) 0%, transparent 50%)'}}></div>
