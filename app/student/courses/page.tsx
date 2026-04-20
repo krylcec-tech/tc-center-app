@@ -161,7 +161,7 @@ function CatalogContent() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen font-sans text-gray-900 relative">
       
-      {/* ซ่อน Scrollbar ของแท็บเลื่อนแนวนอน */}
+      {/* ซ่อน Scrollbar */}
       <style dangerouslySetInnerHTML={{__html: `
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -273,8 +273,8 @@ function CatalogContent() {
         </div>
       )}
 
-      {/* ✨ ส่วนหัว ย้ายมาอยู่ Layer บนสุดด้วย relative z-40 */}
-      <div className="relative z-40">
+      {/* ✨ ส่วนหัว ย้ายมาอยู่ Layer บนสุดด้วย relative z-50 */}
+      <div className="relative z-50">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 pt-2">
           <div>
             <Link href={!isLoggedIn ? "/" : (isAdmin ? "/admin" : "/student")} className="text-blue-600 font-black text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2 mb-2 group w-max">
@@ -296,9 +296,9 @@ function CatalogContent() {
           </div>
         </div>
 
-        {/* ✨ แถบหมวดหมู่หลัก (แก้ให้เลื่อนอิสระ ไม่บังคับ Snap และ Touch Action) */}
-        <div className="w-full mb-4">
-          <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-2 items-center">
+        {/* ✨ แถบหมวดหมู่หลัก (แก้ให้เลื่อนอิสระ ป้องกันบั๊กใน Safari มือถือ) */}
+        <div className="w-full overflow-x-auto no-scrollbar mb-4 overscroll-contain">
+          <div className="flex gap-2 sm:gap-3 items-center pb-2 pr-4 w-max min-w-full">
             <button onClick={() => setActiveTab('all')} className={`shrink-0 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
             <button onClick={() => setActiveTab('course')} className={`shrink-0 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
             <button onClick={() => setActiveTab('book')} className={`shrink-0 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
@@ -317,9 +317,9 @@ function CatalogContent() {
           </div>
         </div>
 
-        {/* ✨ แถบกรองประเภทคนขาย (ย้ายการ scroll มาไว้ในกล่องสีขาวเลย) */}
-        <div className="w-full mb-8">
-          <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 overflow-x-auto no-scrollbar">
+        {/* ✨ แถบกรองประเภทคนขาย */}
+        <div className="w-full overflow-x-auto no-scrollbar mb-8 overscroll-contain">
+          <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 w-max min-w-full pr-4">
              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
                <Filter size={12} /> กรองโดย
              </span>
