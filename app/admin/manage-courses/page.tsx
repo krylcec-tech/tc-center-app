@@ -15,6 +15,7 @@ export default function ManageCoursesPage() {
   // Form States
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [originalPrice, setOriginalPrice] = useState(''); // ✨ เพิ่ม State ราคาเต็ม
   const [price, setPrice] = useState('');
   const [hoursCount, setHoursCount] = useState('0'); 
   const [referralPoints, setReferralPoints] = useState('0');
@@ -29,7 +30,6 @@ export default function ManageCoursesPage() {
   const [subject, setSubject] = useState('คณิตศาสตร์');
   const [level, setLevel] = useState('ม.ปลาย');
   
-  // ✨ ฟิลด์สำหรับระบุตัวตนคนขาย (ใช้กรณีที่แอดมินสร้างชีทให้เอง)
   const [sellerType, setSellerType] = useState('institute');
   const [sellerName, setSellerName] = useState('TC Center');
 
@@ -72,7 +72,8 @@ export default function ManageCoursesPage() {
         is_active: item.is_active !== false,
         tags: Array.isArray(item.tags) ? item.tags : [],
         seller_type: item.seller_type || 'institute',
-        seller_name: item.seller_name || 'TC Center'
+        seller_name: item.seller_name || 'TC Center',
+        original_price: item.original_price || 0 // ✨ ดึงราคาเต็ม
       }));
       setItems(formattedData);
 
@@ -144,6 +145,7 @@ export default function ManageCoursesPage() {
       const payload = { 
         title, 
         description, 
+        original_price: parseFloat(originalPrice) || 0, // ✨ เซฟราคาเต็ม
         price: parseFloat(price), 
         type, 
         category, 
@@ -159,10 +161,9 @@ export default function ManageCoursesPage() {
         sort_order: parseInt(sortOrder) || 0,
         subject: type === 'book' ? subject : null,
         level: type === 'book' ? level : null,
-        // ✨ บันทึกข้อมูลคนขาย
         seller_type: sellerType,
         seller_name: sellerName,
-        approval_status: 'APPROVED' // ถ้าแอดมินสร้างเองให้ถือว่าอนุมัติแล้วเลย
+        approval_status: 'APPROVED'
       };
 
       const { error: dbError } = editingItem 
@@ -185,6 +186,7 @@ export default function ManageCoursesPage() {
     setEditingItem(null);
     setTitle('');
     setDescription('');
+    setOriginalPrice('');
     setPrice('');
     setHoursCount('0');
     setReferralPoints('0');
@@ -209,6 +211,7 @@ export default function ManageCoursesPage() {
   const handleEdit = (item: any) => {
     setEditingItem(item);
     setTitle(item.title);
+    setOriginalPrice(item.original_price?.toString() || ''); // ✨ โหลดราคาเต็ม
     setPrice(item.price.toString());
     setHoursCount(item.hours_count?.toString() || '0');
     setReferralPoints(item.referral_points?.toString() || '0');
@@ -250,14 +253,20 @@ export default function ManageCoursesPage() {
 
   const ItemCard = ({ item }: { item: any }) => {
     const isOutOfStock = !item.is_unlimited && item.stock <= 0;
+    const hasPromo = item.original_price > item.price; // ✨ เช็กว่ามีโปรลดราคาไหม
     
     return (
       <div className={`bg-white p-4 rounded-[24px] shadow-sm border flex flex-col h-full group transition-all relative ${!item.is_active ? 'opacity-60 border-gray-200 bg-gray-50' : isOutOfStock ? 'border-red-100 bg-red-50/30' : 'border-gray-100 hover:shadow-md hover:-translate-y-1'}`}>
         
-        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5 items-end">
           {item.sort_order > 0 && (
             <div className="bg-yellow-400 text-yellow-900 text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center justify-center shadow-md">
               <ArrowUpCircle size={12} className="mr-0.5"/> ลำดับ {item.sort_order}
+            </div>
+          )}
+          {hasPromo && (
+            <div className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-md animate-pulse">
+              PROMO
             </div>
           )}
           <button 
@@ -292,7 +301,6 @@ export default function ManageCoursesPage() {
         
         <h3 className="font-bold text-base text-gray-800 line-clamp-1 pr-8 leading-tight">{item.title}</h3>
         
-        {/* ✨ ป้ายระบุคนขาย (เพื่อให้แอดมินดูง่าย) */}
         {item.type === 'book' && item.seller_type !== 'institute' && (
           <div className="flex items-center gap-1 mt-1 text-[10px] font-black text-orange-500">
              <User size={10}/> โดย: {item.seller_name} ({item.seller_type === 'tutor' ? 'ติวเตอร์' : 'นักเรียน'})
@@ -330,8 +338,9 @@ export default function ManageCoursesPage() {
 
         <div className="mt-auto pt-3 flex justify-between items-end">
           <div className="flex flex-col">
-              {item.type === 'course' && <span className="text-[9px] font-black text-blue-500 uppercase">{item.hours_count} ชม.</span>}
-              <span className="text-lg font-black text-gray-900 leading-none mt-0.5">฿{item.price}</span>
+              {item.type === 'course' && <span className="text-[9px] font-black text-blue-500 uppercase mb-0.5">{item.hours_count} ชม.</span>}
+              {hasPromo && <span className="text-[9px] text-gray-400 line-through leading-none">฿{item.original_price}</span>}
+              <span className={`text-lg font-black leading-none mt-0.5 ${hasPromo ? 'text-red-500' : 'text-gray-900'}`}>฿{item.price}</span>
           </div>
           <div className="flex gap-1.5 relative z-10">
             <button onClick={() => handleEdit(item)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors">
@@ -388,7 +397,6 @@ export default function ManageCoursesPage() {
                 <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
               </div>
 
-              {/* ข้อมูลคนขาย (เฉพาะหนังสือ) */}
               {type === 'book' && (
                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
                   <label className="text-[10px] font-black text-gray-600 uppercase flex items-center gap-1"><User size={12}/> ข้อมูลผู้ขาย (Seller)</label>
@@ -461,15 +469,21 @@ export default function ManageCoursesPage() {
                   )}
                 </div>
 
+                {/* ✨ เพิ่มช่องราคาเต็ม (เพื่อให้ระบบสร้างโปรลดราคา) */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-400 ml-1 uppercase">ราคา (บาท)</label>
-                    <input type="number" className="w-full p-3.5 bg-gray-50 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-black text-blue-600 text-sm" value={price} onChange={(e) => setPrice(e.target.value)} />
+                    <label className="text-[9px] font-black text-gray-400 ml-1 uppercase">ราคาเต็ม (ก่อนลด)</label>
+                    <input type="number" placeholder="ไม่ใส่=ไม่มีโปร" className="w-full p-3.5 bg-gray-50 rounded-xl focus:ring-2 focus:ring-gray-300 outline-none font-black text-gray-400 line-through text-sm" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-400 ml-1 uppercase flex items-center gap-1"><ArrowUpCircle size={10}/> ความสำคัญ (เลขมาก=บนสุด)</label>
-                    <input type="number" className="w-full p-3.5 bg-yellow-50 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none font-black text-yellow-700 border border-yellow-100 text-sm" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} placeholder="0" />
+                    <label className="text-[9px] font-black text-red-500 ml-1 uppercase">ราคาขายจริง 🔥</label>
+                    <input type="number" className="w-full p-3.5 bg-red-50 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-black text-red-600 text-sm border border-red-100" value={price} onChange={(e) => setPrice(e.target.value)} />
                   </div>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-400 ml-1 uppercase flex items-center gap-1"><ArrowUpCircle size={10}/> ความสำคัญ (เลขมาก=บนสุด)</label>
+                  <input type="number" className="w-full p-3.5 bg-yellow-50 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none font-black text-yellow-700 border border-yellow-100 text-sm" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} placeholder="0" />
                 </div>
 
                 {type === 'course' && (
@@ -553,11 +567,9 @@ export default function ManageCoursesPage() {
               <h2 className="text-2xl font-black text-gray-800">หนังสือ & ชีทเรียน</h2>
             </div>
             
-            {/* กรองรายการชีทเรียนเพิ่มเติม */}
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
                <span className="text-xs font-bold text-gray-500 py-1 flex items-center gap-1"><User size={14}/> แหล่งที่มา:</span>
                <button className="bg-gray-800 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm">ทั้งหมด</button>
-               {/* หมายเหตุ: ตรงนี้ CEO สามารถเขียน Logic กรองประเภท seller_type เพิ่มได้ถ้าต้องการครับ */}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">

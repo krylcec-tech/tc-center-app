@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Search, ShoppingCart, BookOpen, Clock, 
   Tag, Loader2, PlayCircle, MessageCircle, Gift, ChevronRight, X, Upload, CheckCircle2,
-  Smartphone, Wallet, Info, Store, Layers, Filter, User // ✨ เพิ่ม Filter และ User ตรงนี้ครับ
+  Smartphone, Wallet, Info, Store, Layers, Filter, User, Flame
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -57,7 +57,7 @@ function CatalogContent() {
     
     const { data, error } = await supabase
       .from('courses')
-      .select('id, title, description, price, hours_count, referral_points, type, category, image_url, target_wallet_type, tags, seller_type, seller_name') 
+      .select('id, title, description, price, original_price, hours_count, referral_points, type, category, image_url, target_wallet_type, tags, seller_type, seller_name, stock, is_unlimited') 
       .eq('is_active', true) 
       .order('sort_order', { ascending: false })
       .order('created_at', { ascending: false });
@@ -83,7 +83,8 @@ function CatalogContent() {
           ...item,
           image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : []),
           tags: parsedTags,
-          seller_type: item.seller_type || 'institute' 
+          seller_type: item.seller_type || 'institute',
+          original_price: item.original_price || 0
         };
       });
 
@@ -167,7 +168,7 @@ function CatalogContent() {
             <button onClick={() => setViewingItem(null)} className="absolute top-4 right-4 bg-gray-100 text-gray-500 p-2 rounded-full hover:bg-gray-200 transition-colors z-10"><X size={20}/></button>
             
             {viewingItem.image_url && viewingItem.image_url.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar mb-6 pb-2">
+              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar mb-6 pb-2" style={{ touchAction: 'pan-x' }}>
                 {viewingItem.image_url.map((url: string, idx: number) => (
                   <img key={idx} src={url} className="w-[85%] sm:w-2/3 h-52 sm:h-64 object-cover rounded-[1.5rem] snap-center shrink-0 border border-gray-100 shadow-sm" alt={`Preview ${idx+1}`} />
                 ))}
@@ -182,9 +183,6 @@ function CatalogContent() {
                  <span className="bg-orange-50 text-orange-600 px-2 py-1 rounded-md text-[10px] font-black uppercase flex items-center gap-1">
                    <User size={10}/> {viewingItem.seller_name || 'TC Center'}
                  </span>
-                 {viewingItem.tags && viewingItem.tags.map((t: string) => (
-                   <span key={t} className="bg-gray-100 text-gray-500 px-2 py-1 rounded-md text-[10px] font-black uppercase">#{t}</span>
-                 ))}
                </div>
                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight mb-2">{viewingItem.title}</h2>
             </div>
@@ -194,9 +192,13 @@ function CatalogContent() {
             </div>
 
             <div className="mt-auto flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-100">
-               <div className="w-full sm:w-auto text-left">
-                  <span className="text-[10px] font-black text-gray-400 uppercase block tracking-widest">ราคา</span>
-                  <span className="text-3xl font-black text-blue-600">฿{viewingItem.price.toLocaleString()}</span>
+               <div className="w-full sm:w-auto text-left flex flex-col">
+                  {viewingItem.original_price > viewingItem.price && (
+                    <span className="text-[10px] font-black text-gray-400 line-through tracking-widest leading-none mb-0.5">฿{viewingItem.original_price.toLocaleString()}</span>
+                  )}
+                  <span className={`text-3xl font-black leading-none ${viewingItem.original_price > viewingItem.price ? 'text-red-500' : 'text-blue-600'}`}>
+                    ฿{viewingItem.price.toLocaleString()}
+                  </span>
                </div>
                <button 
                  onClick={() => {
@@ -287,101 +289,123 @@ function CatalogContent() {
         </div>
       </div>
 
-      {/* แถบหมวดหมู่หลัก */}
-      <div className="flex gap-2 sm:gap-3 mb-4 overflow-x-auto pb-2 no-scrollbar items-center">
-        <button onClick={() => setActiveTab('all')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
-        <button onClick={() => setActiveTab('course')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
-        <button onClick={() => setActiveTab('book')} className={`shrink-0 px-4 sm:px-5 py-2.5 rounded-[1rem] font-black text-xs sm:text-sm transition-all ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
+      {/* ✨ แถบหมวดหมู่หลัก (แก้ให้กดง่ายขึ้นในมือถือ) */}
+      <div className="flex gap-2 sm:gap-3 mb-4 overflow-x-auto pb-4 no-scrollbar items-center snap-x" style={{ touchAction: 'pan-x' }}>
+        <button onClick={() => setActiveTab('all')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 snap-start ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
+        <button onClick={() => setActiveTab('course')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 snap-start ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
+        <button onClick={() => setActiveTab('book')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 snap-start ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
         
-        {availableTags.length > 0 && <div className="w-px h-6 bg-gray-200 mx-1 shrink-0"></div>}
+        {availableTags.length > 0 && <div className="w-px h-6 bg-gray-200 mx-2 shrink-0"></div>}
 
         {availableTags.map(tag => (
           <button 
             key={tag} 
             onClick={() => setActiveTab(tag)} 
-            className={`shrink-0 px-4 py-2.5 rounded-[1rem] font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1 ${activeTab === tag ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'}`}
+            className={`shrink-0 px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 snap-start ${activeTab === tag ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'}`}
           >
             <Tag size={12}/> {tag}
           </button>
         ))}
       </div>
 
-      {/* แถบกรองประเภทคนขาย */}
-      {(activeTab === 'all' || activeTab === 'book') && (
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 no-scrollbar items-center bg-white p-2 rounded-[1.5rem] shadow-sm border border-gray-100 w-max">
-           <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2 pr-1 flex items-center gap-1">
-             <Filter size={12} /> กรองโดย
-           </span>
-           <button onClick={() => setActiveSellerType('ALL')} className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${activeSellerType === 'ALL' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>ทุกแหล่งที่มา</button>
-           <button onClick={() => setActiveSellerType('institute')} className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${activeSellerType === 'institute' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยสถาบัน</button>
-           <button onClick={() => setActiveSellerType('tutor')} className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${activeSellerType === 'tutor' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยติวเตอร์</button>
-           <button onClick={() => setActiveSellerType('student')} className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${activeSellerType === 'student' ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยนักเรียน</button>
-        </div>
-      )}
+      {/* ✨ แถบกรองประเภทคนขาย (แก้ให้กดง่ายขึ้นในมือถือ) */}
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-4 no-scrollbar items-center bg-white p-2 rounded-[1.5rem] shadow-sm border border-gray-100 w-max snap-x" style={{ touchAction: 'pan-x' }}>
+         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
+           <Filter size={12} /> กรองโดย
+         </span>
+         <button onClick={() => setActiveSellerType('ALL')} className={`shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all active:scale-95 snap-start ${activeSellerType === 'ALL' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>ทุกแหล่งที่มา</button>
+         <button onClick={() => setActiveSellerType('institute')} className={`shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all active:scale-95 snap-start ${activeSellerType === 'institute' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยสถาบัน</button>
+         <button onClick={() => setActiveSellerType('tutor')} className={`shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all active:scale-95 snap-start ${activeSellerType === 'tutor' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยติวเตอร์</button>
+         <button onClick={() => setActiveSellerType('student')} className={`shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all active:scale-95 snap-start ${activeSellerType === 'student' ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยนักเรียน</button>
+      </div>
 
       {/* Grid สินค้า */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-        {filteredItems.map((item) => (
-          <div key={item.id} className="bg-white rounded-[1.25rem] sm:rounded-[1.5rem] shadow-sm hover:shadow-xl border border-gray-100 flex flex-col h-full group transition-all duration-300 overflow-hidden text-gray-900 relative">
-            
-            <div 
-              className="h-28 sm:h-44 bg-gray-50 relative overflow-hidden cursor-pointer"
-              onClick={() => setViewingItem(item)}
-            >
-              <img src={item.image_url?.[0] || '/placeholder.png'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-              
-              <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-white/90 backdrop-blur px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[7px] sm:text-[9px] font-black text-gray-700 shadow-sm flex items-center gap-1 uppercase tracking-widest">
-                 {item.type === 'course' ? <Clock size={10} className="text-blue-600"/> : <BookOpen size={10} className="text-orange-500"/>} 
-                 <span className="hidden xs:inline">{item.category}</span>
-              </div>
+        {filteredItems.map((item) => {
+          const hasPromo = item.original_price > item.price;
+          const discountPercent = hasPromo ? Math.round(((item.original_price - item.price) / item.original_price) * 100) : 0;
+          const isLowStock = !item.is_unlimited && item.stock > 0 && item.stock <= 5;
+          const isOutOfStock = !item.is_unlimited && item.stock <= 0;
 
-              {item.type === 'book' && item.seller_type !== 'institute' && (
-                <div className={`absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[7px] sm:text-[8px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1
-                  ${item.seller_type === 'tutor' ? 'bg-purple-500 text-white' : 'bg-orange-500 text-white'}
-                `}>
-                   <User size={8} /> {item.seller_name}
-                </div>
-              )}
-            </div>
-            
-            <div className="p-3 sm:p-5 flex flex-col flex-1">
-              <h3 className="font-black text-sm sm:text-xl mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors cursor-pointer" onClick={() => setViewingItem(item)}>{item.title}</h3>
+          return (
+            <div key={item.id} className={`bg-white rounded-[1.25rem] sm:rounded-[1.5rem] shadow-sm hover:shadow-xl border flex flex-col h-full group transition-all duration-300 overflow-hidden text-gray-900 relative ${hasPromo ? 'border-red-200' : 'border-gray-100'}`}>
               
-              {item.tags && item.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-1.5 sm:mb-2">
-                  {item.tags.map((t: string) => (
-                    <span key={t} className="bg-gray-100 text-gray-500 text-[7px] sm:text-[9px] font-black px-1 py-0.5 rounded uppercase">#{t}</span>
-                  ))}
+              {hasPromo && (
+                <div className="absolute top-0 right-0 z-20 bg-gradient-to-r from-red-500 to-orange-500 text-white font-black text-[10px] sm:text-xs px-3 py-1.5 rounded-bl-[1.2rem] shadow-md flex items-center gap-1">
+                  <Flame size={12} className="animate-pulse"/> ลด {discountPercent}%
                 </div>
               )}
 
-              <p className="text-gray-400 text-[10px] sm:text-sm line-clamp-2 font-medium leading-relaxed mb-3 sm:mb-4 h-6 sm:h-10">{item.description}</p>
-              
-              <div className="mt-auto pt-2 sm:pt-4 border-t border-gray-50 flex justify-between items-end">
-                <div className="flex flex-col">
-                  <span className="text-[7px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-0.5 sm:mb-1">ราคา</span>
-                  <span className="text-sm sm:text-2xl font-black text-gray-900 leading-none">฿{item.price.toLocaleString()}</span>
+              <div 
+                className="h-28 sm:h-44 bg-gray-50 relative overflow-hidden cursor-pointer"
+                onClick={() => setViewingItem(item)}
+              >
+                <img src={item.image_url?.[0] || '/placeholder.png'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                
+                <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-white/90 backdrop-blur px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[7px] sm:text-[9px] font-black text-gray-700 shadow-sm flex items-center gap-1 uppercase tracking-widest">
+                   {item.type === 'course' ? <Clock size={10} className="text-blue-600"/> : <BookOpen size={10} className="text-orange-500"/>} 
+                   <span className="hidden xs:inline">{item.category}</span>
                 </div>
-                <div className="flex items-center gap-1 sm:gap-1.5">
-                  <button 
-                    onClick={() => setViewingItem(item)} 
-                    className="p-1.5 sm:px-3 sm:py-2.5 bg-gray-50 text-gray-500 rounded-lg sm:rounded-xl hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center justify-center font-black"
-                  >
-                     <Info size={14} className="sm:w-4 sm:h-4" />
-                     <span className="hidden sm:inline ml-1 text-xs">รายละเอียด</span>
-                  </button>
-                  <button 
-                    onClick={() => handleBuyClick(item)} 
-                    className="bg-gray-900 text-white p-1.5 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl font-black hover:bg-blue-600 transition-all flex items-center justify-center gap-1 active:scale-95 shadow-md"
-                  >
-                    <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline ml-1 text-xs">ซื้อ</span>
-                  </button>
+
+                {item.type === 'book' && item.seller_type !== 'institute' && (
+                  <div className={`absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[7px] sm:text-[8px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1
+                    ${item.seller_type === 'tutor' ? 'bg-purple-500 text-white' : 'bg-orange-500 text-white'}
+                  `}>
+                     <User size={8} /> {item.seller_name}
+                  </div>
+                )}
+
+                {isLowStock && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-red-600/90 backdrop-blur-sm text-white text-center py-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest">
+                    🔥 รีบเลย! เหลือเพียง {item.stock} ชิ้น
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-3 sm:p-5 flex flex-col flex-1">
+                <h3 className="font-black text-sm sm:text-xl mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors cursor-pointer" onClick={() => setViewingItem(item)}>{item.title}</h3>
+                
+                {item.tags && item.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1.5 sm:mb-2">
+                    {item.tags.map((t: string) => (
+                      <span key={t} className="bg-gray-100 text-gray-500 text-[7px] sm:text-[9px] font-black px-1 py-0.5 rounded uppercase">#{t}</span>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-gray-400 text-[10px] sm:text-sm line-clamp-2 font-medium leading-relaxed mb-3 sm:mb-4 h-6 sm:h-10">{item.description}</p>
+                
+                <div className="mt-auto pt-2 sm:pt-4 border-t border-gray-50 flex justify-between items-end">
+                  <div className="flex flex-col">
+                    {hasPromo && <span className="text-[8px] sm:text-[10px] font-black text-gray-400 line-through tracking-widest leading-none mb-0.5">฿{item.original_price.toLocaleString()}</span>}
+                    <span className={`text-sm sm:text-2xl font-black leading-none ${hasPromo ? 'text-red-500' : 'text-gray-900'}`}>
+                      ฿{item.price.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-1.5">
+                    <button 
+                      onClick={() => setViewingItem(item)} 
+                      className="p-1.5 sm:px-3 sm:py-2.5 bg-gray-50 text-gray-500 rounded-lg sm:rounded-xl hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center justify-center font-black active:scale-95"
+                    >
+                       <Info size={14} className="sm:w-4 sm:h-4" />
+                       <span className="hidden sm:inline ml-1 text-xs">รายละเอียด</span>
+                    </button>
+                    <button 
+                      onClick={() => handleBuyClick(item)} 
+                      disabled={isOutOfStock}
+                      className={`p-1.5 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl font-black transition-all flex items-center justify-center gap-1 shadow-md
+                        ${isOutOfStock ? 'bg-gray-300 text-white cursor-not-allowed shadow-none' : 'bg-gray-900 text-white hover:bg-blue-600 active:scale-95'}
+                      `}
+                    >
+                      <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline ml-1 text-xs">{isOutOfStock ? 'หมด' : 'ซื้อ'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       {filteredItems.length === 0 && !loading && (
