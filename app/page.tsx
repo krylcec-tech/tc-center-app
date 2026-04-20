@@ -90,9 +90,9 @@ export default function LandingPage() {
     { label: 'ฟิสิกส์-เคมี-ชีวะ', emoji: '⚡', color: '#f97316' },
   ];
 
-  // ✨ แยกเฉพาะส่วนกราฟิก SVG ออกมา เพื่อให้ใช้ซ้ำได้ง่าย
-  const IllustrationSVG = () => (
-    <>
+  const HeroIllustration = () => (
+    <div style={{position:'relative',width:'100%',maxWidth:480}}>
+      <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:380,height:380,borderRadius:'50%',background:'linear-gradient(135deg,rgba(37,99,235,0.08),rgba(249,115,22,0.06))',border:'2px dashed rgba(37,99,235,0.15)',animation:'bd2 8s ease-in-out infinite'}}/>
       <svg viewBox="0 0 400 380" style={{width:'100%',maxWidth:440,position:'relative',zIndex:5}} xmlns="http://www.w3.org/2000/svg">
         <rect x="80" y="280" width="240" height="14" rx="7" fill="#e2e8f0"/>
         <rect x="100" y="260" width="200" height="22" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1.5"/>
@@ -103,8 +103,6 @@ export default function LandingPage() {
         <line x1="112" y1="273" x2="170" y2="273" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
         <line x1="208" y1="268" x2="284" y2="268" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
         <line x1="208" y1="273" x2="260" y2="273" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
-
-        {/* STUDENT CHARACTER */}
         <rect x="90" y="180" width="80" height="90" rx="20" fill="#2563eb"/>
         <path d="M130 180 L118 195 L130 200 L142 195 Z" fill="white"/>
         <rect x="120" y="160" width="20" height="24" rx="8" fill="#fbbf24"/>
@@ -170,21 +168,21 @@ export default function LandingPage() {
         <g style={{animation:'eduFloat 4.5s ease-in-out .2s infinite'}}><text x="48" y="295" fontSize="22">💡</text></g>
         <g style={{animation:'eduFloat 4s ease-in-out 2s infinite'}}><text x="355" y="235" fontSize="18">⚛️</text></g>
       </svg>
-      <div className="badge-ai" style={{position:'absolute',top:10,left:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(124,58,237,0.2)',border:'1.5px solid rgba(124,58,237,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat1 4s ease-in-out infinite',zIndex:10}}>
+      <div style={{position:'absolute',top:10,left:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(124,58,237,0.2)',border:'1.5px solid rgba(124,58,237,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat1 4s ease-in-out infinite',zIndex:10}}>
         <span style={{fontSize:20}}>🤖</span>
         <div>
           <p style={{margin:0,fontSize:11,fontWeight:900,color:'#6d28d9'}}>TC AI Tutor</p>
           <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>ตอบทุกคำถาม 24/7</p>
         </div>
       </div>
-      <div className="badge-streak" style={{position:'absolute',bottom:40,right:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(249,115,22,0.2)',border:'1.5px solid rgba(249,115,22,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat2 5s ease-in-out infinite',zIndex:10}}>
+      <div style={{position:'absolute',bottom:40,right:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(249,115,22,0.2)',border:'1.5px solid rgba(249,115,22,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat2 5s ease-in-out infinite',zIndex:10}}>
         <span style={{fontSize:20}}>🔥</span>
         <div>
           <p style={{margin:0,fontSize:11,fontWeight:900,color:'#ea580c'}}>Streak 14 วัน!</p>
           <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>เก่งมากเลย ต่อไปเลย</p>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -216,8 +214,9 @@ export default function LandingPage() {
           transition: all .4s ease;
           padding: 16px 24px;
         }
-        .nav-bar.scrolled { padding: 8px 24px; }
-
+        .nav-bar.scrolled {
+          padding: 8px 24px;
+        }
         .nav-inner {
           max-width: 1240px; margin: 0 auto;
           display: flex; align-items: center; justify-content: space-between;
@@ -226,8 +225,12 @@ export default function LandingPage() {
           border: 1.5px solid rgba(255,255,255,0.95);
           border-radius: 20px;
           padding: 10px 20px;
-          box-shadow: 0 4px 32px rgba(37,99,235,0.08);
+          box-shadow: 0 4px 32px rgba(37,99,235,0.08), 0 1px 4px rgba(0,0,0,0.04);
           transition: all .4s ease;
+        }
+        .nav-inner.scrolled {
+          border-radius: 16px;
+          box-shadow: 0 8px 40px rgba(37,99,235,0.12);
         }
 
         .logo-ring {
@@ -236,6 +239,14 @@ export default function LandingPage() {
           border-radius: 14px; padding: 2.5px;
         }
         @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
+        .nav-link {
+          display: flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border-radius: 12px;
+          font-weight: 700; font-size: 13.5px; color: #475569;
+          text-decoration: none; transition: all .2s ease;
+        }
+        .nav-link:hover { background: rgba(37,99,235,0.06); color: #2563eb; }
 
         .btn-primary {
           display: inline-flex; align-items: center; gap: 8px;
@@ -247,7 +258,8 @@ export default function LandingPage() {
           transition: all .3s cubic-bezier(.34,1.56,.64,1);
           position: relative; overflow: hidden;
         }
-        .btn-primary:hover { transform: translateY(-2px) scale(1.03); }
+        .btn-primary:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 32px rgba(37,99,235,0.4); }
+        .btn-primary:active { transform: scale(.97); }
 
         .btn-orange {
           display: inline-flex; align-items: center; gap: 8px;
@@ -257,7 +269,10 @@ export default function LandingPage() {
           text-decoration: none; border: none; cursor: pointer;
           box-shadow: 0 6px 20px rgba(249,115,22,0.32);
           transition: all .3s cubic-bezier(.34,1.56,.64,1);
+          position: relative; overflow: hidden;
         }
+        .btn-orange:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 32px rgba(249,115,22,0.42); }
+        .btn-orange:active { transform: scale(.97); }
 
         .btn-line {
           display: inline-flex; align-items: center; gap: 8px;
@@ -279,17 +294,6 @@ export default function LandingPage() {
 
         .hero { position: relative; padding: 160px 24px 80px; overflow: hidden; }
 
-        .hero-title {
-          font-size: clamp(36px, 6vw, 76px);
-          font-weight: 900;
-          line-height: 1.12;
-          color: #0f172a;
-          letter-spacing: -0.03em;
-          margin: 0 0 24px;
-        }
-        .grad-orange { background: linear-gradient(135deg,#f97316,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .grad-blue   { background: linear-gradient(135deg,#2563eb,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-
         .hero-eyebrow {
           display: inline-flex; align-items: center; gap: 8px;
           padding: 8px 18px; border-radius: 100px;
@@ -302,6 +306,32 @@ export default function LandingPage() {
           margin-bottom: 24px;
         }
         @keyframes eyebrowPulse { 0%,100%{box-shadow:0 4px 16px rgba(249,115,22,0.12)} 50%{box-shadow:0 4px 24px rgba(249,115,22,0.28)} }
+
+        .hero-title {
+          font-size: clamp(36px, 6vw, 76px);
+          font-weight: 900;
+          line-height: 1.12;
+          color: #0f172a;
+          letter-spacing: -0.03em;
+          margin: 0 0 24px;
+        }
+        .grad-orange { background: linear-gradient(135deg,#f97316,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .grad-blue   { background: linear-gradient(135deg,#2563eb,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+        .subject-ticker-wrap {
+          display: inline-flex; align-items: center; gap: 6px; padding: 5px 5px 5px 10px;
+          background: rgba(255,255,255,0.9); border: 1.5px solid rgba(37,99,235,0.12);
+          border-radius: 100px; box-shadow: 0 4px 16px rgba(37,99,235,0.08);
+          margin-bottom: 28px;
+        }
+        .subject-ticker-inner { display: flex; gap: 6px; }
+
+        .subject-item-pill {
+          padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 800; transition: all .4s ease;
+        }
+
+        .ticker-dot { width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:.7} }
 
         .edu-float {
           position: absolute; pointer-events: none;
@@ -450,12 +480,10 @@ export default function LandingPage() {
         .card-scroll .edu-card { min-width: min(80vw,320px); scroll-snap-align: start; flex-shrink: 0; }
         @media(min-width:601px) { .card-scroll { display: grid; grid-template-columns: repeat(3,1fr); margin: 0; padding: 0; } .card-scroll .edu-card { min-width: auto; } }
 
-        /* ✨ โครงสร้าง Desktop พื้นฐาน ✨ */
         .hero-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; max-width: 1240px; margin: 0 auto; }
         .hero-text-col { display: flex; flex-direction: column; }
         .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
 
-        /* กล่องสถิติ (Desktop) */
         .stats-bar {
           display: flex; align-items: center; justify-content: space-between;
           background: rgba(255,255,255,0.88);
@@ -471,107 +499,56 @@ export default function LandingPage() {
         .stat-val { font-size: 28px; font-weight: 900; color: #0f172a; line-height: 1; margin-bottom: 4px; }
         .stat-lbl { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; }
 
-        /* แถบวิชา (Desktop) */
-        .subject-ticker-wrap {
-          display: inline-flex; align-items: center; gap: 6px; padding: 5px 5px 5px 10px;
-          background: rgba(255,255,255,0.9); border: 1.5px solid rgba(37,99,235,0.12);
-          border-radius: 100px; box-shadow: 0 4px 16px rgba(37,99,235,0.08);
-          margin-bottom: 28px;
-        }
-        .subject-ticker-inner { display: flex; gap: 6px; }
-        .subject-item-pill {
-          padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 800; transition: all .4s ease;
-          white-space: nowrap; flex-shrink: 0;
-        }
-
-        /* ✨ แยกคลาสแสดงผล/ซ่อน ระหว่างจอคอมกับมือถือ ✨ */
-        .md-show { display: flex !important; }
-        .md-hide { display: none !important; }
-        .mobile-hero-center { display: none; }
+        /* ✨ MOBILE OPTIMIZATIONS ✨ */
+        .mobile-illo-only { display: none; }
         .desktop-illo-only { display: flex; align-items: center; justify-content: center; position: relative; }
-        .hero-deco-circle {
-          position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          width: 380px; height: 380px; border-radius: 50%;
-          background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(249,115,22,0.06));
-          border: 2px dashed rgba(37,99,235,0.15); animation: bd2 8s ease-in-out infinite; z-index: 0;
-        }
 
-
-        /* ✨ ✨ MOBILE OVERRIDES (แก้เฉพาะมือถือ) ✨ ✨ */
         @media(max-width: 900px) {
           .hero-layout { grid-template-columns: 1fr; text-align: center; }
           .hero-text-col { align-items: center; }
-          .hero-ctas { justify-content: center; margin-top: 0px; }
+          .hero-ctas { justify-content: center; }
+          .desktop-illo-only { display: none; }
+          /* ✨ แสดงรูปภาพคั่นกลางเฉพาะในมือถือ */
+          .mobile-illo-only { display: flex; justify-content: center; margin: 24px 0 32px; width: 100%; }
           .edu-grid { grid-template-columns: repeat(2,1fr); }
           .ai-inner { grid-template-columns: 1fr !important; }
         }
 
         @media(max-width: 640px) {
-          /* สลับการแสดงผลรูปภาพและกล่องวิชา */
-          .md-show { display: none !important; }
-          .md-hide { display: flex !important; }
-          .desktop-illo-only { display: none !important; }
-          
-          /* ✨ Block รวมรูปภาพ + กล่องวิชา (เฉพาะมือถือ) ✨ */
-          .mobile-hero-center {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            width: 100%; position: relative; margin: 16px 0 24px;
-          }
-
-          /* วงกลมด้านหลัง (ยืดครอบคลุมรูป+กล่องวิชา) */
-          .mobile-hero-center .hero-deco-circle {
-            width: 320px; height: 420px; border-radius: 160px; top: 48%;
-          }
-
-          /* รูปย่อขนาด 20% */
-          .mobile-illo-wrapper {
-            width: 100%; max-width: 320px; position: relative; z-index: 5; transform: scale(0.85); margin-bottom: -20px;
-          }
-
-          /* กล่องวิชา (ดึงกล่องขาวกลับมาให้เป็นระเบียบ) */
-          .mobile-hero-center .subject-ticker-wrap {
-            background: rgba(255,255,255,0.95) !important;
-            border: 1.5px solid rgba(37,99,235,0.12) !important;
-            border-radius: 24px !important;
-            box-shadow: 0 10px 30px rgba(37,99,235,0.08) !important;
-            padding: 16px !important;
-            flex-direction: column !important;
-            width: 100%; max-width: 330px;
-            position: relative; z-index: 10;
-            margin-bottom: 0 !important;
-          }
-          .mobile-hero-center .subject-ticker-inner {
-            flex-wrap: wrap !important; justify-content: center !important; gap: 8px !important;
-          }
-
-          /* 1. Navbar มินิมอล & แคบลง */
+          /* Navbar adjustments (เล็กลง กระทัดรัดขึ้น) */
           .nav-bar { padding: 8px 12px !important; }
-          .nav-inner { padding: 6px 10px !important; border-radius: 16px !important; }
+          .nav-inner { padding: 6px 10px !important; border-radius: 14px !important; }
           .logo-box { width: 28px !important; height: 28px !important; border-radius: 8px !important; }
           .logo-img { height: 18px !important; }
           .logo-title { font-size: 13px !important; }
-          .logo-sub { display: none !important; }
+          .logo-sub { font-size: 7px !important; letter-spacing: 0.1em !important; margin-top: 1px !important; }
           
-          .nav-login-btn { padding: 6px 10px !important; font-size: 12px !important; border-radius: 8px !important; border: none !important; background: transparent !important; }
-          .nav-register-btn { padding: 6px 12px !important; font-size: 12px !important; border-radius: 10px !important; box-shadow: 0 4px 12px rgba(249,115,22,0.2) !important; }
-          .nav-btn-icon { width: 14px !important; height: 14px !important; }
-          .mobile-menu-btn { width: 32px !important; height: 32px !important; border-radius: 8px !important; }
+          /* Buttons in Navbar */
+          .nav-login-btn { padding: 6px 10px !important; font-size: 11px !important; gap: 4px !important; border-radius: 8px !important; }
+          .nav-register-btn { padding: 6px 12px !important; font-size: 11px !important; gap: 4px !important; border-radius: 8px !important; }
+          .nav-btn-icon { width: 12px !important; height: 12px !important; }
+          .mobile-menu-btn { width: 30px !important; height: 30px !important; border-radius: 8px !important; }
 
-          /* 2. Hero Layout */
-          .hero { padding: 110px 16px 40px !important; }
-          .hero-title { font-size: 36px !important; margin-bottom: 16px !important; line-height: 1.15 !important; }
-          .hero-eyebrow { padding: 6px 14px !important; font-size: 11px !important; margin-bottom: 16px !important; }
+          /* Hero adjustments */
+          .hero { padding: 110px 16px 40px; }
+          .hero-title { font-size: 32px !important; line-height: 1.2 !important; margin-bottom: 16px !important; }
           
-          /* 3. Stats Box Grid 2x2 */
-          .stats-bar { 
-            display: grid !important; grid-template-columns: 1fr 1fr !important; 
-            border-radius: 16px !important; padding: 0 !important; gap: 0 !important;
+          /* Subject Ticker adjustments (Wrap และเล็กลง) */
+          .subject-ticker-wrap {
+            flex-direction: row !important; flex-wrap: wrap !important; justify-content: center !important;
+            padding: 8px 12px !important; border-radius: 16px !important; gap: 6px !important;
+            margin-bottom: 20px !important;
           }
-          .stat-item { padding: 16px 12px !important; border-bottom: 1px solid rgba(37,99,235,0.05); border-right: 1px solid rgba(37,99,235,0.05); }
+          .subject-ticker-inner { flex-wrap: wrap; justify-content: center; gap: 4px !important; }
+          .subject-item-pill { padding: 4px 8px !important; font-size: 11px !important; }
+
+          /* Stats Box Grid */
+          .stats-bar { display: grid; grid-template-columns: 1fr 1fr; border-radius: 16px; }
+          .stat-item { padding: 16px 12px; border-bottom: 1px solid rgba(37,99,235,0.05); border-right: 1px solid rgba(37,99,235,0.05); }
           .stat-item:nth-child(2n) { border-right: none; }
           .stat-item:nth-last-child(-n+2) { border-bottom: none; }
           .stat-item::after { display: none !important; }
-          .stat-val { font-size: 24px !important; }
+          .stat-val { font-size: 22px; }
 
           .edu-grid { grid-template-columns: 1fr; }
           .ai-banner { padding: 24px 20px; }
@@ -579,12 +556,17 @@ export default function LandingPage() {
         }
       `}</style>
 
+      {/* Ambient blobs */}
       <div className="blob b1"/><div className="blob b2"/><div className="blob b3"/><div className="blob b4"/>
 
+      {/* ═══════════════ NAVBAR ═══════════════ */}
       <nav className={`nav-bar ${scrolled ? 'scrolled' : ''}`}>
         <div className={`nav-inner ${scrolled ? 'scrolled' : ''}`}>
-          <Link href="/" style={{display:'flex',alignItems:'center',gap:8,textDecoration:'none'}}>
+
+          {/* Logo */}
+          <Link href="/" style={{display:'flex',alignItems:'center',gap:10,textDecoration:'none'}}>
             <div className="logo-ring">
+              {/* ✨ เพิ่ม class logo-box และ logo-img เพื่อควบคุมขนาดใน CSS มือถือ */}
               <div className="logo-box" style={{width:34,height:34,background:'white',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <img src="/icon.png" alt="TC" className="logo-img" style={{height:24,width:'auto',objectFit:'contain'}}
                   onError={(e:any)=>{e.target.style.display='none';e.target.parentNode.innerHTML='<span style="font-weight:900;font-size:12px;color:#2563eb">TC</span>';}}
@@ -597,6 +579,7 @@ export default function LandingPage() {
             </div>
           </Link>
 
+          {/* Desktop nav links */}
           <div style={{display:'none',alignItems:'center',gap:4,background:'rgba(248,250,255,0.8)',padding:'6px',borderRadius:14,border:'1px solid rgba(37,99,235,0.08)'}} className="lg-show">
             <Link href="/student/courses" className="nav-link">
               <BookOpen size={15} color="#2563eb"/> คอร์สเรียน
@@ -607,15 +590,16 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
+          {/* Right CTA */}
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
             {!loading && (user ? (
               <a href={getDashboardUrl()} className="btn-primary nav-register-btn">
                 <LayoutDashboard className="nav-btn-icon" size={14}/> {getDashboardText()}
               </a>
             ) : (
               <>
-                <Link href="/login" className="md-show nav-login-btn" style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:10,color:'#2563eb',fontWeight:700,fontSize:13,textDecoration:'none'}}>
-                  เข้าสู่ระบบ
+                <Link href="/login" className="md-show nav-login-btn" style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:10,background:'rgba(37,99,235,0.07)',color:'#2563eb',fontWeight:700,fontSize:13,textDecoration:'none',border:'1.5px solid rgba(37,99,235,0.15)',transition:'all .2s ease'}}>
+                  <User className="nav-btn-icon" size={14}/> เข้าสู่ระบบ
                 </Link>
                 <Link href="/register" className="btn-orange nav-register-btn">
                   <div className="shimmer-overlay"/>
@@ -629,6 +613,7 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Mobile menu */}
         {isMobileMenuOpen && (
           <div className="mobile-menu">
             <Link href="/student/courses" className="mobile-link" onClick={()=>setIsMobileMenuOpen(false)}>
@@ -657,11 +642,13 @@ export default function LandingPage() {
       {/* ═══════════════ HERO ═══════════════ */}
       <section className="hero page-bg">
         <div className="hero-layout">
-          
+
+          {/* Left/Top: Text Content */}
           <div className="hero-text-col" style={{position:'relative',zIndex:10}}>
             <div className="hero-eyebrow">
               <span>🎓</span>
               <span>TC แพลตฟอร์มติวครบจบในที่เดียว</span>
+              <span style={{width:6,height:6,borderRadius:'50%',background:'#22c55e',display:'inline-block',animation:'pulse 1.5s infinite'}}/>
             </div>
 
             <h1 className="hero-title">
@@ -673,39 +660,20 @@ export default function LandingPage() {
               {' '}🎯
             </h1>
 
-            {/* ✨ MOBILE ONLY: รูปภาพแทรกกลาง + กล่องวิชาอยู่รวมกัน ✨ */}
-            <div className="mobile-hero-center md-hide">
-              <div className="hero-deco-circle"></div>
-              
-              <div className="mobile-illo-wrapper">
-                <IllustrationSVG />
-              </div>
-              
-              <div className="subject-ticker-wrap">
-                <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'4px',display:'block',textAlign:'center'}}>ติวได้ทุกวิชา:</span>
-                <div className="subject-ticker-inner">
-                  {subjects.map((s,i) => (
-                    <div key={i} className="subject-item-pill" style={{
-                      background: i === activeSubject ? s.color : 'rgba(248,250,255,0.8)',
-                      color: i === activeSubject ? 'white' : '#64748b',
-                      border: `1.5px solid ${i === activeSubject ? s.color : 'rgba(37,99,235,0.1)'}`
-                    }}>
-                      {s.emoji} {s.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* ✨ โชว์รูปภาพแทรกตรงกลาง (เฉพาะมือถือ) */}
+            <div className="mobile-illo-only">
+              <HeroIllustration />
             </div>
 
-            {/* ✨ DESKTOP ONLY: กล่องวิชาอยู่ใต้หัวข้อ ✨ */}
-            <div className="subject-ticker-wrap md-show">
-              <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em'}}>ติวได้ทุกวิชา:</span>
+            {/* Subject ticker (Mobile Optimized) */}
+            <div className="subject-ticker-wrap">
+              <span style={{fontSize:10,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>ติวได้ทุกวิชา:</span>
               <div className="subject-ticker-inner">
                 {subjects.map((s,i) => (
                   <div key={i} className="subject-item-pill" style={{
-                    background: i === activeSubject ? s.color : 'rgba(255,255,255,0.9)',
+                    background: i === activeSubject ? s.color : 'rgba(248,250,255,0.8)',
                     color: i === activeSubject ? 'white' : '#64748b',
-                    border: `1px solid ${i === activeSubject ? s.color : 'rgba(37,99,235,0.1)'}`
+                    border: `1.5px solid ${i === activeSubject ? s.color : 'rgba(37,99,235,0.1)'}`
                   }}>
                     {s.emoji} {s.label}
                   </div>
@@ -713,26 +681,25 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <p style={{fontSize:15,color:'#64748b',lineHeight:1.6,maxWidth:480,margin:'0 0 24px',fontFamily:"'Sarabun',sans-serif",fontWeight:500}}>
-              จัดตารางเรียนเองได้ มีคอร์สตั้งแต่ประถมถึงมหาลัย พร้อมดูแลทุกก้าว 🚀
+            <p style={{fontSize:16,color:'#64748b',lineHeight:1.7,maxWidth:480,margin:'0 0 8px',fontFamily:"'Sarabun',sans-serif",fontWeight:500}}>
+              จัดตารางเรียนเองได้ มีคอร์สตั้งแต่ประถมถึงมหาลัย พร้อมติวเตอร์ระดับท็อปคอยดูแลทุกก้าว 🚀
             </p>
 
             <div className="hero-ctas">
-              <a href={user ? getDashboardUrl() : "/register"} className="btn-primary" style={{padding: '14px 28px'}}>
+              <a href={user ? getDashboardUrl() : "/register"} className="btn-primary">
                 <div className="shimmer-overlay"/>
-                <Sparkles size={16} color="#fcd34d"/>
+                <Sparkles size={17} color="#fcd34d"/>
                 <span style={{position:'relative'}}>{user ? "เข้าห้องเรียน" : "เริ่มเรียนฟรีวันนี้!"}</span>
               </a>
-              <Link href="https://lin.ee/ZSDR4B3" target="_blank" className="btn-line md-show" style={{padding: '14px 28px'}}>
-                <MessageCircle size={16} color="#16a34a"/> ปรึกษาแอดมิน
+              <Link href="https://lin.ee/ZSDR4B3" target="_blank" className="btn-line">
+                <MessageCircle size={17} color="#16a34a"/> ปรึกษาแอดมิน LINE
               </Link>
             </div>
           </div>
 
           {/* Right: Illustration (เฉพาะ Desktop) */}
           <div className="desktop-illo-only">
-            <div className="hero-deco-circle"></div>
-            <IllustrationSVG />
+            <HeroIllustration />
           </div>
         </div>
 
@@ -829,6 +796,7 @@ export default function LandingPage() {
               </Link>
             </div>
 
+            {/* AI character preview */}
             <div style={{position:'relative',display:'none',flexDirection:'column',alignItems:'center'}} className="ai-char-show">
               <svg width="180" height="220" viewBox="0 0 180 220" xmlns="http://www.w3.org/2000/svg">
                 <rect x="45" y="130" width="90" height="80" rx="20" fill="#7c3aed"/>
@@ -858,7 +826,6 @@ export default function LandingPage() {
                 <p style={{margin:'4px 0 0',fontSize:11,color:'#64748b',fontFamily:"'Sarabun',sans-serif"}}>น้องมิน ม.5 สอบได้ A</p>
               </div>
             </div>
-            <style>{`.ai-char-show{display:none!important;} @media(min-width:900px){.ai-char-show{display:flex!important;}} .ai-inner{grid-template-columns:1fr!important;} @media(min-width:900px){.ai-inner{grid-template-columns:1fr auto!important;}}`}</style>
           </div>
         </div>
       </div>
