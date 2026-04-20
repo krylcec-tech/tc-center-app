@@ -8,7 +8,7 @@ import {
   History, Settings, Users, Gift, Share2, Copy, 
   Check, Loader2, ArrowRight, ShoppingCart,
   LayoutDashboard, Globe, MapPin, User, Home, Sparkles, Heart,
-  Bot, ChevronRight, Zap, AlertCircle
+  Bot, ChevronRight, Zap, AlertCircle, Menu, X
 } from 'lucide-react';
 
 import FloatingAIMascot from '@/components/FloatingAIMascot';
@@ -20,6 +20,9 @@ export default function StudentDashboard() {
   const [studentData, setStudentData] = useState<any>(null);
   const [wallet, setWallet] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+
+  // ✨ State สำหรับคุมการเปิด/ปิด "เมนูเพิ่มเติม" แบบเลื่อนขึ้น
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
   useEffect(() => {
     setHasMounted(true);
@@ -111,12 +114,10 @@ export default function StudentDashboard() {
         .fade-up { animation: fadeUp 0.6s ease both; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Tier gradients adjusted for a softer, more modern look */
         .tier-blue  { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
         .tier-purple{ background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
         .tier-orange{ background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
         
-        /* ✨ เอา background: #ffffff; ออกไป เพื่อไม่ให้ทับกับ Tailwind */
         .shortcut-card { transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05); }
         .shortcut-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 12px 30px -10px rgba(37,99,235,0.15); }
         
@@ -126,6 +127,10 @@ export default function StudentDashboard() {
         
         .mobile-nav-glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); border-top: 1px solid rgba(241, 245, 249, 1); box-shadow: 0 -10px 40px rgba(37,99,235,0.05); }
         .avatar-ring { box-shadow: 0 0 0 4px white, 0 0 0 6px rgba(37,99,235,0.15), 0 10px 30px rgba(37,99,235,0.2); }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
       `}} />
 
       {/* Ambient */}
@@ -231,6 +236,7 @@ export default function StudentDashboard() {
           <span className="text-[9px] font-black uppercase tracking-wide">ตาราง</span>
         </Link>
 
+        {/* ซื้อคอร์ส (มือถือ) */}
         <Link href="/student/courses" onClick={checkProfileBeforeAction} className="flex flex-col items-center flex-1 relative pb-1">
           <div className="absolute -top-12 w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center shadow-lg shadow-orange-500/40 border-[4px] border-white">
             <ShoppingCart size={24} className="text-white"/>
@@ -245,14 +251,100 @@ export default function StudentDashboard() {
           <span className="text-[9px] font-black uppercase tracking-wide">ชีทเรียน</span>
         </Link>
 
-        <Link href="/student/profile" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-slate-800 flex-1 pb-1 transition-colors relative">
+        {/* ✨ เปลี่ยนปุ่ม Profile เป็นปุ่ม เมนูเพิ่มเติม (More) */}
+        <button onClick={() => setIsMoreMenuOpen(true)} className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-slate-800 flex-1 pb-1 transition-colors relative">
           <div className="w-10 h-10 rounded-[1.2rem] bg-transparent flex items-center justify-center relative">
-            <User size={20}/>
+            <Menu size={22}/>
             {needsProfileUpdate && <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse"></div>}
           </div>
-          <span className="text-[9px] font-black uppercase tracking-wide">โปรไฟล์</span>
-        </Link>
+          <span className="text-[9px] font-black uppercase tracking-wide">เพิ่มเติม</span>
+        </button>
       </div>
+
+      {/* ===== ✨ MORE MENU OVERLAY (Bottom Sheet สำหรับมือถือ) ===== */}
+      {isMoreMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[120] flex flex-col justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsMoreMenuOpen(false)}></div>
+          
+          <div className="bg-white w-full rounded-t-[2.5rem] p-6 pb-10 relative z-10 animate-in slide-in-from-bottom duration-300 max-h-[85vh] flex flex-col shadow-2xl">
+            
+            {/* Header ของเมนู */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800">เมนูทั้งหมด</h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TC Center Portal</p>
+              </div>
+              <button onClick={() => setIsMoreMenuOpen(false)} className="w-10 h-10 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-200 active:scale-95 transition-all">
+                <X size={20}/>
+              </button>
+            </div>
+
+            {/* รายการเมนู (Grid) */}
+            <div className="overflow-y-auto custom-scrollbar pr-2 flex-1 space-y-6">
+              
+              {/* หมวดการเรียน */}
+              <div>
+                <p className="text-[10px] font-black text-blue-500 bg-blue-50 w-max px-2 py-1 rounded uppercase tracking-widest mb-3">หมวดการเรียน</p>
+                <div className="grid grid-cols-4 gap-y-4 gap-x-2">
+                  <Link href="/student/booking-flow" onClick={(e) => { checkProfileBeforeAction(e); setIsMoreMenuOpen(false); }} className="flex flex-col items-center gap-2 text-center group">
+                    <div className="w-14 h-14 bg-blue-50 border border-blue-100 text-blue-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><Calendar size={24}/></div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">จองคิว<br/>เรียน</span>
+                  </Link>
+                  <Link href="/student/my-schedule" onClick={() => setIsMoreMenuOpen(false)} className="flex flex-col items-center gap-2 text-center group">
+                    <div className="w-14 h-14 bg-pink-50 border border-pink-100 text-pink-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><Clock size={24}/></div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">ตาราง<br/>เรียน</span>
+                  </Link>
+                  <Link href="/student/my-books" onClick={() => setIsMoreMenuOpen(false)} className="flex flex-col items-center gap-2 text-center group">
+                    <div className="w-14 h-14 bg-orange-50 border border-orange-100 text-orange-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><BookOpen size={24}/></div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">ชีท<br/>เรียน</span>
+                  </Link>
+                  <Link href="/student/tutors" onClick={() => setIsMoreMenuOpen(false)} className="flex flex-col items-center gap-2 text-center group">
+                    <div className="w-14 h-14 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><Users size={24}/></div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">ทำเนียบ<br/>ติวเตอร์</span>
+                  </Link>
+                  <Link href="/student/ai-tutor" onClick={() => setIsMoreMenuOpen(false)} className="flex flex-col items-center gap-2 text-center group">
+                    <div className="w-14 h-14 bg-purple-50 border border-purple-100 text-purple-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><Bot size={24}/></div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">พี่หมี<br/>AI</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* หมวดร้านค้าและบัญชี */}
+              <div className="pt-2">
+                <p className="text-[10px] font-black text-orange-500 bg-orange-50 w-max px-2 py-1 rounded uppercase tracking-widest mb-3">ร้านค้า & บัญชี</p>
+                <div className="grid grid-cols-4 gap-y-4 gap-x-2">
+                  <Link href="/student/courses" onClick={(e) => { checkProfileBeforeAction(e); setIsMoreMenuOpen(false); }} className="flex flex-col items-center gap-2 text-center group">
+                    <div className="w-14 h-14 bg-slate-900 text-orange-400 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform shadow-md"><ShoppingCart size={24}/></div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">ซื้อ<br/>คอร์ส</span>
+                  </Link>
+                  <Link href="/student/orders" onClick={() => setIsMoreMenuOpen(false)} className="flex flex-col items-center gap-2 text-center group">
+                    <div className="w-14 h-14 bg-slate-50 border border-slate-200 text-slate-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><History size={24}/></div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">ประวัติ<br/>ซื้อ</span>
+                  </Link>
+                  <Link href="/student/affiliate/shop" onClick={() => setIsMoreMenuOpen(false)} className="flex flex-col items-center gap-2 text-center group">
+                    <div className="w-14 h-14 bg-pink-50 border border-pink-100 text-pink-500 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><Gift size={24}/></div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">แลก<br/>รางวัล</span>
+                  </Link>
+                  <Link href="/student/profile" onClick={() => setIsMoreMenuOpen(false)} className="flex flex-col items-center gap-2 text-center group relative">
+                    <div className="w-14 h-14 bg-slate-50 border border-slate-200 text-slate-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform relative">
+                      <Settings size={24}/>
+                      {needsProfileUpdate && <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-white rounded-full animate-pulse"></div>}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-600 leading-tight">ตั้งค่า<br/>โปรไฟล์</span>
+                  </Link>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-100">
+                <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm text-red-500 bg-red-50 hover:bg-red-500 hover:text-white transition-all active:scale-95 border border-red-100">
+                  <LogOut size={18}/> ออกจากระบบ
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== MAIN CONTENT ===== */}
       <main className="flex-1 lg:ml-72 overflow-y-auto hide-scrollbar min-h-screen relative z-10">
@@ -398,6 +490,7 @@ export default function StudentDashboard() {
           </section>
 
           {/* ── SHORTCUTS BENTO ── */}
+          {/* ── SHORTCUTS BENTO ── */}
           <section className="fade-up pt-4">
             <div className="flex items-center gap-3 mb-6 px-1">
               <div className="w-10 h-10 rounded-[1.2rem] bg-orange-100 flex items-center justify-center shadow-sm">
@@ -408,7 +501,7 @@ export default function StudentDashboard() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
 
-              {/* ✨ เอา background: #ffffff; ออกไปแล้ว สีจะขึ้นแบบถูกต้อง */}
+              {/* ซื้อคอร์สเรียน */}
               <Link href="/student/courses" onClick={checkProfileBeforeAction}
                 className="shortcut-card xl:col-span-2 bg-slate-900 text-white p-7 rounded-[2.5rem] flex flex-col justify-between h-44 relative overflow-hidden group border-none">
                 <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl group-hover:bg-orange-500/30 transition-colors"></div>
@@ -421,6 +514,7 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
+              {/* จองคิวเรียน */}
               <Link href="/student/booking-flow" onClick={checkProfileBeforeAction}
                 className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden group">
                 {needsProfileUpdate && <div className="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>}
@@ -432,6 +526,18 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
+              {/* ✨ ตารางเรียน (เพิ่มกลับมาแล้ว!) */}
+              <Link href="/student/my-schedule"
+                className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden group">
+                <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Clock size={24} className="text-pink-500"/>
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 text-sm leading-tight">ตารางเรียน<br/>ของฉัน</h3>
+                </div>
+              </Link>
+
+              {/* พี่หมี AI */}
               <Link href="/student/ai-tutor"
                 className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden shadow-lg border-none group"
                 style={{background: 'linear-gradient(135deg, #7c3aed, #4f46e5)'}}>
@@ -444,6 +550,7 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
+              {/* คลังชีท */}
               <Link href="/student/my-books"
                 className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden shadow-lg border-none group"
                 style={{background: 'linear-gradient(135deg, #f97316, #fb923c)'}}>
@@ -456,6 +563,7 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
+              {/* ประวัติการซื้อ */}
               <Link href="/student/orders"
                 className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 group">
                 <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">

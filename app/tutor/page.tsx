@@ -27,7 +27,6 @@ export default function TutorDashboard() {
     fetchTutorData();
   }, []);
 
-  // Listener แจ้งเตือนแบบ Realtime ในแอป
   useEffect(() => {
     if (!tutorData.id) return;
 
@@ -309,7 +308,6 @@ export default function TutorDashboard() {
           <div className="h-6"></div>
           <p className="px-5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">รายได้และธุรกิจ</p>
           
-          {/* ✨ เพิ่มปุ่ม รายได้ของฉัน (Earnings) */}
           <Link href="/tutor/earnings" className="flex items-center justify-between px-5 py-3.5 text-green-600 bg-green-50 border border-green-100/50 rounded-[1.2rem] font-black hover:bg-green-100 transition-all group mb-1">
             <div className="flex items-center gap-3"><Wallet size={20} className="group-hover:scale-110 transition-transform" /> รายได้ของฉัน</div>
             <ChevronRight size={14} className="opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all"/>

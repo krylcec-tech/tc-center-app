@@ -1,519 +1,555 @@
 'use client'
-import { useState, useRef, useEffect } from 'react';
-import { X, Send, ImageIcon, ArrowLeft, History, Sparkles, BookOpen, Lightbulb, Zap, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import ReactMarkdown from 'react-markdown';
+import { 
+  LogOut, Wallet, Calendar, Clock, BookOpen, 
+  History, Settings, Users, Gift, Share2, Copy, 
+  Check, Loader2, ArrowRight, ShoppingCart,
+  LayoutDashboard, Globe, MapPin, User, Home, Sparkles, Heart,
+  Bot, ChevronRight, Zap, AlertCircle, Compass, X // ✨ เพิ่ม Compass และ X สำหรับเมนูลอย
+} from 'lucide-react';
 
-export default function AITutorPage() {
-  const [messages, setMessages] = useState<any[]>([
-    { role: 'ai', content: 'สวัสดีครับ! พี่หมี TC พร้อมช่วยสอนแล้ว 🐻🎓 \n\nวันนี้มีอะไรให้พี่หมีช่วยติว หรือมีโจทย์ข้อไหนสงสัย ส่งรูปมาได้เลยครับ!' }
-  ]);
-  const [input, setInput] = useState('');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+import FloatingAIMascot from '@/components/FloatingAIMascot';
 
-  const quickPrompts = [
-    { icon: <BookOpen size={14} />, text: "ช่วยอธิบายเรื่องเศษส่วนหน่อย", color: '#2563eb' },
-    { icon: <Lightbulb size={14} />, text: "ขอโจทย์คณิตศาสตร์ ป.6", color: '#f97316' },
-    { icon: <Sparkles size={14} />, text: "ช่วยตรวจการบ้านให้หน่อย", color: '#ec4899' },
-    { icon: <Zap size={14} />, text: "สรุปเนื้อหาวิทยาศาสตร์", color: '#7c3aed' },
-  ];
+export default function StudentDashboard() {
+  const router = useRouter();
+  const [hasMounted, setHasMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [studentData, setStudentData] = useState<any>(null);
+  const [wallet, setWallet] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+  
+  // ✨ State สำหรับคุมการเปิด/ปิด เมนูลอย (Floating Menu)
+  const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    setHasMounted(true);
+    fetchStudentData();
+  }, []);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onloadend = () => { setSelectedImage(reader.result as string); };
-      reader.readAsDataURL(e.target.files[0]);
-    }
-  };
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() && !selectedImage) return;
-
-    const userMessage = input.trim();
-    const userImage = selectedImage;
-    setMessages(prev => [...prev, { role: 'user', content: userMessage, image: userImage }]);
-    setInput('');
-    setSelectedImage(null);
-    setIsLoading(true);
-
+  const fetchStudentData = async () => {
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage, image: userImage }),
-      });
-      const data = await response.json();
-      setMessages(prev => [...prev, { role: 'ai', content: data.reply }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', content: "อูยยย ระบบขัดข้องนิดหน่อย ลองใหม่อีกครั้งนะ 🐻" }]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace('/login'); return; }
+
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      const { data: walletData } = await supabase.from('student_wallets').select('*').eq('user_id', user.id).single();
+
+      setStudentData(profile);
+      setWallet(walletData);
+    } catch (error) {
+      console.error('Error fetching student data:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
+
+  const handleCopyRef = () => {
+    if (studentData?.referral_code) {
+      navigator.clipboard.writeText(studentData.referral_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace('/login');
+  };
+
+  const checkProfileBeforeAction = (e: React.MouseEvent) => {
+    if (!studentData?.grade_level) {
+      e.preventDefault();
+      alert('⚠️ กรุณาไปที่ "ตั้งค่าโปรไฟล์" เพื่อระบุ "ระดับชั้น" ของคุณให้เรียบร้อยก่อนใช้งานระบบนี้ครับ');
+      router.push('/student/profile');
+    }
+  };
+
+  if (!hasMounted) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
+        <style dangerouslySetInnerHTML={{__html: `@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800;900&display=swap'); *{font-family:'Prompt',sans-serif;}`}} />
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-2xl shadow-blue-200">
+              <Loader2 className="animate-spin text-white" size={32} />
+            </div>
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-400 to-orange-400 blur-xl opacity-30 animate-pulse"></div>
+          </div>
+          <p className="text-slate-400 font-bold tracking-[0.3em] uppercase text-xs">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const needsProfileUpdate = !studentData?.grade_level;
 
   return (
-    <div style={{
-      height: '100dvh', display: 'flex', flexDirection: 'column',
-      fontFamily: "'Prompt', sans-serif", overflow: 'hidden',
-      background: '#F0F4FF', position: 'relative',
-    }}>
-      <style>{`
+    <div className="min-h-screen flex bg-[#F8FAFC]" style={{fontFamily: "'Prompt', sans-serif"}}>
+
+      <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800;900&family=Sarabun:wght@400;500;600&display=swap');
-        * { font-family: 'Prompt', sans-serif; box-sizing: border-box; }
+        * { font-family: 'Prompt', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* === Animated dot grid bg === */
-        .chat-bg {
-          position: absolute; inset: 0; pointer-events: none; z-index: 0;
-          background-image: radial-gradient(circle, rgba(37,99,235,0.13) 1.5px, transparent 1.5px);
-          background-size: 26px 26px;
-        }
+        .s-blob-1 { position: fixed; width: 700px; height: 700px; background: radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 65%); top: -200px; left: -150px; border-radius: 50%; pointer-events: none; animation: sBlob1 14s ease-in-out infinite; z-index: 0; }
+        .s-blob-2 { position: fixed; width: 550px; height: 550px; background: radial-gradient(circle, rgba(249,115,22,0.05) 0%, transparent 65%); bottom: -150px; right: -100px; border-radius: 50%; pointer-events: none; animation: sBlob2 18s ease-in-out infinite; z-index: 0; }
+        @keyframes sBlob1 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(40px,-25px) scale(1.04); } 66% { transform: translate(-20px,20px) scale(0.97); } }
+        @keyframes sBlob2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,20px) scale(1.05); } }
 
-        /* === Deco blobs (fixed, behind everything) === */
-        .blob {
-          position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
-          filter: blur(0px);
-        }
-        .blob-1 { width: 400px; height: 400px; top: -120px; left: -100px;
-          background: radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 70%);
-          animation: blobDrift 14s ease-in-out infinite; }
-        .blob-2 { width: 350px; height: 350px; bottom: -100px; right: -80px;
-          background: radial-gradient(circle, rgba(249,115,22,0.11) 0%, transparent 70%);
-          animation: blobDrift 17s ease-in-out infinite reverse; }
-        .blob-3 { width: 250px; height: 250px; top: 35%; right: 5%;
-          background: radial-gradient(circle, rgba(236,72,153,0.08) 0%, transparent 70%);
-          animation: blobDrift 11s ease-in-out infinite; }
-        @keyframes blobDrift {
-          0%,100% { transform: translate(0,0); }
-          33% { transform: translate(25px, -20px); }
-          66% { transform: translate(-15px, 18px); }
-        }
+        .dot-bg { background-image: radial-gradient(circle, rgba(37,99,235,0.08) 1px, transparent 1px); background-size: 30px 30px; }
+        .sidebar-glass { background: rgba(255,255,255,0.9); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border-right: 1px solid rgba(255,255,255,0.9); box-shadow: 4px 0 40px rgba(37,99,235,0.05); }
+        .logo-ring { background: conic-gradient(from 0deg, #2563eb, #f97316, #ec4899, #2563eb); animation: spinRing 6s linear infinite; border-radius: 1.2rem; padding: 2px; }
+        @keyframes spinRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        
+        .tier-card { background: #ffffff; border: 1px solid rgba(241, 245, 249, 1); box-shadow: 0 10px 30px -10px rgba(37,99,235,0.05); transition: all 0.3s ease; overflow: hidden; }
+        .tier-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -10px rgba(37,99,235,0.1); }
+        
+        .hero-wallet { background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #7c3aed 100%); }
+        .fade-up { animation: fadeUp 0.6s ease both; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .tier-blue  { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+        .tier-purple{ background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+        .tier-orange{ background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+        
+        .shortcut-card { transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05); }
+        .shortcut-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 12px 30px -10px rgba(37,99,235,0.15); }
+        
+        .ref-card { background: #ffffff; border: 1px solid rgba(241, 245, 249, 1); box-shadow: 0 10px 30px -10px rgba(37,99,235,0.05); }
+        .reward-banner { background: linear-gradient(135deg, #f97316 0%, #ec4899 100%); transition: all 0.3s ease; }
+        .reward-banner:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(249,115,22,0.35); }
+        
+        .mobile-nav-glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); border-top: 1px solid rgba(241, 245, 249, 1); box-shadow: 0 -10px 40px rgba(37,99,235,0.05); }
+        .avatar-ring { box-shadow: 0 0 0 4px white, 0 0 0 6px rgba(37,99,235,0.15), 0 10px 30px rgba(37,99,235,0.2); }
+      `}} />
 
-        /* === Header === */
-        .chat-header {
-          background: rgba(255,255,255,0.90);
-          backdrop-filter: blur(28px);
-          border-bottom: 1.5px solid rgba(37,99,235,0.09);
-          box-shadow: 0 4px 24px rgba(37,99,235,0.07);
-          flex-shrink: 0; z-index: 50;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 16px;
-        }
+      {/* Ambient */}
+      <div className="s-blob-1"></div>
+      <div className="s-blob-2"></div>
+      <div className="fixed inset-0 dot-bg opacity-40 pointer-events-none"></div>
 
-        /* Bear logo animation */
-        .bear-ring {
-          background: conic-gradient(from 0deg, #2563eb, #f97316, #ec4899, #7c3aed, #2563eb);
-          animation: spinRing 5s linear infinite;
-          border-radius: 16px; padding: 2.5px;
-        }
-        @keyframes spinRing { from{transform:rotate(0)} to{transform:rotate(360deg)} }
-
-        .online-dot {
-          width: 8px; height: 8px; border-radius: 50%;
-          background: #22c55e;
-          box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(34,197,94,0.3);
-          animation: pulse 2s ease-in-out infinite;
-          position: absolute; bottom: 2px; right: 2px;
-        }
-        @keyframes pulse { 0%,100%{transform:scale(1)}50%{transform:scale(1.3)} }
-
-        /* === Messages area === */
-        .messages-area {
-          flex: 1; overflow-y: auto; position: relative; z-index: 10;
-          padding: 20px 16px 8px;
-          scroll-behavior: smooth;
-        }
-        .messages-area::-webkit-scrollbar { width: 4px; }
-        .messages-area::-webkit-scrollbar-thumb { background: rgba(37,99,235,0.15); border-radius: 8px; }
-
-        /* === Quick prompt chips === */
-        .quick-chip {
-          display: inline-flex; align-items: center; gap: 6px;
-          padding: 8px 14px; border-radius: 100px;
-          background: rgba(255,255,255,0.9);
-          border: 1.5px solid rgba(37,99,235,0.12);
-          font-size: 12px; font-weight: 700; color: #475569;
-          cursor: pointer; text-decoration: none;
-          transition: all 0.25s cubic-bezier(.34,1.56,.64,1);
-          white-space: nowrap;
-        }
-        .quick-chip:hover {
-          transform: translateY(-3px) scale(1.04);
-          border-color: rgba(249,115,22,0.4);
-          box-shadow: 0 6px 20px rgba(249,115,22,0.15);
-          color: #f97316;
-        }
-        .quick-chip:active { transform: scale(0.97); }
-
-        /* === Bubble styles === */
-        .bubble-ai {
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(16px);
-          border: 1.5px solid rgba(255,255,255,0.95);
-          box-shadow: 0 4px 20px rgba(37,99,235,0.07), 0 1px 4px rgba(0,0,0,0.03);
-          border-radius: 22px 22px 22px 6px;
-          padding: 14px 18px;
-          color: #1e293b;
-          font-size: 14px;
-          line-height: 1.7;
-          max-width: 82%;
-          animation: bubbleIn .4s cubic-bezier(.34,1.56,.64,1) both;
-        }
-
-        .bubble-user {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8);
-          border-radius: 22px 22px 6px 22px;
-          padding: 13px 18px;
-          color: white;
-          font-size: 14px;
-          line-height: 1.65;
-          max-width: 78%;
-          box-shadow: 0 6px 20px rgba(37,99,235,0.28);
-          animation: bubbleInRight .4s cubic-bezier(.34,1.56,.64,1) both;
-        }
-
-        @keyframes bubbleIn {
-          from { opacity: 0; transform: translateY(12px) scale(.95); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes bubbleInRight {
-          from { opacity: 0; transform: translateY(12px) translateX(10px) scale(.95); }
-          to { opacity: 1; transform: translateY(0) translateX(0) scale(1); }
-        }
-
-        /* === Bear avatar === */
-        .bear-avatar {
-          width: 34px; height: 34px; border-radius: 50%;
-          background: linear-gradient(135deg, #fed7aa, #fdba74);
-          border: 2px solid white;
-          box-shadow: 0 3px 10px rgba(249,115,22,0.2);
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0; overflow: hidden;
-        }
-
-        /* === Typing indicator === */
-        .typing-dot {
-          width: 8px; height: 8px; border-radius: 50%;
-          background: linear-gradient(135deg, #f97316, #ec4899);
-          display: inline-block;
-          animation: typingBounce .7s ease-in-out infinite;
-        }
-        .typing-dot:nth-child(2) { animation-delay: .15s; }
-        .typing-dot:nth-child(3) { animation-delay: .30s; }
-        @keyframes typingBounce {
-          0%,60%,100% { transform: translateY(0); }
-          30% { transform: translateY(-8px); }
-        }
-
-        /* === Footer / Input area === */
-        .chat-footer {
-          background: rgba(255,255,255,0.94);
-          backdrop-filter: blur(28px);
-          border-top: 1.5px solid rgba(37,99,235,0.09);
-          box-shadow: 0 -8px 32px rgba(37,99,235,0.07);
-          flex-shrink: 0; z-index: 50;
-          padding: 12px 16px;
-          padding-bottom: max(env(safe-area-inset-bottom), 14px);
-        }
-
-        .input-shell {
-          display: flex; align-items: center; gap: 8px;
-          background: rgba(248,250,255,0.9);
-          border: 2px solid rgba(37,99,235,0.12);
-          border-radius: 100px;
-          padding: 6px 6px 6px 14px;
-          transition: all .25s ease;
-          box-shadow: 0 2px 12px rgba(37,99,235,0.07);
-        }
-        .input-shell:focus-within {
-          border-color: rgba(249,115,22,0.45);
-          box-shadow: 0 4px 20px rgba(249,115,22,0.12);
-          background: white;
-        }
-
-        .send-btn {
-          width: 42px; height: 42px; border-radius: 50%;
-          border: none; cursor: pointer; flex-shrink: 0;
-          display: flex; align-items: center; justify-content: center;
-          transition: all .25s cubic-bezier(.34,1.56,.64,1);
-        }
-        .send-btn.active {
-          background: linear-gradient(135deg, #f97316, #ec4899);
-          box-shadow: 0 6px 18px rgba(249,115,22,0.38);
-        }
-        .send-btn.active:hover { transform: scale(1.1); }
-        .send-btn.active:active { transform: scale(.95); }
-        .send-btn.inactive { background: #e2e8f0; cursor: not-allowed; }
-
-        .img-btn {
-          width: 36px; height: 36px; border-radius: 50%; border: none;
-          background: transparent; cursor: pointer; flex-shrink: 0;
-          display: flex; align-items: center; justify-content: center;
-          color: #93c5fd; transition: all .2s ease;
-        }
-        .img-btn:hover { background: rgba(37,99,235,0.08); color: #2563eb; transform: scale(1.1); }
-
-        /* === Intro card === */
-        .intro-card {
-          background: rgba(255,255,255,0.78);
-          backdrop-filter: blur(20px);
-          border: 1.5px solid rgba(255,255,255,0.95);
-          border-radius: 24px;
-          box-shadow: 0 4px 24px rgba(37,99,235,0.07);
-          padding: 24px; text-align: center;
-          animation: fadeUp .7s cubic-bezier(.34,1.4,.64,1) both;
-        }
-        @keyframes fadeUp {
-          from { opacity:0; transform: translateY(20px) scale(.97); }
-          to { opacity:1; transform: translateY(0) scale(1); }
-        }
-
-        /* === Message row === */
-        .msg-row { display: flex; margin-bottom: 14px; }
-        .msg-row.ai { justify-content: flex-start; align-items: flex-end; gap: 9px; }
-        .msg-row.user { justify-content: flex-end; }
-
-        /* Markdown inside AI bubble */
-        .ai-md p { margin: 0 0 8px; white-space: pre-wrap; word-break: break-word; }
-        .ai-md p:last-child { margin-bottom: 0; }
-        .ai-md strong { font-weight: 800; color: #f97316; }
-        .ai-md ul { list-style: disc; padding-left: 20px; margin: 6px 0 10px; }
-        .ai-md ol { list-style: decimal; padding-left: 20px; margin: 6px 0 10px; font-weight: 700; }
-        .ai-md li { padding-left: 4px; margin-bottom: 4px; font-weight: 500; word-break: break-word; }
-        .ai-md ul li::marker { color: #f97316; }
-        .ai-md ol li::marker { color: #f97316; }
-
-        /* Reset history button */
-        .reset-btn {
-          width: 38px; height: 38px; border-radius: 50%;
-          background: rgba(255,255,255,0.9);
-          border: 1.5px solid rgba(37,99,235,0.12);
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; color: #94a3b8;
-          transition: all .2s ease;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .reset-btn:hover { color: #ef4444; border-color: rgba(239,68,68,0.3); background: rgba(254,242,242,0.9); transform: rotate(15deg); }
-
-        /* Image preview */
-        .img-preview {
-          position: relative; display: inline-block;
-          animation: zoomIn .3s cubic-bezier(.34,1.56,.64,1) both;
-        }
-        @keyframes zoomIn { from{opacity:0;transform:scale(.7)} to{opacity:1;transform:scale(1)} }
-
-        /* Stars decorative */
-        .star-deco {
-          position: absolute; pointer-events: none;
-          animation: twinkle 2.5s ease-in-out infinite;
-        }
-        @keyframes twinkle { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:.9;transform:scale(1.25)} }
-      `}</style>
-
-      {/* Ambient blobs */}
-      <div className="blob blob-1"/>
-      <div className="blob blob-2"/>
-      <div className="blob blob-3"/>
-      <div className="chat-bg"/>
-
-      {/* Decorative stars */}
-      <div className="star-deco" style={{top:80,right:60,animationDelay:'0s'}}><Star size={14} color="#f97316" fill="#f97316" opacity={0.4}/></div>
-      <div className="star-deco" style={{top:160,left:80,animationDelay:'.8s'}}><Star size={10} color="#2563eb" fill="#2563eb" opacity={0.35}/></div>
-      <div className="star-deco" style={{bottom:180,right:100,animationDelay:'1.4s'}}><Star size={12} color="#ec4899" fill="#ec4899" opacity={0.35}/></div>
-
-      {/* ===== HEADER ===== */}
-      <header className="chat-header">
-        <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <Link href="/student" style={{width:36,height:36,borderRadius:12,background:'rgba(37,99,235,0.07)',display:'flex',alignItems:'center',justifyContent:'center',color:'#2563eb',textDecoration:'none',transition:'all .2s',flexShrink:0}}>
-            <ArrowLeft size={20}/>
-          </Link>
-
-          <div style={{display:'flex',alignItems:'center',gap:12}}>
-            {/* Spinning ring around bear */}
-            <div style={{position:'relative'}}>
-              <div className="bear-ring">
-                <div style={{width:42,height:42,background:'white',borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-                  <img src="/aibear.png" alt="Bear" style={{width:'100%',height:'100%',objectFit:'contain',transform:'scale(1.1)'}}
-                    onError={(e:any) => { e.target.style.display='none'; e.target.parentNode.textContent='🐻'; }}
-                  />
-                </div>
+      {/* ===== SIDEBAR (Desktop) ===== */}
+      <aside className="sidebar-glass w-72 hidden lg:flex flex-col fixed inset-y-0 left-0 z-50 h-screen">
+        
+        {/* Logo */}
+        <div className="p-7 pt-8 border-b border-slate-100/60">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="relative logo-ring">
+              <div className="w-10 h-10 bg-white rounded-[1.1rem] flex items-center justify-center">
+                <span className="text-sm font-black text-blue-600">TC</span>
               </div>
-              <div className="online-dot"/>
             </div>
-
             <div>
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <h2 style={{fontWeight:900,fontSize:17,color:'#0f172a',lineHeight:1,margin:0}}>TC AI Tutor</h2>
-                <span style={{fontSize:9,fontWeight:800,background:'linear-gradient(135deg,#f97316,#ec4899)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',textTransform:'uppercase',letterSpacing:'0.08em'}}>BETA</span>
+              <p className="font-black text-xl text-slate-900 leading-none">TC Center</p>
+              <p className="text-[9px] font-bold tracking-[0.2em] uppercase mt-0.5 text-blue-600">Student Portal</p>
+            </div>
+          </div>
+
+          {/* Profile chip */}
+          <div className="flex items-center gap-3 bg-blue-50/70 px-3 py-3 rounded-2xl border border-blue-100/80">
+            {studentData?.avatar_url ? (
+              <img src={studentData.avatar_url} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0"/>
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-black text-sm shrink-0">
+                {wallet?.student_name?.charAt(0) || 'TC'}
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:4,marginTop:3}}>
-                <span style={{width:6,height:6,borderRadius:'50%',background:'#22c55e',display:'inline-block'}}/>
-                <p style={{fontSize:11,fontWeight:700,color:'#22c55e',margin:0}}>พี่หมีออนไลน์อยู่</p>
-              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-xs font-black text-slate-800 truncate">{wallet?.student_name || 'นักเรียน'}</p>
+              <p className="text-[9px] text-blue-500 font-semibold truncate">{studentData?.email || ''}</p>
             </div>
           </div>
         </div>
 
-        <button
-          className="reset-btn"
-          onClick={() => setMessages([messages[0]])}
-          title="เริ่มบทสนทนาใหม่"
+        {/* Nav */}
+        <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto hide-scrollbar">
+          <Link href="/student" className="nav-item flex items-center gap-3 px-4 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-md shadow-blue-200">
+            <LayoutDashboard size={18}/> แดชบอร์ด
+          </Link>
+
+          <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-6 mb-2">การเรียน</p>
+
+          <Link href="/student/booking-flow" onClick={checkProfileBeforeAction} className="nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl font-bold text-sm transition-all">
+            <Calendar size={18}/> จองคิวเรียน
+          </Link>
+          <Link href="/student/my-schedule" className="nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-pink-50 hover:text-pink-600 rounded-2xl font-bold text-sm transition-all">
+            <Clock size={18}/> ตารางเรียน / เข้าเรียน
+          </Link>
+          <Link href="/student/my-books" className="nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-orange-50 hover:text-orange-600 rounded-2xl font-bold text-sm transition-all">
+            <BookOpen size={18}/> คลังหนังสือและชีท
+          </Link>
+          <Link href="/student/tutors" className="nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-2xl font-bold text-sm transition-all">
+            <Users size={18}/> ทำเนียบติวเตอร์
+          </Link>
+
+          <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-6 mb-2">ร้านค้า & บัญชี</p>
+
+          <Link href="/student/courses" onClick={checkProfileBeforeAction} className="nav-item flex items-center gap-3 px-4 py-3.5 bg-slate-900 text-white hover:bg-orange-500 rounded-2xl font-bold text-sm transition-all shadow-md">
+            <ShoppingCart size={18} className="text-orange-400"/> ซื้อคอร์สเรียน
+          </Link>
+          <Link href="/student/orders" className="nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-2xl font-bold text-sm transition-all">
+            <History size={18}/> ประวัติการสั่งซื้อ
+          </Link>
+          <Link href="/student/profile" className="nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-2xl font-bold text-sm transition-all">
+            <Settings size={18}/> ตั้งค่าโปรไฟล์
+            {needsProfileUpdate && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse ml-auto"></div>}
+          </Link>
+          <Link href="/student/affiliate/shop" className="nav-item flex items-center gap-3 px-4 py-3.5 text-pink-500 hover:bg-pink-50 rounded-2xl font-bold text-sm transition-all">
+            <Gift size={18}/> ร้านค้าแลกของรางวัล
+          </Link>
+        </nav>
+
+        {/* Logout */}
+        <div className="p-4 border-t border-slate-100/80">
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-black text-sm text-red-500 bg-red-50 hover:bg-red-500 hover:text-white transition-all active:scale-95 border border-red-100/80">
+            <LogOut size={16}/> ออกจากระบบ
+          </button>
+        </div>
+      </aside>
+
+      {/* ===== MOBILE BOTTOM NAV ===== */}
+      <div className="mobile-nav-glass lg:hidden fixed bottom-0 left-0 right-0 z-[80] rounded-t-[2.5rem] flex justify-between items-end px-3"
+        style={{paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', paddingTop: '12px'}}>
+
+        <Link href="/student" className="flex flex-col items-center gap-1.5 text-blue-600 flex-1 pb-1">
+          <div className="w-10 h-10 rounded-[1.2rem] bg-blue-50 text-blue-600 flex items-center justify-center">
+            <LayoutDashboard size={20}/>
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-wide">หน้าหลัก</span>
+        </Link>
+
+        <Link href="/student/my-schedule" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-blue-600 flex-1 pb-1 transition-colors">
+          <div className="w-10 h-10 rounded-[1.2rem] bg-transparent flex items-center justify-center">
+            <Calendar size={20}/>
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-wide">ตาราง</span>
+        </Link>
+
+        <Link href="/student/courses" onClick={checkProfileBeforeAction} className="flex flex-col items-center flex-1 relative pb-1">
+          <div className="absolute -top-12 w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center shadow-lg shadow-orange-500/40 border-[4px] border-white">
+            <ShoppingCart size={24} className="text-white"/>
+          </div>
+          <span className="text-[9px] font-black uppercase text-slate-700 mt-7">ซื้อคอร์ส</span>
+        </Link>
+
+        <Link href="/student/my-books" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-orange-500 flex-1 pb-1 transition-colors">
+          <div className="w-10 h-10 rounded-[1.2rem] bg-transparent flex items-center justify-center">
+            <BookOpen size={20}/>
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-wide">ชีทเรียน</span>
+        </Link>
+
+        <Link href="/student/profile" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-slate-800 flex-1 pb-1 transition-colors relative">
+          <div className="w-10 h-10 rounded-[1.2rem] bg-transparent flex items-center justify-center relative">
+            <User size={20}/>
+            {needsProfileUpdate && <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse"></div>}
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-wide">โปรไฟล์</span>
+        </Link>
+      </div>
+
+      {/* ===== ✨ FLOATING QUICK MENU (Speed Dial) ===== */}
+      <div className="fixed bottom-28 right-5 lg:bottom-10 lg:right-10 z-[90] flex flex-col items-end gap-3">
+        {/* กล่องเมนูที่เด้งขึ้นมา */}
+        <div className={`flex flex-col items-end gap-2.5 transition-all duration-300 origin-bottom ${isFloatingMenuOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 translate-y-10 pointer-events-none'}`}>
+          
+          <Link href="/student/affiliate/shop" onClick={() => setIsFloatingMenuOpen(false)} className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-100 shadow-xl px-5 py-3 rounded-full text-slate-700 hover:text-pink-600 hover:scale-105 transition-all group">
+            <span className="text-[11px] font-black uppercase tracking-widest">แลกของรางวัล</span>
+            <div className="w-8 h-8 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center group-hover:bg-pink-600 group-hover:text-white transition-colors"><Gift size={14}/></div>
+          </Link>
+
+          <Link href="/student/ai-tutor" onClick={() => setIsFloatingMenuOpen(false)} className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-100 shadow-xl px-5 py-3 rounded-full text-slate-700 hover:text-purple-600 hover:scale-105 transition-all group">
+            <span className="text-[11px] font-black uppercase tracking-widest">พี่หมี AI ช่วยสอน</span>
+            <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors"><Bot size={14}/></div>
+          </Link>
+
+          <Link href="/student/courses" onClick={(e) => { checkProfileBeforeAction(e); setIsFloatingMenuOpen(false); }} className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-100 shadow-xl px-5 py-3 rounded-full text-slate-700 hover:text-orange-600 hover:scale-105 transition-all group">
+            <span className="text-[11px] font-black uppercase tracking-widest">ซื้อคอร์สเรียน</span>
+            <div className="w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-colors"><ShoppingCart size={14}/></div>
+          </Link>
+
+          <Link href="/student/booking-flow" onClick={(e) => { checkProfileBeforeAction(e); setIsFloatingMenuOpen(false); }} className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-100 shadow-xl px-5 py-3 rounded-full text-slate-700 hover:text-blue-600 hover:scale-105 transition-all group">
+            <span className="text-[11px] font-black uppercase tracking-widest">จองคิวเรียน</span>
+            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors"><Calendar size={14}/></div>
+          </Link>
+        </div>
+
+        {/* ปุ่มกดเปิด/ปิด (ปุ่มหลัก) */}
+        <button 
+          onClick={() => setIsFloatingMenuOpen(!isFloatingMenuOpen)}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 relative z-10 hover:scale-105 active:scale-95 ${isFloatingMenuOpen ? 'bg-slate-800 text-white' : 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-blue-500/40'}`}
         >
-          <History size={17}/>
+          <div className={`absolute transition-all duration-300 ${isFloatingMenuOpen ? 'rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'}`}>
+            <Compass size={26} />
+          </div>
+          <div className={`absolute transition-all duration-300 ${isFloatingMenuOpen ? 'rotate-0 scale-100 opacity-100' : '-rotate-90 scale-0 opacity-0'}`}>
+            <X size={26} />
+          </div>
         </button>
-      </header>
+      </div>
 
-      {/* ===== MESSAGES ===== */}
-      <main className="messages-area">
-        <div style={{maxWidth:720,margin:'0 auto',display:'flex',flexDirection:'column'}}>
+      {/* ===== MAIN CONTENT ===== */}
+      <main className="flex-1 lg:ml-72 overflow-y-auto hide-scrollbar min-h-screen relative z-10">
+        <div className="p-4 sm:p-7 md:p-9 lg:p-10 pb-40 lg:pb-12 max-w-[1200px] mx-auto space-y-8 md:space-y-10">
 
-          {/* Welcome / Quick prompts */}
-          {messages.length === 1 && (
-            <div style={{marginBottom:24}}>
-              <div className="intro-card" style={{marginBottom:16}}>
-                {/* Bear hero */}
-                <div style={{position:'relative',display:'inline-block',marginBottom:16}}>
-                  <div style={{width:80,height:80,borderRadius:24,background:'linear-gradient(135deg,#fff7ed,#fed7aa)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto',boxShadow:'0 8px 28px rgba(249,115,22,0.2)',overflow:'hidden'}}>
-                    <img src="/aibear.png" alt="Bear" style={{width:'90%',height:'90%',objectFit:'contain',transform:'scale(1.1)'}}
-                      onError={(e:any) => { e.target.style.display='none'; e.target.parentNode.innerHTML='<span style="font-size:40px">🐻</span>'; }}
-                    />
-                  </div>
-                  <div style={{position:'absolute',top:-8,right:-8}}><Star size={16} color="#f97316" fill="#f97316"/></div>
-                  <div style={{position:'absolute',bottom:-6,left:-6}}><Star size={12} color="#7c3aed" fill="#7c3aed"/></div>
+          {/* ── HEADER ── */}
+          <header className="fade-up pt-4 lg:pt-2">
+            <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-40 h-40 bg-blue-100/50 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+              
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-pink-50/80 border border-pink-200/50 rounded-full text-[10px] font-black text-pink-600 mb-3 tracking-widest uppercase">
+                  <Heart size={12} className="text-pink-500 fill-pink-500 animate-pulse"/> Welcome Back
                 </div>
-                <h3 style={{fontWeight:900,fontSize:18,color:'#0f172a',margin:'0 0 6px'}}>พี่หมีพร้อมสอนแล้ว! 🎓</h3>
-                <p style={{fontSize:13,color:'#64748b',margin:0,fontFamily:"'Sarabun',sans-serif",lineHeight:1.6}}>ถามได้ทุกวิชา ส่งรูปโจทย์มาได้เลย<br/>พี่หมีจะช่วยอธิบายให้เข้าใจ ✨</p>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-800 leading-tight tracking-tight">
+                  สวัสดี, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">{wallet?.student_name || 'นักเรียน'}</span> 👋
+                </h1>
+                <p className="text-slate-500 font-bold text-sm mt-2">
+                  พร้อมจะเรียนรู้และสนุกไปด้วยกันหรือยังครับ?
+                </p>
               </div>
 
-              <p style={{textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',marginBottom:10,letterSpacing:'0.05em',textTransform:'uppercase'}}>💡 ลองถามพี่หมีดูสิ</p>
-              <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>
-                {quickPrompts.map((p,i) => (
-                  <button key={i} className="quick-chip" onClick={() => setInput(p.text)}>
-                    <span style={{color:p.color}}>{p.icon}</span>
-                    {p.text}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Messages */}
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`msg-row ${msg.role}`}>
-              {msg.role === 'ai' && idx > 0 && (
-                <div className="bear-avatar">
-                  <img src="/aibear.png" style={{width:'100%',height:'100%',objectFit:'contain'}}
-                    onError={(e:any) => { e.target.style.display='none'; e.target.parentNode.textContent='🐻'; }}
-                  />
-                </div>
-              )}
-              {/* Spacer so AI bubble aligns when no avatar (first message) */}
-              {msg.role === 'ai' && idx === 0 && <div style={{width:34,flexShrink:0}}/>}
-
-              <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:msg.role==='user'?'flex-end':'flex-start',maxWidth:'100%'}}>
-                {msg.image && (
-                  <img src={msg.image} style={{borderRadius:16,maxHeight:220,maxWidth:'80%',border:'3px solid white',boxShadow:'0 6px 20px rgba(0,0,0,0.12)',objectFit:'cover'}}/>
-                )}
-                <div className={msg.role === 'ai' ? 'bubble-ai' : 'bubble-user'}>
-                  {msg.role === 'ai' ? (
-                    <div className="ai-md">
-                      <ReactMarkdown
-                        components={{
-                          p: ({node,...props}) => <p {...props}/>,
-                          strong: ({node,...props}) => <strong {...props}/>,
-                          ul: ({node,...props}) => <ul {...props}/>,
-                          ol: ({node,...props}) => <ol {...props}/>,
-                          li: ({node,...props}) => <li {...props}/>,
-                        }}
-                      >{msg.content}</ReactMarkdown>
-                    </div>
+              <div className="flex items-center gap-3 relative z-10 mt-2 sm:mt-0">
+                <Link href="/" className="flex items-center justify-center gap-2 px-5 py-3 bg-white border border-slate-100 text-slate-600 rounded-2xl text-[11px] font-black hover:bg-slate-50 transition-all shadow-sm flex-1 sm:flex-none">
+                  <Home size={16}/> ไปเว็บไซต์
+                </Link>
+                <Link href="/student/profile" className="relative shrink-0 transition-transform hover:scale-105">
+                  {studentData?.avatar_url ? (
+                    <img src={studentData.avatar_url} alt="" className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover avatar-ring"/>
                   ) : (
-                    <span style={{whiteSpace:'pre-wrap',fontWeight:600,wordBreak:'break-word'}}>{msg.content}</span>
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-2xl avatar-ring">
+                      {wallet?.student_name?.charAt(0) || 'T'}
+                    </div>
                   )}
-                </div>
+                  {needsProfileUpdate && <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full animate-pulse"></div>}
+                </Link>
               </div>
             </div>
-          ))}
+          </header>
 
-          {/* Typing indicator */}
-          {isLoading && (
-            <div className="msg-row ai">
-              <div className="bear-avatar">
-                <img src="/aibear.png" style={{width:'100%',height:'100%',objectFit:'contain'}}
-                  onError={(e:any) => { e.target.style.display='none'; e.target.parentNode.textContent='🐻'; }}
-                />
+          {/* BANNER แจ้งเตือนให้ตั้งค่าโปรไฟล์ */}
+          {needsProfileUpdate && (
+            <div className="fade-up bg-orange-50 border border-orange-200 rounded-[2rem] p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5 relative overflow-hidden shadow-sm">
+              <div className="absolute -right-4 -top-4 w-32 h-32 bg-orange-200/30 rounded-full blur-2xl pointer-events-none"></div>
+              <div className="w-12 h-12 bg-orange-100 rounded-[1.2rem] flex items-center justify-center text-orange-600 shrink-0">
+                 <AlertCircle size={24} />
               </div>
-              <div className="bubble-ai" style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:5}}>
-                <span className="typing-dot"/>
-                <span className="typing-dot"/>
-                <span className="typing-dot"/>
+              <div className="flex-1 relative z-10">
+                <h3 className="text-base font-black text-orange-800">กรุณาตั้งค่าโปรไฟล์ก่อนเริ่มใช้งาน</h3>
+                <p className="text-xs font-bold text-orange-600/80 mt-1">
+                  ระบบจำเป็นต้องทราบ <strong className="text-orange-700">"ระดับชั้น"</strong> ของคุณ เพื่อให้ติวเตอร์จัดเตรียมเนื้อหาให้ตรงจุดครับ
+                </p>
               </div>
+              <Link href="/student/profile" className="w-full sm:w-auto text-center bg-orange-500 text-white px-6 py-3.5 rounded-xl text-xs font-black hover:bg-orange-600 active:scale-95 transition-all shadow-md shadow-orange-200 relative z-10">
+                ไปตั้งค่าโปรไฟล์
+              </Link>
             </div>
           )}
 
-          <div ref={messagesEndRef} style={{height:8}}/>
+          {/* ── TIER HOURS SECTION ── */}
+          <section className="fade-up">
+            <div className="flex items-center justify-between mb-5 px-1">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[1.2rem] bg-blue-100 flex items-center justify-center shadow-sm">
+                  <Wallet size={20} className="text-blue-600"/>
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-800 leading-none">ชั่วโมงเรียนคงเหลือ</h2>
+                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">เช็กยอดชั่วโมงตามคอร์ส</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex lg:grid lg:grid-cols-3 gap-5 overflow-x-auto snap-x snap-mandatory hide-scrollbar pb-4 -mx-4 px-4 sm:-mx-7 sm:px-7 lg:mx-0 lg:px-0 lg:pb-0">
+              {[
+                {
+                  label: 'ประถม - ม.ต้น', tier: 'tier1',
+                  headerClass: 'tier-blue',
+                  onlineBal: wallet?.tier1_online_balance || 0,
+                  onsiteBal: wallet?.tier1_onsite_balance || 0,
+                  accentColor: '#3b82f6',
+                  onlineBtnClass: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
+                  onsiteBtnClass: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                },
+                {
+                  label: 'สอบเข้า ม.4', tier: 'tier2',
+                  headerClass: 'tier-purple',
+                  onlineBal: wallet?.tier2_online_balance || 0,
+                  onsiteBal: wallet?.tier2_onsite_balance || 0,
+                  accentColor: '#8b5cf6',
+                  onlineBtnClass: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
+                  onsiteBtnClass: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                },
+                {
+                  label: 'ม.ปลาย / มหาลัย', tier: 'tier3',
+                  headerClass: 'tier-orange',
+                  onlineBal: wallet?.tier3_online_balance || 0,
+                  onsiteBal: wallet?.tier3_onsite_balance || 0,
+                  accentColor: '#f97316',
+                  onlineBtnClass: 'bg-orange-50 text-orange-600 hover:bg-orange-100',
+                  onsiteBtnClass: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                },
+              ].map((t, i) => (
+                <div key={i} className="tier-card rounded-[2.5rem] flex flex-col min-w-[85vw] sm:min-w-[320px] lg:min-w-0 snap-start shrink-0 relative">
+                  <div className={`${t.headerClass} px-6 py-5 flex items-center justify-between`}>
+                    <span className="text-white font-black text-base">{t.label}</span>
+                    <Sparkles size={18} className="text-white/40"/>
+                  </div>
+
+                  <div className="p-6 md:p-8 flex-1 flex flex-col gap-6">
+                    <div className="flex items-center justify-between px-2">
+                      <div className="text-center flex-1">
+                        <div className="flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest mb-2" style={{color: t.accentColor}}>
+                          <Globe size={14}/> Online
+                        </div>
+                        <p className="text-5xl font-black tracking-tight" style={{color: t.accentColor}}>{t.onlineBal}</p>
+                        <p className="text-xs text-slate-400 font-bold mt-1">ชั่วโมง</p>
+                      </div>
+                      <div className="w-px h-16 bg-slate-100 mx-2"></div>
+                      <div className="text-center flex-1">
+                        <div className="flex items-center justify-center gap-1.5 text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">
+                          <MapPin size={14}/> Onsite
+                        </div>
+                        <p className="text-5xl font-black tracking-tight text-emerald-500">{t.onsiteBal}</p>
+                        <p className="text-xs text-slate-400 font-bold mt-1">ชั่วโมง</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mt-auto">
+                      <Link href={`/student/booking-flow?tier=${t.tier}&type=Online`} onClick={checkProfileBeforeAction}
+                        className={`${t.onlineBtnClass} py-3.5 rounded-full font-black text-[11px] text-center transition-all active:scale-95`}>
+                        จองเรียน Online
+                      </Link>
+                      <Link href={`/student/booking-flow?tier=${t.tier}&type=Onsite`} onClick={checkProfileBeforeAction}
+                        className={`${t.onsiteBtnClass} py-3.5 rounded-full font-black text-[11px] text-center transition-all active:scale-95`}>
+                        จองเรียน Onsite
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ── SHORTCUTS BENTO ── */}
+          <section className="fade-up pt-4">
+            <div className="flex items-center gap-3 mb-6 px-1">
+              <div className="w-10 h-10 rounded-[1.2rem] bg-orange-100 flex items-center justify-center shadow-sm">
+                <Zap size={20} className="text-orange-500"/>
+              </div>
+              <h2 className="text-xl font-black text-slate-800">เมนูทางลัด</h2>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+
+              <Link href="/student/courses" onClick={checkProfileBeforeAction}
+                className="shortcut-card xl:col-span-2 bg-slate-900 text-white p-7 rounded-[2.5rem] flex flex-col justify-between h-44 relative overflow-hidden group border-none">
+                <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl group-hover:bg-orange-500/30 transition-colors"></div>
+                <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-blue-500/20 blur-xl"></div>
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm relative z-10 border border-white/10">
+                  <ShoppingCart size={24} className="text-orange-400"/>
+                </div>
+                <div className="relative z-10">
+                  <h3 className="font-black text-lg leading-tight">ซื้อคอร์สเรียน<br/>หรือเพิ่มเวลา</h3>
+                </div>
+              </Link>
+
+              <Link href="/student/booking-flow" onClick={checkProfileBeforeAction}
+                className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden group">
+                {needsProfileUpdate && <div className="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>}
+                <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Calendar size={24} className="text-blue-500"/>
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 text-sm leading-tight">จองคิว<br/>เรียนสด</h3>
+                </div>
+              </Link>
+
+              <Link href="/student/ai-tutor"
+                className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden shadow-lg border-none group"
+                style={{background: 'linear-gradient(135deg, #7c3aed, #4f46e5)'}}>
+                <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10 blur-xl"></div>
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform border border-white/10 relative z-10">
+                  <Bot size={24} className="text-white"/>
+                </div>
+                <div className="relative z-10">
+                  <h3 className="font-black text-white text-sm leading-tight">พี่หมี AI<br/>ช่วยสอน</h3>
+                </div>
+              </Link>
+
+              <Link href="/student/my-books"
+                className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden shadow-lg border-none group"
+                style={{background: 'linear-gradient(135deg, #f97316, #fb923c)'}}>
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-white/15 blur-2xl"></div>
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform border border-white/10 relative z-10">
+                  <BookOpen size={24} className="text-white"/>
+                </div>
+                <div className="relative z-10">
+                  <h3 className="font-black text-white text-sm leading-tight">คลังชีทเรียน<br/>(E-Books)</h3>
+                </div>
+              </Link>
+
+              <Link href="/student/orders"
+                className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 group">
+                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <History size={24} className="text-slate-500"/>
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 text-sm leading-tight">ประวัติ<br/>การซื้อคอร์ส</h3>
+                </div>
+              </Link>
+
+            </div>
+          </section>
+
+          {/* ── REFERRAL + REWARD ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 pt-4 fade-up">
+
+            <div className="ref-card lg:col-span-3 rounded-[2.5rem] p-8 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden border-none shadow-sm">
+              <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full pointer-events-none" style={{background: 'radial-gradient(circle, rgba(37,99,235,0.05) 0%, transparent 65%)'}}></div>
+              <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 shrink-0">
+                <Share2 size={28}/>
+              </div>
+              <div className="flex-1 min-w-0 w-full">
+                <h3 className="font-black text-slate-800 text-lg mb-1">ชวนเพื่อนเรียน รับแต้มฟรี! 🎁</h3>
+                <p className="text-slate-500 text-xs mb-4 font-bold">ให้เพื่อนกรอกรหัสของคุณตอนสมัคร เพื่อรับแต้มสะสมทั้งคู่</p>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5">
+                  <span className="font-black text-blue-600 tracking-[0.15em] text-lg flex-1 truncate">
+                    {studentData?.referral_code || '...'}
+                  </span>
+                  <button onClick={handleCopyRef} className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors active:scale-95 shadow-md">
+                    {copied ? <Check size={18}/> : <Copy size={18}/>}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <Link href="/student/affiliate/shop"
+              className="reward-banner lg:col-span-2 rounded-[2.5rem] p-8 text-white flex flex-col justify-between min-h-[200px] shadow-[0_8px_32px_rgba(249,115,22,0.28)] group border-none">
+              <div className="absolute inset-0 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity" style={{background: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.15) 0%, transparent 50%)'}}></div>
+              <div className="w-14 h-14 rounded-[1.2rem] bg-white/20 border border-white/25 flex items-center justify-center backdrop-blur-sm shadow-inner relative z-10">
+                <Gift size={26}/>
+              </div>
+              <div className="relative z-10 mt-6">
+                <h3 className="font-black text-2xl leading-tight mb-1">ร้านค้าเด็กขยัน</h3>
+                <p className="text-white/90 text-xs font-bold mb-4">ใช้แต้มสะสมแลกรับของรางวัลพิเศษ</p>
+                <div className="flex items-center gap-2 font-black text-sm bg-white/20 w-max px-4 py-2 rounded-full border border-white/30 backdrop-blur-sm">
+                  ไปแลกรางวัล <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
+                </div>
+              </div>
+            </Link>
+          </div>
+
         </div>
       </main>
 
-      {/* ===== FOOTER ===== */}
-      <footer className="chat-footer">
-        <div style={{maxWidth:720,margin:'0 auto'}}>
-
-          {/* Image preview */}
-          {selectedImage && (
-            <div style={{marginBottom:10}}>
-              <div className="img-preview">
-                <img src={selectedImage} style={{width:64,height:64,objectFit:'cover',borderRadius:14,border:'2.5px solid',borderColor:'#f97316',boxShadow:'0 4px 14px rgba(249,115,22,0.3)'}}/>
-                <button
-                  onClick={() => setSelectedImage(null)}
-                  style={{position:'absolute',top:-8,right:-8,width:22,height:22,borderRadius:'50%',background:'#ef4444',border:'2px solid white',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',boxShadow:'0 2px 8px rgba(239,68,68,0.4)'}}
-                >
-                  <X size={11} color="white"/>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Input form */}
-          <form onSubmit={handleSend} style={{display:'contents'}}>
-            <div className="input-shell">
-              <button type="button" className="img-btn" onClick={() => fileInputRef.current?.click()}>
-                <ImageIcon size={20}/>
-              </button>
-              <input type="file" ref={fileInputRef} style={{display:'none'}} accept="image/*" onChange={handleImageChange}/>
-
-              <input
-                type="text"
-                placeholder="พิมพ์ถามการบ้านได้เลย..."
-                style={{flex:1,background:'transparent',border:'none',outline:'none',fontSize:14,fontWeight:600,color:'#1e293b',minWidth:0}}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-              />
-
-              <button
-                type="submit"
-                className={`send-btn ${(!input.trim() && !selectedImage) ? 'inactive' : 'active'}`}
-                disabled={!input.trim() && !selectedImage}
-              >
-                <Send size={17} color={(!input.trim() && !selectedImage) ? '#94a3b8' : 'white'}/>
-              </button>
-            </div>
-          </form>
-
-          <p style={{textAlign:'center',fontSize:10,color:'#cbd5e1',fontWeight:600,marginTop:8,display:'none'}} className="sm-show">
-            TC AI Tutor ช่วยแนะนำวิธีคิด ฝึกทำเองจะเก่งที่สุด! ✨
-          </p>
-        </div>
-      </footer>
-
-      <style>{`.sm-show { display: block; } @media(max-width:600px){.sm-show{display:none}}`}</style>
+      <FloatingAIMascot />
     </div>
   );
 }
