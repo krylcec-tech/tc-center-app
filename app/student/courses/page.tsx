@@ -161,6 +161,12 @@ function CatalogContent() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen font-sans text-gray-900 relative">
       
+      {/* ซ่อน Scrollbar ของแท็บเลื่อนแนวนอน */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
+
       {/* Modal ดูรายละเอียดสินค้าแบบเต็ม */}
       {viewingItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewingItem(null)}>
@@ -168,7 +174,7 @@ function CatalogContent() {
             <button onClick={() => setViewingItem(null)} className="absolute top-4 right-4 bg-gray-100 text-gray-500 p-2 rounded-full hover:bg-gray-200 transition-colors z-10"><X size={20}/></button>
             
             {viewingItem.image_url && viewingItem.image_url.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto hide-scrollbar mb-6 pb-2" style={{ touchAction: 'pan-x' }}>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar mb-6 pb-2">
                 {viewingItem.image_url.map((url: string, idx: number) => (
                   <img key={idx} src={url} className="w-[85%] sm:w-2/3 h-52 sm:h-64 object-cover rounded-[1.5rem] shrink-0 border border-gray-100 shadow-sm" alt={`Preview ${idx+1}`} />
                 ))}
@@ -267,9 +273,9 @@ function CatalogContent() {
         </div>
       )}
 
-      {/* ✨ ดัน Header และ Navbar ให้ลอยอยู่ชั้นบนสุด ทับทุก Element ของ Background */}
-      <div className="relative z-50">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 pt-2">
+      {/* ✨ ส่วนหัว ย้ายมาอยู่ Layer บนสุดด้วย relative z-40 */}
+      <div className="relative z-40">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 pt-2">
           <div>
             <Link href={!isLoggedIn ? "/" : (isAdmin ? "/admin" : "/student")} className="text-blue-600 font-black text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2 mb-2 group w-max">
               <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> กลับหน้าหลัก
@@ -290,20 +296,20 @@ function CatalogContent() {
           </div>
         </div>
 
-        {/* ✨ แถบหมวดหมู่หลัก */}
-        <div className="w-full overflow-x-auto hide-scrollbar mb-4" style={{ touchAction: 'pan-x' }}>
-          <div className="flex gap-2 sm:gap-3 items-center pb-2 pr-4 w-max min-w-full">
-            <button onClick={() => setActiveTab('all')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
-            <button onClick={() => setActiveTab('course')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
-            <button onClick={() => setActiveTab('book')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
+        {/* ✨ แถบหมวดหมู่หลัก (แก้ให้เลื่อนอิสระ ไม่บังคับ Snap และ Touch Action) */}
+        <div className="w-full mb-4">
+          <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-2 items-center">
+            <button onClick={() => setActiveTab('all')} className={`shrink-0 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
+            <button onClick={() => setActiveTab('course')} className={`shrink-0 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
+            <button onClick={() => setActiveTab('book')} className={`shrink-0 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
             
-            {availableTags.length > 0 && <div className="w-px h-6 bg-gray-200 mx-2 shrink-0"></div>}
+            {availableTags.length > 0 && <div className="w-px h-6 bg-gray-200 mx-1 shrink-0"></div>}
 
             {availableTags.map(tag => (
               <button 
                 key={tag} 
                 onClick={() => setActiveTab(tag)} 
-                className={`shrink-0 px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 ${activeTab === tag ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'}`}
+                className={`shrink-0 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 ${activeTab === tag ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'}`}
               >
                 <Tag size={12}/> {tag}
               </button>
@@ -311,16 +317,16 @@ function CatalogContent() {
           </div>
         </div>
 
-        {/* ✨ แถบกรองประเภทคนขาย */}
-        <div className="w-full overflow-x-auto hide-scrollbar mb-8" style={{ touchAction: 'pan-x' }}>
-          <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 w-max min-w-full pr-4">
+        {/* ✨ แถบกรองประเภทคนขาย (ย้ายการ scroll มาไว้ในกล่องสีขาวเลย) */}
+        <div className="w-full mb-8">
+          <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 overflow-x-auto no-scrollbar">
              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
                <Filter size={12} /> กรองโดย
              </span>
-             <button onClick={() => setActiveSellerType('ALL')} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'ALL' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>ทุกแหล่งที่มา</button>
-             <button onClick={() => setActiveSellerType('institute')} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'institute' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยสถาบัน</button>
-             <button onClick={() => setActiveSellerType('tutor')} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'tutor' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยติวเตอร์</button>
-             <button onClick={() => setActiveSellerType('student')} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'student' ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยนักเรียน</button>
+             <button onClick={() => setActiveSellerType('ALL')} className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'ALL' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>ทุกแหล่งที่มา</button>
+             <button onClick={() => setActiveSellerType('institute')} className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'institute' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยสถาบัน</button>
+             <button onClick={() => setActiveSellerType('tutor')} className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'tutor' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยติวเตอร์</button>
+             <button onClick={() => setActiveSellerType('student')} className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'student' ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยนักเรียน</button>
           </div>
         </div>
       </div>

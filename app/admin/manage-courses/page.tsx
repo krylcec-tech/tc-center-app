@@ -15,7 +15,7 @@ export default function ManageCoursesPage() {
   // Form States
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [originalPrice, setOriginalPrice] = useState(''); // ✨ เพิ่ม State ราคาเต็ม
+  const [originalPrice, setOriginalPrice] = useState(''); 
   const [price, setPrice] = useState('');
   const [hoursCount, setHoursCount] = useState('0'); 
   const [referralPoints, setReferralPoints] = useState('0');
@@ -65,22 +65,35 @@ export default function ManageCoursesPage() {
       .order('created_at', { ascending: false });
 
     if (data) {
-      const formattedData = data.map(item => ({
-        ...item,
-        image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : []),
-        type: item.type || 'course',
-        is_active: item.is_active !== false,
-        tags: Array.isArray(item.tags) ? item.tags : [],
-        seller_type: item.seller_type || 'institute',
-        seller_name: item.seller_name || 'TC Center',
-        original_price: item.original_price || 0 // ✨ ดึงราคาเต็ม
-      }));
-      setItems(formattedData);
-
       const tagsSet = new Set<string>();
-      formattedData.forEach(item => {
-        item.tags.forEach((t: string) => tagsSet.add(t));
+
+      const formattedData = data.map(item => {
+        let parsedTags: string[] = [];
+        if (Array.isArray(item.tags)) {
+          parsedTags = item.tags;
+        } else if (typeof item.tags === 'string') {
+          try {
+            parsedTags = JSON.parse(item.tags);
+          } catch {
+            parsedTags = item.tags.replace(/^{|}$/g, '').split(',').map(t => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
+          }
+        }
+
+        parsedTags.forEach((t: string) => tagsSet.add(t));
+
+        return {
+          ...item,
+          image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : []),
+          type: item.type || 'course',
+          is_active: item.is_active !== false,
+          tags: parsedTags,
+          seller_type: item.seller_type || 'institute',
+          seller_name: item.seller_name || 'TC Center',
+          original_price: item.original_price || 0 
+        };
       });
+
+      setItems(formattedData);
       setAllAvailableTags(Array.from(tagsSet));
     }
   };
@@ -115,6 +128,33 @@ export default function ManageCoursesPage() {
     setSelectedTags(selectedTags.filter(t => t !== tagToRemove));
   };
 
+  // ✨ ฟังก์ชันใหม่: สำหรับลบ Tag ออกจากทุกคอร์สในระบบถาวร
+  const handleDeleteGlobalTag = async (tagToDelete: string) => {
+    if (!confirm(`⚠️ ยืนยันการลบ Tag "${tagToDelete}" ออกจากระบบ?\n\n(การกระทำนี้จะดึง Tag นี้ออกจากทุกคอร์ส/ชีท ที่เคยถูกใส่ไว้ทั้งหมดครับ)`)) return;
+    
+    setLoading(true);
+    try {
+      const coursesToUpdate = items.filter(item => item.tags && item.tags.includes(tagToDelete));
+      
+      if (coursesToUpdate.length > 0) {
+        const updatePromises = coursesToUpdate.map(course => {
+          const updatedTags = course.tags.filter((t: string) => t !== tagToDelete);
+          return supabase.from('courses').update({ tags: updatedTags }).eq('id', course.id);
+        });
+        await Promise.all(updatePromises);
+      }
+      
+      setSelectedTags(prev => prev.filter(t => t !== tagToDelete));
+      
+      alert(`🗑️ ลบ Tag "${tagToDelete}" ออกจากระบบเรียบร้อยแล้วครับ!`);
+      fetchItems(); 
+    } catch (error: any) {
+      alert('เกิดข้อผิดพลาดในการลบ Tag: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!title || !price) return alert("กรุณากรอกชื่อและราคาครับ");
     if (type === 'course' && !targetWalletType) return alert("กรุณาเลือกประเภทกระเป๋าที่จะเติมชั่วโมงด้วยครับ");
@@ -145,7 +185,7 @@ export default function ManageCoursesPage() {
       const payload = { 
         title, 
         description, 
-        original_price: parseFloat(originalPrice) || 0, // ✨ เซฟราคาเต็ม
+        original_price: parseFloat(originalPrice) || 0,
         price: parseFloat(price), 
         type, 
         category, 
@@ -211,7 +251,7 @@ export default function ManageCoursesPage() {
   const handleEdit = (item: any) => {
     setEditingItem(item);
     setTitle(item.title);
-    setOriginalPrice(item.original_price?.toString() || ''); // ✨ โหลดราคาเต็ม
+    setOriginalPrice(item.original_price?.toString() || '');
     setPrice(item.price.toString());
     setHoursCount(item.hours_count?.toString() || '0');
     setReferralPoints(item.referral_points?.toString() || '0');
@@ -253,7 +293,7 @@ export default function ManageCoursesPage() {
 
   const ItemCard = ({ item }: { item: any }) => {
     const isOutOfStock = !item.is_unlimited && item.stock <= 0;
-    const hasPromo = item.original_price > item.price; // ✨ เช็กว่ามีโปรลดราคาไหม
+    const hasPromo = item.original_price > item.price; 
     
     return (
       <div className={`bg-white p-4 rounded-[24px] shadow-sm border flex flex-col h-full group transition-all relative ${!item.is_active ? 'opacity-60 border-gray-200 bg-gray-50' : isOutOfStock ? 'border-red-100 bg-red-50/30' : 'border-gray-100 hover:shadow-md hover:-translate-y-1'}`}>
@@ -455,21 +495,29 @@ export default function ManageCoursesPage() {
                       ))}
                     </div>
                   )}
+                  
+                  {/* ✨ อัปเดตส่วนปุ่มลบ Tag ที่มีอยู่แล้ว */}
                   {allAvailableTags.length > 0 && (
                     <div className="pt-2.5 border-t border-blue-100">
                       <p className="text-[9px] font-black text-blue-400 mb-1.5 uppercase tracking-widest">คลิกเพื่อเลือก Tag ที่มีอยู่แล้ว</p>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1.5">
                         {allAvailableTags.filter(t => !selectedTags.includes(t)).map(tag => (
-                          <button key={tag} type="button" onClick={() => setSelectedTags([...selectedTags, tag])} className="bg-white border border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-300 px-2 py-1 rounded-md text-[9px] font-black transition-all shadow-sm">
-                            + {tag}
-                          </button>
+                          <div key={tag} className="flex items-stretch bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
+                            <button type="button" onClick={() => setSelectedTags([...selectedTags, tag])} className="px-2 py-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 text-[9px] font-black transition-all">
+                              + {tag}
+                            </button>
+                            {/* ปุ่ม X สำหรับลบออกจากระบบ */}
+                            <button type="button" onClick={() => handleDeleteGlobalTag(tag)} className="px-1.5 py-1 border-l border-gray-100 bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-100 transition-all active:scale-95" title="ลบ Tag นี้ออกจากระบบอย่างถาวร">
+                              <X size={10}/>
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
                   )}
+
                 </div>
 
-                {/* ✨ เพิ่มช่องราคาเต็ม (เพื่อให้ระบบสร้างโปรลดราคา) */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-gray-400 ml-1 uppercase">ราคาเต็ม (ก่อนลด)</label>
