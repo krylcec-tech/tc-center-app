@@ -75,7 +75,8 @@ export default function ManageCoursesPage() {
           try {
             parsedTags = JSON.parse(item.tags);
           } catch {
-            parsedTags = item.tags.replace(/^{|}$/g, '').split(',').map(t => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
+            // ✨ แก้ปัญหาขีดแดง TypeScript ตรงนี้ (เติม t: string)
+            parsedTags = item.tags.replace(/^{|}$/g, '').split(',').map((t: string) => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
           }
         }
 
@@ -128,7 +129,6 @@ export default function ManageCoursesPage() {
     setSelectedTags(selectedTags.filter(t => t !== tagToRemove));
   };
 
-  // ✨ ฟังก์ชันใหม่: สำหรับลบ Tag ออกจากทุกคอร์สในระบบถาวร
   const handleDeleteGlobalTag = async (tagToDelete: string) => {
     if (!confirm(`⚠️ ยืนยันการลบ Tag "${tagToDelete}" ออกจากระบบ?\n\n(การกระทำนี้จะดึง Tag นี้ออกจากทุกคอร์ส/ชีท ที่เคยถูกใส่ไว้ทั้งหมดครับ)`)) return;
     
@@ -496,7 +496,6 @@ export default function ManageCoursesPage() {
                     </div>
                   )}
                   
-                  {/* ✨ อัปเดตส่วนปุ่มลบ Tag ที่มีอยู่แล้ว */}
                   {allAvailableTags.length > 0 && (
                     <div className="pt-2.5 border-t border-blue-100">
                       <p className="text-[9px] font-black text-blue-400 mb-1.5 uppercase tracking-widest">คลิกเพื่อเลือก Tag ที่มีอยู่แล้ว</p>
@@ -506,7 +505,6 @@ export default function ManageCoursesPage() {
                             <button type="button" onClick={() => setSelectedTags([...selectedTags, tag])} className="px-2 py-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 text-[9px] font-black transition-all">
                               + {tag}
                             </button>
-                            {/* ปุ่ม X สำหรับลบออกจากระบบ */}
                             <button type="button" onClick={() => handleDeleteGlobalTag(tag)} className="px-1.5 py-1 border-l border-gray-100 bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-100 transition-all active:scale-95" title="ลบ Tag นี้ออกจากระบบอย่างถาวร">
                               <X size={10}/>
                             </button>
