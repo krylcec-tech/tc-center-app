@@ -1,16 +1,18 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, DollarSign, CheckCircle2, AlertCircle, Edit3, ArrowLeft, GraduationCap } from 'lucide-react';
+import { Loader2, DollarSign, CheckCircle2, AlertCircle, Edit3, ArrowLeft, GraduationCap, Search, Filter, Users } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminTutorPayouts() {
   const [loading, setLoading] = useState(true);
   const [payouts, setPayouts] = useState<any[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
-  
-  // เก็บค่าเงินที่แอดมินพิมพ์ในช่อง Input
   const [feeInputs, setFeeInputs] = useState<{ [key: string]: string }>({});
+
+  const [activeTab, setActiveTab] = useState<'PENDING' | 'PAID'>('PENDING');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTutorId, setSelectedTutorId] = useState<string>('ALL');
 
   useEffect(() => {
     fetchVerifiedBookings();
@@ -19,20 +21,16 @@ export default function AdminTutorPayouts() {
   const fetchVerifiedBookings = async () => {
     setLoading(true);
     try {
-      // ดึงคลาสที่ VERIFIED แล้ว
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select(`
-          id, status, tutor_fee, student_id,
-          tutor_id,
+          id, status, tutor_fee, student_id, tutor_id,
           slots ( start_time, location_type ),
           tutors ( name, email, balance )
         `)
-        .eq('status', 'VERIFIED')
-        .order('id', { ascending: false });
+        .eq('status', 'VERIFIED');
 
       if (bookingsData) {
-        // ✨ ดึง grade_level เพิ่มเข้ามาจาก profiles
         const { data: profiles } = await supabase.from('profiles').select('id, email, full_name, grade_level');
         const { data: wallets } = await supabase.from('student_wallets').select('user_id, student_name');
         
@@ -44,10 +42,12 @@ export default function AdminTutorPayouts() {
             ...b,
             student_name: studentWallet?.student_name || studentProfile?.full_name || 'ไม่ทราบชื่อ',
             student_email: studentProfile?.email || 'ไม่มีอีเมล',
-            student_grade: studentProfile?.grade_level || 'ไม่ระบุระดับชั้น' // ✨ เก็บข้อมูลระดับชั้นไว้ใช้
+            student_grade: studentProfile?.grade_level || 'ไม่ระบุระดับชั้น',
+            start_time_obj: new Date(b.slots.start_time)
           };
         });
 
+        // ไม่ต้อง sort ตรงนี้แล้ว ย้ายไป sort ตอนแสดงผล (ล่างสุด) เพื่อแยกตาม Tab
         setPayouts(formatted);
         
         const initialInputs: any = {};
@@ -89,10 +89,53 @@ export default function AdminTutorPayouts() {
     }
   };
 
+  const uniqueTutors = useMemo(() => {
+    const tutorsMap = new Map();
+    payouts.forEach(item => {
+      if (!tutorsMap.has(item.tutor_id)) {
+        tutorsMap.set(item.tutor_id, item.tutors.name);
+      }
+    });
+    return Array.from(tutorsMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [payouts]);
+
+  // ✨ ระบบ Filter, Search (รวม Email) และ Sorting แยกตาม Tab
+  const filteredPayouts = payouts.filter(item => {
+    // 1. กรองตาม Tab (รอจ่าย / จ่ายแล้ว)
+    const isPaid = item.tutor_fee !== null && item.tutor_fee > 0;
+    if (activeTab === 'PENDING' && isPaid) return false;
+    if (activeTab === 'PAID' && !isPaid) return false;
+
+    // 2. กรองตามติวเตอร์ที่เลือกใน Dropdown
+    if (selectedTutorId !== 'ALL' && item.tutor_id !== selectedTutorId) return false;
+
+    // 3. กรองตามช่องค้นหา (ชื่อเด็ก, ชื่อครู, อีเมลเด็ก, อีเมลครู)
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchStudentName = item.student_name?.toLowerCase().includes(q) || false;
+      const matchStudentEmail = item.student_email?.toLowerCase().includes(q) || false;
+      const matchTutorName = item.tutors?.name?.toLowerCase().includes(q) || false;
+      const matchTutorEmail = item.tutors?.email?.toLowerCase().includes(q) || false;
+      
+      if (!matchStudentName && !matchStudentEmail && !matchTutorName && !matchTutorEmail) return false;
+    }
+
+    return true;
+  }).sort((a, b) => {
+    // ✨ 4. เรียงลำดับข้อมูลแยกตาม Tab
+    if (activeTab === 'PENDING') {
+      // รอจ่าย: เอาเก่าสุดขึ้นก่อน (ค้างจ่ายนานสุด)
+      return a.start_time_obj.getTime() - b.start_time_obj.getTime();
+    } else {
+      // จ่ายแล้ว: เอาใหม่สุดขึ้นก่อน (เพิ่งจ่ายล่าสุด)
+      return b.start_time_obj.getTime() - a.start_time_obj.getTime();
+    }
+  });
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 md:p-10 font-sans text-slate-800">
       <div className="max-w-6xl mx-auto">
         <Link href="/admin" className="text-sm font-black text-slate-400 flex items-center gap-2 mb-4 hover:text-blue-600 w-max transition-colors">
           <ArrowLeft size={16}/> กลับหน้าหลัก
@@ -102,34 +145,93 @@ export default function AdminTutorPayouts() {
         </h1>
         <p className="text-slate-500 font-bold mb-8 text-sm">จัดการค่าสอนสำหรับคลาสที่ได้รับการยืนยัน (VERIFIED) แล้ว</p>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 mb-6 flex flex-col lg:flex-row gap-4 justify-between items-center z-20 relative">
+          
+          {/* Tabs: รอจ่าย / จ่ายแล้ว */}
+          <div className="flex bg-slate-100 p-1 rounded-2xl w-full lg:w-max">
+            <button 
+              onClick={() => setActiveTab('PENDING')}
+              className={`flex-1 lg:px-8 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'PENDING' ? 'bg-white shadow-sm text-orange-500' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              รอจ่ายเงิน
+            </button>
+            <button 
+              onClick={() => setActiveTab('PAID')}
+              className={`flex-1 lg:px-8 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'PAID' ? 'bg-white shadow-sm text-emerald-500' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              จ่ายเงินแล้ว
+            </button>
+          </div>
+
+          {/* Search & Filter */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            {/* Dropdown ติวเตอร์ */}
+            <div className="relative w-full sm:w-48">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <Users size={16} className="text-slate-400" />
+              </div>
+              <select 
+                value={selectedTutorId}
+                onChange={(e) => setSelectedTutorId(e.target.value)}
+                className="w-full pl-9 pr-8 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-blue-500 shadow-sm appearance-none cursor-pointer hover:bg-slate-50"
+              >
+                <option value="ALL">ติวเตอร์ทั้งหมด</option>
+                {uniqueTutors.map(tutor => (
+                  <option key={tutor.id} value={tutor.id}>ครู{tutor.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* ช่องค้นหา */}
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="ค้นหาชื่อ, อีเมล..." 
+                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <X size={14}/>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden relative z-10">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left min-w-[800px]">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">รายละเอียดคลาส</th>
+                  <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">รายละเอียดคลาส (เวลา)</th>
                   <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ข้อมูลติวเตอร์</th>
                   <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ข้อมูลนักเรียน</th>
                   <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">ค่าสอน (บาท)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {payouts.map((item) => (
+                {filteredPayouts.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-6">
-                      <p className="font-black text-slate-800">{new Date(item.slots.start_time).toLocaleDateString('th-TH')} • {new Date(item.slots.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</p>
+                      <p className="font-black text-slate-800 flex items-center gap-1.5">
+                         {item.start_time_obj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} 
+                         <span className="text-slate-400 font-bold text-xs">•</span> 
+                         <span className="text-blue-600">{item.start_time_obj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</span>
+                      </p>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase mt-1.5 inline-block ${item.slots.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
                         {item.slots.location_type}
                       </span>
                     </td>
                     <td className="p-6">
                       <p className="font-black text-slate-800">ครู{item.tutors.name}</p>
-                      <p className="text-[10px] text-slate-500 font-bold">{item.tutors.email}</p>
+                      <p className="text-[10px] text-slate-500 font-bold break-all">{item.tutors.email}</p>
                     </td>
                     <td className="p-6">
                       <p className="font-black text-slate-800 mb-0.5">น้อง{item.student_name}</p>
-                      <p className="text-[10px] text-slate-400 font-bold mb-1">{item.student_email}</p>
-                      {/* ✨ แสดงระดับชั้นของนักเรียน (ไอคอนหมวกรับปริญญา) */}
+                      <p className="text-[10px] text-slate-400 font-bold mb-1 break-all">{item.student_email}</p>
                       <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-600 text-[9px] font-black px-2 py-0.5 rounded-md">
                         <GraduationCap size={10}/> {item.student_grade}
                       </span>
@@ -139,14 +241,18 @@ export default function AdminTutorPayouts() {
                         <input 
                           type="number" 
                           placeholder="0.00"
-                          className="w-24 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-black text-center outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                          className={`w-24 px-3 py-2.5 bg-white border rounded-xl text-sm font-black text-center outline-none focus:ring-2 transition-all shadow-sm
+                            ${activeTab === 'PAID' ? 'border-emerald-200 text-emerald-700 focus:border-emerald-500 focus:ring-emerald-100 bg-emerald-50/30' : 'border-slate-200 text-slate-800 focus:border-blue-500 focus:ring-blue-100'}
+                          `}
                           value={feeInputs[item.id] || ''}
                           onChange={(e) => setFeeInputs({...feeInputs, [item.id]: e.target.value})}
                         />
                         <button 
                           onClick={() => handleSaveFee(item)}
                           disabled={savingId === item.id}
-                          className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 min-w-[100px] ${item.tutor_fee !== null ? 'bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                          className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 min-w-[100px] 
+                            ${item.tutor_fee !== null ? 'bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200' : 'bg-blue-600 text-white hover:bg-blue-700'}
+                          `}
                         >
                           {savingId === item.id ? <Loader2 size={14} className="animate-spin"/> : (item.tutor_fee !== null ? <Edit3 size={14}/> : <CheckCircle2 size={14}/>)}
                           {item.tutor_fee !== null ? 'แก้ไขยอด' : 'ยืนยันจ่าย'}
@@ -155,8 +261,17 @@ export default function AdminTutorPayouts() {
                     </td>
                   </tr>
                 ))}
-                {payouts.length === 0 && (
-                  <tr><td colSpan={4} className="p-16 text-center text-slate-400 font-bold text-sm bg-slate-50/50">ยังไม่มีคลาสที่รอการเพิ่มยอดเงินครับ</td></tr>
+                
+                {filteredPayouts.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-16 text-center">
+                      <div className="flex flex-col items-center justify-center text-slate-400">
+                        <AlertCircle size={40} className="mb-3 opacity-20" />
+                        <p className="font-black text-base text-slate-500">ไม่พบข้อมูลคลาสเรียน</p>
+                        <p className="text-xs font-bold mt-1">ลองเปลี่ยนเงื่อนไขการค้นหา หรือสลับแท็บดูนะครับ</p>
+                      </div>
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

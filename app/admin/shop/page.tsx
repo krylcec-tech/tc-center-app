@@ -4,13 +4,16 @@ import { supabase } from '@/lib/supabase';
 import { 
   PackagePlus, Gift, Store, Loader2, CheckCircle, Clock, 
   Users, GraduationCap, ImagePlus, X, ArrowLeft, Trash2, Eye, EyeOff,
-  Infinity, Box
+  Infinity, Box, Edit3, Search, XCircle, CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminShopPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // ✨ State สำหรับการแก้ไข
+  const [editingReward, setEditingReward] = useState<any>(null);
   
   // Form States
   const [rewardName, setRewardName] = useState('');
@@ -21,10 +24,15 @@ export default function AdminShopPage() {
   
   // Image Upload States
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]); 
 
   // Data States
   const [rewards, setRewards] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
+
+  // ✨ States สำหรับตารางรับคำร้อง (Tabs & Search)
+  const [requestTab, setRequestTab] = useState<'PENDING' | 'HISTORY'>('PENDING');
+  const [requestSearch, setRequestSearch] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -33,12 +41,14 @@ export default function AdminShopPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // 1. ดึงข้อมูลของรางวัล
       const { data: rewardsData } = await supabase
         .from('rewards')
         .select('*')
         .order('created_at', { ascending: false });
       setRewards(rewardsData || []);
 
+      // 2. ดึงข้อมูลคำร้องขอ
       const { data: requestsData } = await supabase
         .from('redeem_requests')
         .select(`
@@ -47,15 +57,35 @@ export default function AdminShopPage() {
         `)
         .order('created_at', { ascending: false });
       
-      const { data: profiles } = await supabase.from('student_wallets').select('user_id, student_name');
-      const { data: tutors } = await supabase.from('tutors').select('user_id, name');
+      // 3. ดึงข้อมูลผู้ใช้เพื่อเอา ชื่อ และ อีเมล
+      const { data: profiles } = await supabase.from('profiles').select('id, email, full_name');
+      const { data: wallets } = await supabase.from('student_wallets').select('user_id, student_name');
+      const { data: tutors } = await supabase.from('tutors').select('user_id, name, email');
+      
       const nameMap = new Map();
-      profiles?.forEach(p => nameMap.set(p.user_id, p.student_name));
-      tutors?.forEach(t => nameMap.set(t.user_id, t.name));
+      const emailMap = new Map();
+
+      // แมปข้อมูลโปรไฟล์หลัก
+      profiles?.forEach(p => {
+        nameMap.set(p.id, p.full_name);
+        if (p.email) emailMap.set(p.id, p.email);
+      });
+
+      // ทับด้วยข้อมูลนักเรียน (ถ้ามี)
+      wallets?.forEach(w => {
+        if (w.student_name) nameMap.set(w.user_id, w.student_name);
+      });
+
+      // ทับด้วยข้อมูลติวเตอร์ (ถ้ามี)
+      tutors?.forEach(t => {
+        if (t.name) nameMap.set(t.user_id, t.name);
+        if (t.email) emailMap.set(t.user_id, t.email);
+      });
 
       const formattedRequests = (requestsData || []).map(req => ({
         ...req,
-        requester_name: nameMap.get(req.user_id) || 'ไม่ทราบชื่อ'
+        requester_name: nameMap.get(req.user_id) || 'ไม่ทราบชื่อ',
+        requester_email: emailMap.get(req.user_id) || 'ไม่มีอีเมล'
       }));
 
       setRequests(formattedRequests);
@@ -76,7 +106,34 @@ export default function AdminShopPage() {
     setSelectedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
-  const handleAddReward = async (e: React.FormEvent) => {
+  const removeExistingImage = (indexToRemove: number) => {
+    setExistingImageUrls((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleEdit = (reward: any) => {
+    setEditingReward(reward);
+    setRewardName(reward.name);
+    setPointsCost(reward.points_cost.toString());
+    setTargetGroup(reward.target_group);
+    setRewardStock(reward.stock.toString());
+    setIsUnlimited(reward.is_unlimited);
+    setExistingImageUrls(reward.image_urls || []);
+    setSelectedFiles([]); 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingReward(null);
+    setRewardName('');
+    setPointsCost('');
+    setTargetGroup('TUTOR');
+    setRewardStock('1');
+    setIsUnlimited(false);
+    setSelectedFiles([]);
+    setExistingImageUrls([]);
+  };
+
+  const handleSaveReward = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -88,43 +145,35 @@ export default function AdminShopPage() {
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
           const filePath = `${targetGroup.toLowerCase()}/${fileName}`; 
 
-          const { error: uploadError } = await supabase.storage
-            .from('rewards')
-            .upload(filePath, file);
+          const { error: uploadError } = await supabase.storage.from('rewards').upload(filePath, file);
+          if (uploadError) throw new Error(`อัปโหลดรูปไม่สำเร็จ: ${uploadError.message}`);
 
-          // ✨ ดักจับ Error Storage ให้ชัดเจนขึ้น
-          if (uploadError) throw new Error(`อัปโหลดรูปไม่สำเร็จ: (เช็ก Bucket 'rewards') ${uploadError.message}`);
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('rewards')
-            .getPublicUrl(filePath);
-
+          const { data: { publicUrl } } = supabase.storage.from('rewards').getPublicUrl(filePath);
           uploadedImageUrls.push(publicUrl);
         }
       }
 
-      const { error } = await supabase
-        .from('rewards')
-        .insert([{
-          name: rewardName,
-          points_cost: Number(pointsCost),
-          target_group: targetGroup,
-          image_urls: uploadedImageUrls,
-          stock: isUnlimited ? 0 : Number(rewardStock), 
-          is_unlimited: isUnlimited 
-        }]);
+      const finalImageUrls = [...existingImageUrls, ...uploadedImageUrls];
+      const payload = {
+        name: rewardName,
+        points_cost: Number(pointsCost),
+        target_group: targetGroup,
+        image_urls: finalImageUrls,
+        stock: isUnlimited ? 0 : Number(rewardStock), 
+        is_unlimited: isUnlimited 
+      };
 
-      // ✨ ดักจับ Error Database ให้ชัดเจนขึ้น
-      if (error) throw new Error(`บันทึกข้อมูลลงฐานข้อมูลไม่สำเร็จ: ${error.message}`);
+      if (editingReward) {
+        const { error } = await supabase.from('rewards').update(payload).eq('id', editingReward.id);
+        if (error) throw new Error(`อัปเดตข้อมูลไม่สำเร็จ: ${error.message}`);
+        alert('✅ แก้ไขของรางวัลเรียบร้อย! 🎁');
+      } else {
+        const { error } = await supabase.from('rewards').insert([payload]);
+        if (error) throw new Error(`บันทึกข้อมูลไม่สำเร็จ: ${error.message}`);
+        alert('✅ เพิ่มของรางวัลเข้าระบบเรียบร้อย! 🎁');
+      }
       
-      alert('✅ เพิ่มของรางวัลเข้าระบบเรียบร้อย! 🎁');
-      
-      // Reset Form
-      setRewardName('');
-      setPointsCost('');
-      setRewardStock('1');
-      setIsUnlimited(false);
-      setSelectedFiles([]);
+      cancelEdit();
       fetchData(); 
 
     } catch (error: any) {
@@ -135,7 +184,7 @@ export default function AdminShopPage() {
   };
 
   const handleApproveRequest = async (requestId: string) => {
-    if (!confirm('ยืนยันว่าดำเนินการให้ผู้ใช้เรียบร้อยแล้ว?')) return;
+    if (!confirm('ยืนยันว่าดำเนินการ (ส่งของ) ให้ผู้ใช้เรียบร้อยแล้วใช่ไหม?')) return;
     try {
       const { error } = await supabase
         .from('redeem_requests')
@@ -145,6 +194,46 @@ export default function AdminShopPage() {
       fetchData(); 
     } catch (error: any) {
       alert('เกิดข้อผิดพลาด: ' + error.message);
+    }
+  };
+
+  // ✨ ฟังก์ชันใหม่: ปฏิเสธคำร้อง และ คืน Point
+  const handleRejectRequest = async (req: any) => {
+    if (!confirm(`⚠️ ยืนยันการ "ปฏิเสธ" คำร้องนี้?\n\nระบบจะเปลี่ยนสถานะเป็นปฏิเสธ และทำการคืน ${req.rewards?.points_cost} Points กลับเข้ากระเป๋าผู้ใช้อัตโนมัติครับ`)) return;
+    
+    setSaving(true);
+    try {
+      // 1. เปลี่ยนสถานะคำร้องเป็น REJECTED
+      const { error: updateErr } = await supabase
+        .from('redeem_requests')
+        .update({ status: 'REJECTED', updated_at: new Date() })
+        .eq('id', req.id);
+      
+      if (updateErr) throw updateErr;
+
+      // 2. คืน Point ให้ผู้ใช้ (เช็กว่าเป็นนักเรียนหรือติวเตอร์)
+      const pointsToRefund = req.rewards?.points_cost || 0;
+      
+      // ลองค้นหาในกระเป๋านักเรียนก่อน
+      const { data: studentWallet } = await supabase.from('student_wallets').select('reward_points').eq('user_id', req.user_id).single();
+      
+      if (studentWallet) {
+        // ถ้านักเรียนมีกระเป๋า คืนเข้า reward_points
+        await supabase.from('student_wallets').update({ reward_points: (studentWallet.reward_points || 0) + pointsToRefund }).eq('user_id', req.user_id);
+      } else {
+        // ถ้าไม่เจอในนักเรียน ลองหาในกระเป๋าติวเตอร์
+        const { data: tutorWallet } = await supabase.from('tutors').select('reward_points').eq('user_id', req.user_id).single();
+        if (tutorWallet) {
+          await supabase.from('tutors').update({ reward_points: (tutorWallet.reward_points || 0) + pointsToRefund }).eq('user_id', req.user_id);
+        }
+      }
+
+      alert('❌ ปฏิเสธคำร้องและคืน Points ให้ผู้ใช้เรียบร้อยแล้ว!');
+      fetchData();
+    } catch (error: any) {
+      alert('เกิดข้อผิดพลาดในการปฏิเสธ/คืนพอยต์: ' + error.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -169,6 +258,22 @@ export default function AdminShopPage() {
     }
   };
 
+  // ✨ กรองข้อมูลคำร้องขอตาม Tabs และ Search
+  const filteredRequests = requests.filter(req => {
+    // 1. กรองตาม Tabs
+    if (requestTab === 'PENDING' && req.status !== 'PENDING') return false;
+    if (requestTab === 'HISTORY' && req.status === 'PENDING') return false;
+
+    // 2. กรองตามช่องค้นหา
+    if (requestSearch) {
+      const q = requestSearch.toLowerCase();
+      const matchName = req.requester_name?.toLowerCase().includes(q) || false;
+      const matchEmail = req.requester_email?.toLowerCase().includes(q) || false;
+      if (!matchName && !matchEmail) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -185,13 +290,21 @@ export default function AdminShopPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* ส่วนที่ 1: ฟอร์มเพิ่มของรางวัล */}
+          {/* ส่วนที่ 1: ฟอร์มเพิ่ม/แก้ไขของรางวัล */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
-              <h2 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
-                <PackagePlus className="text-green-500" /> เพิ่มของรางวัลใหม่
-              </h2>
-              <form onSubmit={handleAddReward} className="space-y-4">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                  {editingReward ? <Edit3 className="text-orange-500" /> : <PackagePlus className="text-green-500" />} 
+                  {editingReward ? 'แก้ไขของรางวัล' : 'เพิ่มของรางวัลใหม่'}
+                </h2>
+                {editingReward && (
+                  <button onClick={cancelEdit} className="text-gray-400 hover:text-red-500 transition-colors p-1 bg-gray-50 rounded-full">
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
+              <form onSubmit={handleSaveReward} className="space-y-4">
                 
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase ml-2">สำหรับกลุ่มเป้าหมาย</label>
@@ -252,15 +365,35 @@ export default function AdminShopPage() {
                     </div>
                   </div>
 
-                  {/* ✨ เพิ่มส่วนพรีวิวรูปภาพตรงนี้! */}
-                  {selectedFiles.length > 0 && (
+                  {existingImageUrls.length > 0 && (
                     <div className="flex gap-3 flex-wrap mt-4">
+                      {existingImageUrls.map((url, idx) => (
+                        <div key={`exist-${idx}`} className="relative group">
+                          <img 
+                            src={url} 
+                            alt="existing preview" 
+                            className="w-16 h-16 object-cover rounded-xl border-2 border-gray-200 shadow-sm" 
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => removeExistingImage(idx)} 
+                            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedFiles.length > 0 && (
+                    <div className="flex gap-3 flex-wrap mt-4 border-t border-gray-100 pt-4">
                       {selectedFiles.map((file, idx) => (
-                        <div key={idx} className="relative group">
+                        <div key={`new-${idx}`} className="relative group">
                           <img 
                             src={URL.createObjectURL(file)} 
-                            alt="preview" 
-                            className="w-16 h-16 object-cover rounded-xl border-2 border-gray-200 shadow-sm" 
+                            alt="new preview" 
+                            className="w-16 h-16 object-cover rounded-xl border-2 border-blue-200 shadow-sm" 
                           />
                           <button 
                             type="button" 
@@ -275,9 +408,10 @@ export default function AdminShopPage() {
                   )}
                 </div>
                 
-                <button disabled={saving} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black text-lg hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4">
-                  {saving ? <Loader2 className="animate-spin" /> : <Gift size={20} />}
-                  {saving ? 'กำลังประมวลผล...' : 'บันทึกเข้าระบบ'}
+                {/* ✨ แก้ไขชื่อตัวแปรที่นี่ด้วย จาก editingItem เป็น editingReward */}
+                <button disabled={saving} className={`w-full text-white py-4 rounded-xl font-black text-lg transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 ${editingReward ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                  {saving ? <Loader2 className="animate-spin" /> : (editingReward ? <Edit3 size={20} /> : <Gift size={20} />)}
+                  {saving ? 'กำลังประมวลผล...' : (editingReward ? 'บันทึกการแก้ไข' : 'บันทึกเข้าระบบ')}
                 </button>
               </form>
             </div>
@@ -290,6 +424,9 @@ export default function AdminShopPage() {
                    return (
                     <div key={reward.id} className={`flex flex-col p-3 rounded-xl border transition-all relative group ${reward.is_active ? (isOutOfStock ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100') : 'bg-gray-100 border-gray-200 opacity-60'}`}>
                       <div className="absolute top-2 right-2 flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity z-10">
+                        <button onClick={() => handleEdit(reward)} className="p-1.5 bg-blue-50 text-blue-500 rounded-lg hover:bg-blue-100 transition-colors">
+                          <Edit3 size={16} />
+                        </button>
                         <button onClick={() => handleToggleActive(reward.id, reward.is_active)} className={`p-1.5 rounded-lg transition-colors ${reward.is_active ? 'bg-orange-50 text-orange-500 hover:bg-orange-100' : 'bg-green-50 text-green-500 hover:bg-green-100'}`}>
                           {reward.is_active ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
@@ -298,7 +435,7 @@ export default function AdminShopPage() {
                         </button>
                       </div>
 
-                      <div className="flex justify-between items-start mb-2 pr-16">
+                      <div className="flex justify-between items-start mb-2 pr-24">
                         <div>
                           <span className={`font-bold block text-sm ${reward.is_active ? (isOutOfStock ? 'text-red-600' : 'text-gray-800') : 'text-gray-500 line-through'}`}>{reward.name}</span>
                           <div className="flex items-center gap-2 mt-1">
@@ -317,7 +454,7 @@ export default function AdminShopPage() {
                             )}
                           </div>
                         </div>
-                        <span className="font-black text-gray-600 bg-white px-2 py-1 rounded-lg text-[10px] shadow-sm">{reward.points_cost} pts</span>
+                        <span className="font-black text-gray-600 bg-white px-2 py-1 rounded-lg text-[10px] shadow-sm mt-1">{reward.points_cost} pts</span>
                       </div>
                       
                       {reward.image_urls && reward.image_urls.length > 0 && (
@@ -337,56 +474,109 @@ export default function AdminShopPage() {
 
           {/* ส่วนที่ 2: ตารางรับคำร้อง */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 min-h-full">
-              <h2 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
-                <Clock className="text-orange-500" /> คำร้องขอแลกของรางวัล
-              </h2>
+            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 min-h-full flex flex-col">
               
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                  <Clock className="text-orange-500" /> คำร้องขอแลกของรางวัล
+                </h2>
+                
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-max">
+                    <button 
+                      onClick={() => setRequestTab('PENDING')}
+                      className={`flex-1 px-4 py-2 rounded-lg text-[11px] font-black transition-all ${requestTab === 'PENDING' ? 'bg-white shadow-sm text-orange-500' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      รอตรวจสอบ
+                    </button>
+                    <button 
+                      onClick={() => setRequestTab('HISTORY')}
+                      className={`flex-1 px-4 py-2 rounded-lg text-[11px] font-black transition-all ${requestTab === 'HISTORY' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      ประวัติการแลก
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-56">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input 
+                      type="text" 
+                      placeholder="ค้นหาชื่อ, อีเมล..." 
+                      className="w-full pl-9 pr-4 py-2 bg-gray-50 border-2 border-transparent rounded-xl text-xs font-bold text-gray-600 outline-none focus:border-blue-400 transition-all"
+                      value={requestSearch}
+                      onChange={(e) => setRequestSearch(e.target.value)}
+                    />
+                    {requestSearch && (
+                      <button onClick={() => setRequestSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <X size={12}/>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto flex-1">
+                <table className="w-full text-left min-w-[700px]">
                   <thead>
                     <tr className="border-b-2 border-gray-100">
                       <th className="pb-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">วันที่ขอ</th>
                       <th className="pb-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">ผู้ขอแลก</th>
                       <th className="pb-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">ของที่แลก</th>
-                      <th className="pb-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">สถานะ</th>
+                      <th className="pb-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">สถานะ</th>
                       <th className="pb-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">จัดการ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {requests.length > 0 ? requests.map((req) => (
+                    {filteredRequests.length > 0 ? filteredRequests.map((req) => (
                       <tr key={req.id} className="hover:bg-gray-50/50 transition-colors group">
                         <td className="py-4 text-xs font-bold text-gray-500">
                           {new Date(req.created_at).toLocaleDateString('th-TH')}
                         </td>
-                        <td className="py-4 font-black text-sm text-blue-600">
-                          {req.requester_name}
+                        <td className="py-4">
+                          <p className="font-black text-sm text-blue-600 mb-0.5">{req.requester_name}</p>
+                          <p className="text-[10px] font-bold text-gray-400 break-all">{req.requester_email}</p>
                         </td>
                         <td className="py-4">
-                          <p className="font-black text-gray-800 text-sm">{req.rewards?.name}</p>
+                          <p className="font-black text-gray-800 text-sm mb-0.5">{req.rewards?.name}</p>
                           <p className="text-[10px] font-bold text-gray-400 uppercase">{req.rewards?.points_cost} points</p>
+                        </td>
+                        <td className="py-4 text-center">
+                          {req.status === 'PENDING' && <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black">รอตรวจสอบ</span>}
+                          {req.status === 'COMPLETED' && <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-[10px] font-black">สำเร็จ</span>}
+                          {req.status === 'REJECTED' && <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black">ถูกปฏิเสธ</span>}
                         </td>
                         <td className="py-4">
                           {req.status === 'PENDING' ? (
-                            <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black">รอตรวจสอบ</span>
+                            <div className="flex items-center justify-center gap-2">
+                              <button 
+                                onClick={() => handleApproveRequest(req.id)}
+                                className="flex items-center justify-center p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-500 hover:text-white transition-all shadow-sm active:scale-95"
+                                title="อนุมัติการแลกของรางวัล"
+                              >
+                                <CheckCircle2 size={16} />
+                              </button>
+
+                              <button 
+                                onClick={() => handleRejectRequest(req)}
+                                className="flex items-center justify-center p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-95"
+                                title="ปฏิเสธคำร้อง และ คืน Point"
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            </div>
                           ) : (
-                            <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-[10px] font-black">เสร็จสิ้น</span>
-                          )}
-                        </td>
-                        <td className="py-4 text-center">
-                          {req.status === 'PENDING' && (
-                            <button 
-                              onClick={() => handleApproveRequest(req.id)}
-                              className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-green-500 hover:bg-green-600 px-4 py-2 rounded-xl transition-all shadow-md active:scale-95"
-                            >
-                              <CheckCircle size={14} /> อนุมัติ
-                            </button>
+                            <div className="text-center text-gray-300 font-black text-xl">-</div>
                           )}
                         </td>
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={5} className="text-center py-12 text-gray-400 font-bold italic">ยังไม่มีคำร้องขอแลกของในขณะนี้</td>
+                        <td colSpan={5} className="text-center py-16">
+                           <div className="flex flex-col items-center justify-center text-gray-300">
+                             <Store size={40} className="mb-3 opacity-20" />
+                             <p className="font-bold text-sm text-gray-400">ไม่พบข้อมูลคำร้องขอ</p>
+                           </div>
+                        </td>
                       </tr>
                     )}
                   </tbody>
