@@ -14,7 +14,8 @@ export default function StudentFloatingMenu() {
     setIsOpen(false);
   }, [pathname]);
 
-  if (pathname === '/student') {
+  // ✨ แก้ไขตรงนี้: สั่งให้ซ่อนปุ่มถ้าอยู่หน้า Dashboard หลัก หรือ หน้าพี่หมี AI
+  if (pathname === '/student' || pathname === '/student/ai-tutor') {
     return null;
   }
 
