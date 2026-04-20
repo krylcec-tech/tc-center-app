@@ -90,6 +90,101 @@ export default function LandingPage() {
     { label: 'ฟิสิกส์-เคมี-ชีวะ', emoji: '⚡', color: '#f97316' },
   ];
 
+  const HeroIllustration = () => (
+    <div style={{position:'relative',width:'100%',maxWidth:480}}>
+      <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:380,height:380,borderRadius:'50%',background:'linear-gradient(135deg,rgba(37,99,235,0.08),rgba(249,115,22,0.06))',border:'2px dashed rgba(37,99,235,0.15)',animation:'bd2 8s ease-in-out infinite'}}/>
+      <svg viewBox="0 0 400 380" style={{width:'100%',maxWidth:440,position:'relative',zIndex:5}} xmlns="http://www.w3.org/2000/svg">
+        <rect x="80" y="280" width="240" height="14" rx="7" fill="#e2e8f0"/>
+        <rect x="100" y="260" width="200" height="22" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1.5"/>
+        <rect x="104" y="263" width="92" height="16" rx="3" fill="#eff6ff"/>
+        <rect x="200" y="263" width="92" height="16" rx="3" fill="#fff7ed"/>
+        <line x1="200" y1="263" x2="200" y2="279" stroke="#e2e8f0" strokeWidth="1"/>
+        <line x1="112" y1="268" x2="188" y2="268" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
+        <line x1="112" y1="273" x2="170" y2="273" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
+        <line x1="208" y1="268" x2="284" y2="268" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
+        <line x1="208" y1="273" x2="260" y2="273" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
+        <rect x="90" y="180" width="80" height="90" rx="20" fill="#2563eb"/>
+        <path d="M130 180 L118 195 L130 200 L142 195 Z" fill="white"/>
+        <rect x="120" y="160" width="20" height="24" rx="8" fill="#fbbf24"/>
+        <ellipse cx="130" cy="145" rx="36" ry="34" fill="#fbbf24"/>
+        <path d="M96 130 Q98 105 130 100 Q162 105 164 130 Q155 118 130 116 Q105 118 96 130Z" fill="#1e293b"/>
+        <ellipse cx="118" cy="140" rx="6" ry="7" fill="white"/>
+        <ellipse cx="142" cy="140" rx="6" ry="7" fill="white"/>
+        <circle cx="120" cy="141" r="4" fill="#1e293b"/>
+        <circle cx="144" cy="141" r="4" fill="#1e293b"/>
+        <circle cx="121" cy="139" r="1.5" fill="white"/>
+        <circle cx="145" cy="139" r="1.5" fill="white"/>
+        <path d="M120 153 Q130 162 140 153" stroke="#1e293b" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+        <ellipse cx="108" cy="152" rx="8" ry="5" fill="#f87171" opacity="0.4"/>
+        <ellipse cx="152" cy="152" rx="8" ry="5" fill="#f87171" opacity="0.4"/>
+        <rect x="109" y="134" width="16" height="12" rx="4" fill="none" stroke="#1e293b" strokeWidth="2"/>
+        <rect x="133" y="134" width="16" height="12" rx="4" fill="none" stroke="#1e293b" strokeWidth="2"/>
+        <line x1="125" y1="140" x2="133" y2="140" stroke="#1e293b" strokeWidth="2"/>
+        <line x1="93" y1="138" x2="109" y2="138" stroke="#1e293b" strokeWidth="1.5"/>
+        <line x1="149" y1="138" x2="163" y2="138" stroke="#1e293b" strokeWidth="1.5"/>
+        <path d="M168 205 Q190 215 195 230" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" fill="none"/>
+        <rect x="188" y="225" width="8" height="36" rx="4" fill="#fcd34d" transform="rotate(-30,192,243)"/>
+        <polygon points="192,255 196,255 194,265" fill="#f97316"/>
+        <rect x="188" y="223" width="8" height="6" rx="2" fill="#94a3b8" transform="rotate(-30,192,226)"/>
+        <path d="M92 205 Q70 215 75 240" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" fill="none"/>
+        <ellipse cx="76" cy="244" rx="12" ry="9" fill="#fbbf24"/>
+        <path d="M100 185 Q115 220 110 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
+        <path d="M160 185 Q145 220 150 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
+
+        {/* AI / ROBOT CHARACTER */}
+        <rect x="235" y="175" width="85" height="100" rx="22" fill="#7c3aed"/>
+        <rect x="248" y="195" width="58" height="42" rx="10" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
+        <circle cx="263" cy="208" r="4" fill="#34d399"/>
+        <circle cx="278" cy="208" r="4" fill="#fbbf24" opacity="0.9"/>
+        <circle cx="293" cy="208" r="4" fill="#f87171" opacity="0.9"/>
+        <rect x="258" y="220" width="40" height="6" rx="3" fill="rgba(255,255,255,0.3)"/>
+        <rect x="258" y="220" width="26" height="6" rx="3" fill="#34d399"/>
+        <rect x="265" y="155" width="24" height="22" rx="5" fill="#6d28d9"/>
+        <rect x="230" y="100" width="95" height="60" rx="22" fill="#6d28d9"/>
+        <line x1="277" y1="100" x2="277" y2="78" stroke="#6d28d9" strokeWidth="4" strokeLinecap="round"/>
+        <circle cx="277" cy="72" r="8" fill="#f97316"/>
+        <circle cx="277" cy="72" r="4" fill="white" opacity="0.7"/>
+        <rect x="225" y="112" width="8" height="30" rx="4" fill="#5b21b6"/>
+        <rect x="322" y="112" width="8" height="30" rx="4" fill="#5b21b6"/>
+        <rect x="242" y="112" rx="10" width="32" height="28" fill="#0f172a"/>
+        <rect x="280" y="112" rx="10" width="32" height="28" fill="#0f172a"/>
+        <rect x="246" y="116" rx="7" width="24" height="20" fill="#38bdf8" opacity="0.9"/>
+        <rect x="284" y="116" rx="7" width="24" height="20" fill="#38bdf8" opacity="0.9"/>
+        <line x1="246" y1="126" x2="270" y2="126" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="284" y1="126" x2="308" y2="126" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M252 147 Q278 158 308 147" stroke="#34d399" strokeWidth="3" fill="none" strokeLinecap="round"/>
+        <rect x="318" y="185" width="20" height="60" rx="10" fill="#6d28d9"/>
+        <ellipse cx="328" cy="250" rx="12" ry="10" fill="#5b21b6"/>
+        <rect x="212" y="185" width="20" height="60" rx="10" fill="#6d28d9"/>
+        <ellipse cx="222" cy="250" rx="12" ry="10" fill="#5b21b6"/>
+        <rect x="300" y="55" width="85" height="44" rx="14" fill="white" stroke="rgba(37,99,235,0.2)" strokeWidth="1.5"/>
+        <path d="M310 99 L305 112 L320 99Z" fill="white"/>
+        <text x="342" y="73" textAnchor="middle" fontSize="11" fontWeight="700" fill="#0f172a">TC AI</text>
+        <text x="342" y="88" textAnchor="middle" fontSize="10" fill="#64748b">พร้อมช่วย!</text>
+        <g style={{animation:'eduFloat 3s ease-in-out infinite'}}><text x="45" y="155" fontSize="22">⭐</text></g>
+        <g style={{animation:'eduFloat 4s ease-in-out 1s infinite'}}><text x="350" y="310" fontSize="18">✨</text></g>
+        <g style={{animation:'eduFloat 5s ease-in-out .5s infinite'}}><text x="30" y="230" fontSize="13" fill="#7c3aed" fontWeight="700">E=mc²</text></g>
+        <g style={{animation:'eduFloat 3.5s ease-in-out 1.5s infinite'}}><text x="355" y="170" fontSize="26" fill="#2563eb" fontWeight="900">+</text></g>
+        <g style={{animation:'eduFloat 4.5s ease-in-out .2s infinite'}}><text x="48" y="295" fontSize="22">💡</text></g>
+        <g style={{animation:'eduFloat 4s ease-in-out 2s infinite'}}><text x="355" y="235" fontSize="18">⚛️</text></g>
+      </svg>
+      <div style={{position:'absolute',top:10,left:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(124,58,237,0.2)',border:'1.5px solid rgba(124,58,237,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat1 4s ease-in-out infinite',zIndex:10}}>
+        <span style={{fontSize:20}}>🤖</span>
+        <div>
+          <p style={{margin:0,fontSize:11,fontWeight:900,color:'#6d28d9'}}>TC AI Tutor</p>
+          <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>ตอบทุกคำถาม 24/7</p>
+        </div>
+      </div>
+      <div style={{position:'absolute',bottom:40,right:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(249,115,22,0.2)',border:'1.5px solid rgba(249,115,22,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat2 5s ease-in-out infinite',zIndex:10}}>
+        <span style={{fontSize:20}}>🔥</span>
+        <div>
+          <p style={{margin:0,fontSize:11,fontWeight:900,color:'#ea580c'}}>Streak 14 วัน!</p>
+          <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>เก่งมากเลย ต่อไปเลย</p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', background: '#FAFBFF', fontFamily: "'Prompt', sans-serif", overflowX: 'hidden', position: 'relative' }}>
       <style>{`
@@ -198,7 +293,6 @@ export default function LandingPage() {
         @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
 
         .hero { position: relative; padding: 160px 24px 80px; overflow: hidden; }
-        @media(max-width:768px) { .hero { padding: 130px 20px 60px; } }
 
         .hero-eyebrow {
           display: inline-flex; align-items: center; gap: 8px;
@@ -214,7 +308,7 @@ export default function LandingPage() {
         @keyframes eyebrowPulse { 0%,100%{box-shadow:0 4px 16px rgba(249,115,22,0.12)} 50%{box-shadow:0 4px 24px rgba(249,115,22,0.28)} }
 
         .hero-title {
-          font-size: clamp(32px, 8vw, 76px);
+          font-size: clamp(36px, 6vw, 76px);
           font-weight: 900;
           line-height: 1.12;
           color: #0f172a;
@@ -231,9 +325,9 @@ export default function LandingPage() {
           margin-bottom: 28px;
         }
         .subject-ticker-inner { display: flex; gap: 6px; }
-        @media(max-width: 640px) {
-          .subject-ticker-wrap { flex-direction: column; border-radius: 20px; padding: 12px; }
-          .subject-ticker-inner { flex-wrap: wrap; justify-content: center; }
+
+        .subject-item-pill {
+          padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 800; transition: all .4s ease;
         }
 
         .ticker-dot { width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite; }
@@ -244,8 +338,6 @@ export default function LandingPage() {
           animation: eduFloat 4s ease-in-out infinite;
         }
         @keyframes eduFloat { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-14px) rotate(4deg)} }
-
-        .hero-illo { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
 
         .section { position: relative; z-index: 10; padding: 0 24px 80px; max-width: 1240px; margin: 0 auto; }
         .section-tag {
@@ -260,8 +352,6 @@ export default function LandingPage() {
         .section-title { font-size: clamp(28px,4vw,40px); font-weight: 900; color: #0f172a; margin: 0 0 40px; }
 
         .edu-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
-        @media(max-width:900px) { .edu-grid { grid-template-columns: repeat(2,1fr); } }
-        @media(max-width:600px) { .edu-grid { grid-template-columns: 1fr; } }
 
         .edu-card {
           border-radius: 28px; padding: 32px;
@@ -320,8 +410,6 @@ export default function LandingPage() {
           padding: 56px 48px;
           box-shadow: 0 24px 80px rgba(15,23,42,0.3);
         }
-        @media(max-width:768px) { .ai-banner { padding: 24px 20px; } }
-
         .ai-grid-bg {
           position: absolute; inset: 0; pointer-events: none;
           background-image: linear-gradient(rgba(99,102,241,0.08) 1px, transparent 1px),
@@ -332,7 +420,6 @@ export default function LandingPage() {
         .ai-glow-2 { position: absolute; bottom:-100px; right:-50px; width:350px; height:350px; border-radius:50%; background:radial-gradient(circle,rgba(249,115,22,0.15) 0%,transparent 65%); pointer-events:none; }
 
         .subject-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 40px; }
-        @media(max-width:768px) { .subject-row { justify-content: center; } }
         .subject-pill {
           display: inline-flex; align-items: center; gap: 7px;
           padding: 8px 16px; border-radius: 100px;
@@ -394,7 +481,7 @@ export default function LandingPage() {
         @media(min-width:601px) { .card-scroll { display: grid; grid-template-columns: repeat(3,1fr); margin: 0; padding: 0; } .card-scroll .edu-card { min-width: auto; } }
 
         .hero-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; max-width: 1240px; margin: 0 auto; }
-        @media(max-width:900px) { .hero-layout { grid-template-columns: 1fr; text-align: center; } .hero-ctas { justify-content: center; } }
+        .hero-text-col { display: flex; flex-direction: column; }
         .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
 
         .stats-bar {
@@ -412,35 +499,87 @@ export default function LandingPage() {
         .stat-val { font-size: 28px; font-weight: 900; color: #0f172a; line-height: 1; margin-bottom: 4px; }
         .stat-lbl { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; }
 
+        /* ✨ MOBILE OPTIMIZATIONS ✨ */
+        .mobile-illo-only { display: none; }
+        .desktop-illo-only { display: flex; align-items: center; justify-content: center; position: relative; }
+
+        @media(max-width: 900px) {
+          .hero-layout { grid-template-columns: 1fr; text-align: center; }
+          .hero-text-col { align-items: center; }
+          .hero-ctas { justify-content: center; }
+          .desktop-illo-only { display: none; }
+          /* ✨ แสดงรูปภาพคั่นกลางเฉพาะในมือถือ */
+          .mobile-illo-only { display: flex; justify-content: center; margin: 24px 0 32px; width: 100%; }
+          .edu-grid { grid-template-columns: repeat(2,1fr); }
+          .ai-inner { grid-template-columns: 1fr !important; }
+        }
+
         @media(max-width: 640px) {
+          /* Navbar adjustments (เล็กลง กระทัดรัดขึ้น) */
+          .nav-bar { padding: 8px 12px !important; }
+          .nav-inner { padding: 6px 10px !important; border-radius: 14px !important; }
+          .logo-box { width: 28px !important; height: 28px !important; border-radius: 8px !important; }
+          .logo-img { height: 18px !important; }
+          .logo-title { font-size: 13px !important; }
+          .logo-sub { font-size: 7px !important; letter-spacing: 0.1em !important; margin-top: 1px !important; }
+          
+          /* Buttons in Navbar */
+          .nav-login-btn { padding: 6px 10px !important; font-size: 11px !important; gap: 4px !important; border-radius: 8px !important; }
+          .nav-register-btn { padding: 6px 12px !important; font-size: 11px !important; gap: 4px !important; border-radius: 8px !important; }
+          .nav-btn-icon { width: 12px !important; height: 12px !important; }
+          .mobile-menu-btn { width: 30px !important; height: 30px !important; border-radius: 8px !important; }
+
+          /* Hero adjustments */
+          .hero { padding: 110px 16px 40px; }
+          .hero-title { font-size: 32px !important; line-height: 1.2 !important; margin-bottom: 16px !important; }
+          
+          /* Subject Ticker adjustments (Wrap และเล็กลง) */
+          .subject-ticker-wrap {
+            flex-direction: row !important; flex-wrap: wrap !important; justify-content: center !important;
+            padding: 8px 12px !important; border-radius: 16px !important; gap: 6px !important;
+            margin-bottom: 20px !important;
+          }
+          .subject-ticker-inner { flex-wrap: wrap; justify-content: center; gap: 4px !important; }
+          .subject-item-pill { padding: 4px 8px !important; font-size: 11px !important; }
+
+          /* Stats Box Grid */
           .stats-bar { display: grid; grid-template-columns: 1fr 1fr; border-radius: 16px; }
           .stat-item { padding: 16px 12px; border-bottom: 1px solid rgba(37,99,235,0.05); border-right: 1px solid rgba(37,99,235,0.05); }
           .stat-item:nth-child(2n) { border-right: none; }
           .stat-item:nth-last-child(-n+2) { border-bottom: none; }
           .stat-item::after { display: none !important; }
           .stat-val { font-size: 22px; }
+
+          .edu-grid { grid-template-columns: 1fr; }
+          .ai-banner { padding: 24px 20px; }
+          .subject-row { justify-content: center; }
         }
       `}</style>
 
+      {/* Ambient blobs */}
       <div className="blob b1"/><div className="blob b2"/><div className="blob b3"/><div className="blob b4"/>
 
+      {/* ═══════════════ NAVBAR ═══════════════ */}
       <nav className={`nav-bar ${scrolled ? 'scrolled' : ''}`}>
         <div className={`nav-inner ${scrolled ? 'scrolled' : ''}`}>
 
-          <Link href="/" style={{display:'flex',alignItems:'center',gap:12,textDecoration:'none'}}>
+          {/* Logo */}
+          <Link href="/" style={{display:'flex',alignItems:'center',gap:10,textDecoration:'none'}}>
             <div className="logo-ring">
-              <div style={{width:38,height:38,background:'white',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <img src="/icon.png" alt="TC" style={{height:28,width:'auto',objectFit:'contain'}}
-                  onError={(e:any)=>{e.target.style.display='none';e.target.parentNode.innerHTML='<span style="font-weight:900;font-size:13px;color:#2563eb">TC</span>';}}
+              {/* ✨ เพิ่ม class logo-box และ logo-img เพื่อควบคุมขนาดใน CSS มือถือ */}
+              <div className="logo-box" style={{width:34,height:34,background:'white',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <img src="/icon.png" alt="TC" className="logo-img" style={{height:24,width:'auto',objectFit:'contain'}}
+                  onError={(e:any)=>{e.target.style.display='none';e.target.parentNode.innerHTML='<span style="font-weight:900;font-size:12px;color:#2563eb">TC</span>';}}
                 />
               </div>
             </div>
             <div>
-              <p style={{fontWeight:900,fontSize:17,background:'linear-gradient(135deg,#2563eb,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1,margin:0,letterSpacing:'0.05em'}}>TC CENTER</p>
-              <p style={{fontSize:9,fontWeight:700,color:'#f97316',letterSpacing:'0.18em',textTransform:'uppercase',margin:'3px 0 0'}}>The Convergence</p>
+              <p className="logo-title" style={{fontWeight:900,fontSize:17,background:'linear-gradient(135deg,#2563eb,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1,margin:0,letterSpacing:'0.05em'}}>TC CENTER</p>
+              <p className="logo-sub" style={{fontSize:9,fontWeight:700,color:'#f97316',letterSpacing:'0.18em',textTransform:'uppercase',margin:'3px 0 0'}}>The Convergence</p>
             </div>
           </Link>
 
+          {/* Desktop nav links */}
           <div style={{display:'none',alignItems:'center',gap:4,background:'rgba(248,250,255,0.8)',padding:'6px',borderRadius:14,border:'1px solid rgba(37,99,235,0.08)'}} className="lg-show">
             <Link href="/student/courses" className="nav-link">
               <BookOpen size={15} color="#2563eb"/> คอร์สเรียน
@@ -451,28 +590,30 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
+          {/* Right CTA */}
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
             {!loading && (user ? (
-              <a href={getDashboardUrl()} className="btn-primary">
-                <LayoutDashboard size={16}/> {getDashboardText()}
+              <a href={getDashboardUrl()} className="btn-primary nav-register-btn">
+                <LayoutDashboard className="nav-btn-icon" size={14}/> {getDashboardText()}
               </a>
             ) : (
               <>
-                <Link href="/login" style={{display:'flex',alignItems:'center',gap:7,padding:'9px 18px',borderRadius:12,background:'rgba(37,99,235,0.07)',color:'#2563eb',fontWeight:700,fontSize:13.5,textDecoration:'none',border:'1.5px solid rgba(37,99,235,0.15)',transition:'all .2s ease'}} className="md-show">
-                  <User size={15}/> เข้าสู่ระบบ
+                <Link href="/login" className="md-show nav-login-btn" style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:10,background:'rgba(37,99,235,0.07)',color:'#2563eb',fontWeight:700,fontSize:13,textDecoration:'none',border:'1.5px solid rgba(37,99,235,0.15)',transition:'all .2s ease'}}>
+                  <User className="nav-btn-icon" size={14}/> เข้าสู่ระบบ
                 </Link>
-                <Link href="/register" className="btn-orange">
+                <Link href="/register" className="btn-orange nav-register-btn">
                   <div className="shimmer-overlay"/>
-                  <Rocket size={15}/> <span style={{position:'relative'}}>เริ่มเรียนฟรี!</span>
+                  <Rocket className="nav-btn-icon" size={14}/> <span style={{position:'relative'}}>เริ่มเรียนฟรี!</span>
                 </Link>
               </>
             ))}
-            <button onClick={()=>setIsMobileMenuOpen(!isMobileMenuOpen)} style={{width:38,height:38,borderRadius:12,border:'1.5px solid rgba(37,99,235,0.12)',background:'rgba(255,255,255,0.9)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#475569'}} className="md-hide">
-              {isMobileMenuOpen ? <X size={19} color="#f97316"/> : <Menu size={19}/>}
+            <button onClick={()=>setIsMobileMenuOpen(!isMobileMenuOpen)} className="md-hide mobile-menu-btn" style={{width:38,height:38,borderRadius:10,border:'1.5px solid rgba(37,99,235,0.12)',background:'rgba(255,255,255,0.9)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#475569'}}>
+              {isMobileMenuOpen ? <X size={18} color="#f97316"/> : <Menu size={18}/>}
             </button>
           </div>
         </div>
 
+        {/* Mobile menu */}
         {isMobileMenuOpen && (
           <div className="mobile-menu">
             <Link href="/student/courses" className="mobile-link" onClick={()=>setIsMobileMenuOpen(false)}>
@@ -498,20 +639,12 @@ export default function LandingPage() {
         )}
       </nav>
 
-      <style>{`
-        .lg-show { display: none!important; }
-        @media(min-width:900px){ .lg-show { display: flex!important; } }
-        .md-show { display: none!important; }
-        @media(min-width:640px){ .md-show { display: flex!important; } }
-        .md-hide { display: flex!important; }
-        @media(min-width:640px){ .md-hide { display: none!important; } }
-      `}</style>
-
       {/* ═══════════════ HERO ═══════════════ */}
       <section className="hero page-bg">
         <div className="hero-layout">
 
-          <div style={{position:'relative',zIndex:10}}>
+          {/* Left/Top: Text Content */}
+          <div className="hero-text-col" style={{position:'relative',zIndex:10}}>
             <div className="hero-eyebrow">
               <span>🎓</span>
               <span>TC แพลตฟอร์มติวครบจบในที่เดียว</span>
@@ -527,11 +660,21 @@ export default function LandingPage() {
               {' '}🎯
             </h1>
 
+            {/* ✨ โชว์รูปภาพแทรกตรงกลาง (เฉพาะมือถือ) */}
+            <div className="mobile-illo-only">
+              <HeroIllustration />
+            </div>
+
+            {/* Subject ticker (Mobile Optimized) */}
             <div className="subject-ticker-wrap">
-              <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em'}}>ติวได้ทุกวิชา:</span>
+              <span style={{fontSize:10,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>ติวได้ทุกวิชา:</span>
               <div className="subject-ticker-inner">
                 {subjects.map((s,i) => (
-                  <div key={i} style={{padding:'5px 12px',borderRadius:100,fontSize:12,fontWeight:800,transition:'all .4s ease',background:i===activeSubject?s.color:'rgba(248,250,255,0.8)',color:i===activeSubject?'white':'#64748b',border:`1.5px solid ${i===activeSubject?s.color:'rgba(37,99,235,0.1)'}`}}>
+                  <div key={i} className="subject-item-pill" style={{
+                    background: i === activeSubject ? s.color : 'rgba(248,250,255,0.8)',
+                    color: i === activeSubject ? 'white' : '#64748b',
+                    border: `1.5px solid ${i === activeSubject ? s.color : 'rgba(37,99,235,0.1)'}`
+                  }}>
                     {s.emoji} {s.label}
                   </div>
                 ))}
@@ -554,122 +697,13 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <div style={{position:'relative',width:'100%',maxWidth:480}}>
-
-              <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:380,height:380,borderRadius:'50%',background:'linear-gradient(135deg,rgba(37,99,235,0.08),rgba(249,115,22,0.06))',border:'2px dashed rgba(37,99,235,0.15)',animation:'bd2 8s ease-in-out infinite'}}/>
-
-              <svg viewBox="0 0 400 380" style={{width:'100%',maxWidth:440,position:'relative',zIndex:5}} xmlns="http://www.w3.org/2000/svg">
-                {/* Book / desk */}
-                <rect x="80" y="280" width="240" height="14" rx="7" fill="#e2e8f0"/>
-                <rect x="100" y="260" width="200" height="22" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1.5"/>
-                <rect x="104" y="263" width="92" height="16" rx="3" fill="#eff6ff"/>
-                <rect x="200" y="263" width="92" height="16" rx="3" fill="#fff7ed"/>
-                <line x1="200" y1="263" x2="200" y2="279" stroke="#e2e8f0" strokeWidth="1"/>
-                <line x1="112" y1="268" x2="188" y2="268" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="112" y1="273" x2="170" y2="273" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="208" y1="268" x2="284" y2="268" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="208" y1="273" x2="260" y2="273" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
-
-                {/* STUDENT CHARACTER */}
-                <rect x="90" y="180" width="80" height="90" rx="20" fill="#2563eb"/>
-                <path d="M130 180 L118 195 L130 200 L142 195 Z" fill="white"/>
-                <rect x="120" y="160" width="20" height="24" rx="8" fill="#fbbf24"/>
-                <ellipse cx="130" cy="145" rx="36" ry="34" fill="#fbbf24"/>
-                <path d="M96 130 Q98 105 130 100 Q162 105 164 130 Q155 118 130 116 Q105 118 96 130Z" fill="#1e293b"/>
-                <ellipse cx="118" cy="140" rx="6" ry="7" fill="white"/>
-                <ellipse cx="142" cy="140" rx="6" ry="7" fill="white"/>
-                <circle cx="120" cy="141" r="4" fill="#1e293b"/>
-                <circle cx="144" cy="141" r="4" fill="#1e293b"/>
-                <circle cx="121" cy="139" r="1.5" fill="white"/>
-                <circle cx="145" cy="139" r="1.5" fill="white"/>
-                <path d="M120 153 Q130 162 140 153" stroke="#1e293b" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-                <ellipse cx="108" cy="152" rx="8" ry="5" fill="#f87171" opacity="0.4"/>
-                <ellipse cx="152" cy="152" rx="8" ry="5" fill="#f87171" opacity="0.4"/>
-                <rect x="109" y="134" width="16" height="12" rx="4" fill="none" stroke="#1e293b" strokeWidth="2"/>
-                <rect x="133" y="134" width="16" height="12" rx="4" fill="none" stroke="#1e293b" strokeWidth="2"/>
-                <line x1="125" y1="140" x2="133" y2="140" stroke="#1e293b" strokeWidth="2"/>
-                <line x1="93" y1="138" x2="109" y2="138" stroke="#1e293b" strokeWidth="1.5"/>
-                <line x1="149" y1="138" x2="163" y2="138" stroke="#1e293b" strokeWidth="1.5"/>
-                <path d="M168 205 Q190 215 195 230" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" fill="none"/>
-                <rect x="188" y="225" width="8" height="36" rx="4" fill="#fcd34d" transform="rotate(-30,192,243)"/>
-                <polygon points="192,255 196,255 194,265" fill="#f97316"/>
-                <rect x="188" y="223" width="8" height="6" rx="2" fill="#94a3b8" transform="rotate(-30,192,226)"/>
-                <path d="M92 205 Q70 215 75 240" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" fill="none"/>
-                <ellipse cx="76" cy="244" rx="12" ry="9" fill="#fbbf24"/>
-                <path d="M100 185 Q115 220 110 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
-                <path d="M160 185 Q145 220 150 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
-
-                {/* AI / ROBOT CHARACTER */}
-                <rect x="235" y="175" width="85" height="100" rx="22" fill="#7c3aed"/>
-                <rect x="248" y="195" width="58" height="42" rx="10" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
-                <circle cx="263" cy="208" r="4" fill="#34d399"/>
-                <circle cx="278" cy="208" r="4" fill="#fbbf24" opacity="0.9"/>
-                <circle cx="293" cy="208" r="4" fill="#f87171" opacity="0.9"/>
-                <rect x="258" y="220" width="40" height="6" rx="3" fill="rgba(255,255,255,0.3)"/>
-                <rect x="258" y="220" width="26" height="6" rx="3" fill="#34d399"/>
-                <rect x="265" y="155" width="24" height="22" rx="5" fill="#6d28d9"/>
-                <rect x="230" y="100" width="95" height="60" rx="22" fill="#6d28d9"/>
-                <line x1="277" y1="100" x2="277" y2="78" stroke="#6d28d9" strokeWidth="4" strokeLinecap="round"/>
-                <circle cx="277" cy="72" r="8" fill="#f97316"/>
-                <circle cx="277" cy="72" r="4" fill="white" opacity="0.7"/>
-                <rect x="225" y="112" width="8" height="30" rx="4" fill="#5b21b6"/>
-                <rect x="322" y="112" width="8" height="30" rx="4" fill="#5b21b6"/>
-                <rect x="242" y="112" rx="10" width="32" height="28" fill="#0f172a"/>
-                <rect x="280" y="112" rx="10" width="32" height="28" fill="#0f172a"/>
-                <rect x="246" y="116" rx="7" width="24" height="20" fill="#38bdf8" opacity="0.9"/>
-                <rect x="284" y="116" rx="7" width="24" height="20" fill="#38bdf8" opacity="0.9"/>
-                <line x1="246" y1="126" x2="270" y2="126" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round"/>
-                <line x1="284" y1="126" x2="308" y2="126" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M252 147 Q278 158 308 147" stroke="#34d399" strokeWidth="3" fill="none" strokeLinecap="round"/>
-                <rect x="318" y="185" width="20" height="60" rx="10" fill="#6d28d9"/>
-                <ellipse cx="328" cy="250" rx="12" ry="10" fill="#5b21b6"/>
-                <rect x="212" y="185" width="20" height="60" rx="10" fill="#6d28d9"/>
-                <ellipse cx="222" cy="250" rx="12" ry="10" fill="#5b21b6"/>
-                <rect x="300" y="55" width="85" height="44" rx="14" fill="white" stroke="rgba(37,99,235,0.2)" strokeWidth="1.5"/>
-                <path d="M310 99 L305 112 L320 99Z" fill="white"/>
-                <text x="342" y="73" textAnchor="middle" fontSize="11" fontWeight="700" fill="#0f172a">TC AI</text>
-                <text x="342" y="88" textAnchor="middle" fontSize="10" fill="#64748b">พร้อมช่วย!</text>
-
-                <g style={{animation:'eduFloat 3s ease-in-out infinite'}}>
-                  <text x="45" y="155" fontSize="22">⭐</text>
-                </g>
-                <g style={{animation:'eduFloat 4s ease-in-out 1s infinite'}}>
-                  <text x="350" y="310" fontSize="18">✨</text>
-                </g>
-                <g style={{animation:'eduFloat 5s ease-in-out .5s infinite'}}>
-                  <text x="30" y="230" fontSize="13" fill="#7c3aed" fontWeight="700">E=mc²</text>
-                </g>
-                <g style={{animation:'eduFloat 3.5s ease-in-out 1.5s infinite'}}>
-                  <text x="355" y="170" fontSize="26" fill="#2563eb" fontWeight="900">+</text>
-                </g>
-                <g style={{animation:'eduFloat 4.5s ease-in-out .2s infinite'}}>
-                  <text x="48" y="295" fontSize="22">💡</text>
-                </g>
-                <g style={{animation:'eduFloat 4s ease-in-out 2s infinite'}}>
-                  <text x="355" y="235" fontSize="18">⚛️</text>
-                </g>
-              </svg>
-
-              <div style={{position:'absolute',top:10,left:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(124,58,237,0.2)',border:'1.5px solid rgba(124,58,237,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat1 4s ease-in-out infinite',zIndex:10}}>
-                <span style={{fontSize:20}}>🤖</span>
-                <div>
-                  <p style={{margin:0,fontSize:11,fontWeight:900,color:'#6d28d9'}}>TC AI Tutor</p>
-                  <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>ตอบทุกคำถาม 24/7</p>
-                </div>
-              </div>
-
-              <div style={{position:'absolute',bottom:40,right:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(249,115,22,0.2)',border:'1.5px solid rgba(249,115,22,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat2 5s ease-in-out infinite',zIndex:10}}>
-                <span style={{fontSize:20}}>🔥</span>
-                <div>
-                  <p style={{margin:0,fontSize:11,fontWeight:900,color:'#ea580c'}}>Streak 14 วัน!</p>
-                  <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>เก่งมากเลย ต่อไปเลย</p>
-                </div>
-              </div>
-            </div>
+          {/* Right: Illustration (เฉพาะ Desktop) */}
+          <div className="desktop-illo-only">
+            <HeroIllustration />
           </div>
         </div>
 
+        {/* Stats bar */}
         <div style={{position:'relative',zIndex:10,maxWidth:1240,margin:'48px auto 0',padding:'0 24px'}}>
           <div className="stats-bar">
             {[
@@ -792,7 +826,6 @@ export default function LandingPage() {
                 <p style={{margin:'4px 0 0',fontSize:11,color:'#64748b',fontFamily:"'Sarabun',sans-serif"}}>น้องมิน ม.5 สอบได้ A</p>
               </div>
             </div>
-            <style>{`.ai-char-show{display:none!important;} @media(min-width:900px){.ai-char-show{display:flex!important;}} .ai-inner{grid-template-columns:1fr!important;} @media(min-width:900px){.ai-inner{grid-template-columns:1fr auto!important;}}`}</style>
           </div>
         </div>
       </div>
