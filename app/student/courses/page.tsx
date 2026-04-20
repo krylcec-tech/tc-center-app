@@ -168,9 +168,9 @@ function CatalogContent() {
             <button onClick={() => setViewingItem(null)} className="absolute top-4 right-4 bg-gray-100 text-gray-500 p-2 rounded-full hover:bg-gray-200 transition-colors z-10"><X size={20}/></button>
             
             {viewingItem.image_url && viewingItem.image_url.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar mb-6 pb-2" style={{ touchAction: 'pan-x' }}>
+              <div className="flex gap-3 overflow-x-auto hide-scrollbar mb-6 pb-2">
                 {viewingItem.image_url.map((url: string, idx: number) => (
-                  <img key={idx} src={url} className="w-[85%] sm:w-2/3 h-52 sm:h-64 object-cover rounded-[1.5rem] snap-center shrink-0 border border-gray-100 shadow-sm" alt={`Preview ${idx+1}`} />
+                  <img key={idx} src={url} className="w-[85%] sm:w-2/3 h-52 sm:h-64 object-cover rounded-[1.5rem] shrink-0 border border-gray-100 shadow-sm" alt={`Preview ${idx+1}`} />
                 ))}
               </div>
             )}
@@ -289,34 +289,38 @@ function CatalogContent() {
         </div>
       </div>
 
-      {/* ✨ แถบหมวดหมู่หลัก (แก้ให้กดง่ายขึ้นในมือถือ) */}
-      <div className="flex gap-2 sm:gap-3 mb-4 overflow-x-auto pb-4 no-scrollbar items-center snap-x" style={{ touchAction: 'pan-x' }}>
-        <button onClick={() => setActiveTab('all')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 snap-start ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
-        <button onClick={() => setActiveTab('course')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 snap-start ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
-        <button onClick={() => setActiveTab('book')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 snap-start ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
-        
-        {availableTags.length > 0 && <div className="w-px h-6 bg-gray-200 mx-2 shrink-0"></div>}
+      {/* ✨ แถบหมวดหมู่หลัก (แก้ให้ไม่ดันจอและกดยาก) */}
+      <div className="w-full overflow-x-auto hide-scrollbar mb-4">
+        <div className="flex gap-2 sm:gap-3 items-center pb-2 pr-4 w-max min-w-full">
+          <button onClick={() => setActiveTab('all')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
+          <button onClick={() => setActiveTab('course')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'course' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-blue-50'}`}>คอร์สเรียน</button>
+          <button onClick={() => setActiveTab('book')} className={`shrink-0 px-5 sm:px-6 py-3 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'book' ? 'bg-orange-50 text-orange-600 shadow-md border-orange-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-orange-50'}`}>หนังสือ & ชีท</button>
+          
+          {availableTags.length > 0 && <div className="w-px h-6 bg-gray-200 mx-2 shrink-0"></div>}
 
-        {availableTags.map(tag => (
-          <button 
-            key={tag} 
-            onClick={() => setActiveTab(tag)} 
-            className={`shrink-0 px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 snap-start ${activeTab === tag ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'}`}
-          >
-            <Tag size={12}/> {tag}
-          </button>
-        ))}
+          {availableTags.map(tag => (
+            <button 
+              key={tag} 
+              onClick={() => setActiveTab(tag)} 
+              className={`shrink-0 px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 ${activeTab === tag ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-white text-gray-500 border border-gray-100 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200'}`}
+            >
+              <Tag size={12}/> {tag}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ✨ แถบกรองประเภทคนขาย (แก้ให้กดง่ายขึ้นในมือถือ) */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-4 no-scrollbar items-center bg-white p-2 rounded-[1.5rem] shadow-sm border border-gray-100 w-max snap-x" style={{ touchAction: 'pan-x' }}>
-         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
-           <Filter size={12} /> กรองโดย
-         </span>
-         <button onClick={() => setActiveSellerType('ALL')} className={`shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all active:scale-95 snap-start ${activeSellerType === 'ALL' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>ทุกแหล่งที่มา</button>
-         <button onClick={() => setActiveSellerType('institute')} className={`shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all active:scale-95 snap-start ${activeSellerType === 'institute' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยสถาบัน</button>
-         <button onClick={() => setActiveSellerType('tutor')} className={`shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all active:scale-95 snap-start ${activeSellerType === 'tutor' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยติวเตอร์</button>
-         <button onClick={() => setActiveSellerType('student')} className={`shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all active:scale-95 snap-start ${activeSellerType === 'student' ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยนักเรียน</button>
+      {/* ✨ แถบกรองประเภทคนขาย (แก้ให้ไม่ดันจอและกดยาก) */}
+      <div className="w-full overflow-x-auto hide-scrollbar mb-8">
+        <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 w-max min-w-full pr-4">
+           <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
+             <Filter size={12} /> กรองโดย
+           </span>
+           <button onClick={() => setActiveSellerType('ALL')} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'ALL' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>ทุกแหล่งที่มา</button>
+           <button onClick={() => setActiveSellerType('institute')} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'institute' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยสถาบัน</button>
+           <button onClick={() => setActiveSellerType('tutor')} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'tutor' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยติวเตอร์</button>
+           <button onClick={() => setActiveSellerType('student')} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'student' ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยนักเรียน</button>
+        </div>
       </div>
 
       {/* Grid สินค้า */}
