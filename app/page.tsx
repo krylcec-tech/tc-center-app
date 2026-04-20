@@ -97,7 +97,6 @@ export default function LandingPage() {
         * { box-sizing: border-box; }
         body { margin: 0; }
 
-        /* ── Grid paper background ── */
         .page-bg {
           background-color: #FAFBFF;
           background-image:
@@ -107,7 +106,6 @@ export default function LandingPage() {
           min-height: 100vh;
         }
 
-        /* ── Ambient blobs ── */
         .blob { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
         .b1 { width:700px;height:700px;top:-200px;left:-180px; background:radial-gradient(circle,rgba(37,99,235,0.09) 0%,transparent 65%); animation:bd1 16s ease-in-out infinite; }
         .b2 { width:550px;height:550px;bottom:-150px;right:-130px; background:radial-gradient(circle,rgba(249,115,22,0.10) 0%,transparent 65%); animation:bd2 19s ease-in-out infinite; }
@@ -116,7 +114,6 @@ export default function LandingPage() {
         @keyframes bd1 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(35px,-25px)} 66%{transform:translate(-20px,22px)} }
         @keyframes bd2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,22px)} }
 
-        /* ── Navbar ── */
         .nav-bar {
           position: fixed; top: 0; left: 0; right: 0; z-index: 100;
           transition: all .4s ease;
@@ -156,7 +153,6 @@ export default function LandingPage() {
         }
         .nav-link:hover { background: rgba(37,99,235,0.06); color: #2563eb; }
 
-        /* ── Buttons ── */
         .btn-primary {
           display: inline-flex; align-items: center; gap: 8px;
           padding: 11px 24px; border-radius: 14px;
@@ -201,7 +197,6 @@ export default function LandingPage() {
         }
         @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
 
-        /* ── Hero ── */
         .hero { position: relative; padding: 160px 24px 80px; overflow: hidden; }
         @media(max-width:768px) { .hero { padding: 130px 20px 60px; } }
 
@@ -218,7 +213,6 @@ export default function LandingPage() {
         }
         @keyframes eyebrowPulse { 0%,100%{box-shadow:0 4px 16px rgba(249,115,22,0.12)} 50%{box-shadow:0 4px 24px rgba(249,115,22,0.28)} }
 
-        /* ✨ แก้ไขฟอนต์มือถือให้ไม่ใหญ่เกินไป */
         .hero-title {
           font-size: clamp(32px, 8vw, 76px);
           font-weight: 900;
@@ -230,7 +224,6 @@ export default function LandingPage() {
         .grad-orange { background: linear-gradient(135deg,#f97316,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         .grad-blue   { background: linear-gradient(135deg,#2563eb,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 
-        /* ✨ ปรับปรุง Ticker ให้ครอบคลุมการห่อตัวในมือถือ */
         .subject-ticker-wrap {
           display: inline-flex; align-items: center; gap: 6px; padding: 5px 5px 5px 10px;
           background: rgba(255,255,255,0.9); border: 1.5px solid rgba(37,99,235,0.12);
@@ -317,12 +310,10 @@ export default function LandingPage() {
         }
         .edu-card:hover .cta-arrow { transform: translateX(4px); }
 
-        /* ── AI Section ── */
         .ai-section {
           position: relative; z-index: 10; padding: 0 24px 80px;
           max-width: 1240px; margin: 0 auto;
         }
-        /* ✨ แก้ไขลด Padding บนมือถือ */
         .ai-banner {
           border-radius: 32px; overflow: hidden; position: relative;
           background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
@@ -406,7 +397,6 @@ export default function LandingPage() {
         @media(max-width:900px) { .hero-layout { grid-template-columns: 1fr; text-align: center; } .hero-ctas { justify-content: center; } }
         .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
 
-        /* ✨ แก้ไข Stats Bar ให้รองรับมือถือ (Grid 2x2) */
         .stats-bar {
           display: flex; align-items: center; justify-content: space-between;
           background: rgba(255,255,255,0.88);
@@ -432,14 +422,11 @@ export default function LandingPage() {
         }
       `}</style>
 
-      {/* Ambient blobs */}
       <div className="blob b1"/><div className="blob b2"/><div className="blob b3"/><div className="blob b4"/>
 
-      {/* ═══════════════ NAVBAR ═══════════════ */}
       <nav className={`nav-bar ${scrolled ? 'scrolled' : ''}`}>
         <div className={`nav-inner ${scrolled ? 'scrolled' : ''}`}>
 
-          {/* Logo */}
           <Link href="/" style={{display:'flex',alignItems:'center',gap:12,textDecoration:'none'}}>
             <div className="logo-ring">
               <div style={{width:38,height:38,background:'white',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -454,7 +441,6 @@ export default function LandingPage() {
             </div>
           </Link>
 
-          {/* Desktop nav links */}
           <div style={{display:'none',alignItems:'center',gap:4,background:'rgba(248,250,255,0.8)',padding:'6px',borderRadius:14,border:'1px solid rgba(37,99,235,0.08)'}} className="lg-show">
             <Link href="/student/courses" className="nav-link">
               <BookOpen size={15} color="#2563eb"/> คอร์สเรียน
@@ -465,7 +451,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Right CTA */}
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             {!loading && (user ? (
               <a href={getDashboardUrl()} className="btn-primary">
@@ -488,7 +473,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Mobile menu */}
         {isMobileMenuOpen && (
           <div className="mobile-menu">
             <Link href="/student/courses" className="mobile-link" onClick={()=>setIsMobileMenuOpen(false)}>
@@ -527,7 +511,6 @@ export default function LandingPage() {
       <section className="hero page-bg">
         <div className="hero-layout">
 
-          {/* Left: text */}
           <div style={{position:'relative',zIndex:10}}>
             <div className="hero-eyebrow">
               <span>🎓</span>
@@ -544,7 +527,6 @@ export default function LandingPage() {
               {' '}🎯
             </h1>
 
-            {/* ✨ แก้ไข Subject ticker เพื่อให้ Wrap ในมือถือ */}
             <div className="subject-ticker-wrap">
               <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em'}}>ติวได้ทุกวิชา:</span>
               <div className="subject-ticker-inner">
@@ -572,159 +554,111 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right: Illustration */}
           <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            {/* Main SVG illustration */}
             <div style={{position:'relative',width:'100%',maxWidth:480}}>
 
-              {/* Big decorative circle */}
               <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:380,height:380,borderRadius:'50%',background:'linear-gradient(135deg,rgba(37,99,235,0.08),rgba(249,115,22,0.06))',border:'2px dashed rgba(37,99,235,0.15)',animation:'bd2 8s ease-in-out infinite'}}/>
 
-              {/* Center: SVG Student + AI character */}
               <svg viewBox="0 0 400 380" style={{width:'100%',maxWidth:440,position:'relative',zIndex:5}} xmlns="http://www.w3.org/2000/svg">
-
                 {/* Book / desk */}
                 <rect x="80" y="280" width="240" height="14" rx="7" fill="#e2e8f0"/>
                 <rect x="100" y="260" width="200" height="22" rx="6" fill="white" stroke="#e2e8f0" strokeWidth="1.5"/>
-                {/* Book pages */}
                 <rect x="104" y="263" width="92" height="16" rx="3" fill="#eff6ff"/>
                 <rect x="200" y="263" width="92" height="16" rx="3" fill="#fff7ed"/>
                 <line x1="200" y1="263" x2="200" y2="279" stroke="#e2e8f0" strokeWidth="1"/>
-                {/* Book lines */}
                 <line x1="112" y1="268" x2="188" y2="268" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
                 <line x1="112" y1="273" x2="170" y2="273" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round"/>
                 <line x1="208" y1="268" x2="284" y2="268" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
                 <line x1="208" y1="273" x2="260" y2="273" stroke="#fdba74" strokeWidth="1.5" strokeLinecap="round"/>
 
-                {/* ── STUDENT CHARACTER (left) ── */}
-                {/* Body */}
+                {/* STUDENT CHARACTER */}
                 <rect x="90" y="180" width="80" height="90" rx="20" fill="#2563eb"/>
-                {/* Collar/collar stripe */}
                 <path d="M130 180 L118 195 L130 200 L142 195 Z" fill="white"/>
-                {/* Neck */}
                 <rect x="120" y="160" width="20" height="24" rx="8" fill="#fbbf24"/>
-                {/* Head */}
                 <ellipse cx="130" cy="145" rx="36" ry="34" fill="#fbbf24"/>
-                {/* Hair */}
                 <path d="M96 130 Q98 105 130 100 Q162 105 164 130 Q155 118 130 116 Q105 118 96 130Z" fill="#1e293b"/>
-                {/* Eyes */}
                 <ellipse cx="118" cy="140" rx="6" ry="7" fill="white"/>
                 <ellipse cx="142" cy="140" rx="6" ry="7" fill="white"/>
                 <circle cx="120" cy="141" r="4" fill="#1e293b"/>
                 <circle cx="144" cy="141" r="4" fill="#1e293b"/>
                 <circle cx="121" cy="139" r="1.5" fill="white"/>
                 <circle cx="145" cy="139" r="1.5" fill="white"/>
-                {/* Smile */}
                 <path d="M120 153 Q130 162 140 153" stroke="#1e293b" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-                {/* Cheeks */}
                 <ellipse cx="108" cy="152" rx="8" ry="5" fill="#f87171" opacity="0.4"/>
                 <ellipse cx="152" cy="152" rx="8" ry="5" fill="#f87171" opacity="0.4"/>
-                {/* Glasses */}
                 <rect x="109" y="134" width="16" height="12" rx="4" fill="none" stroke="#1e293b" strokeWidth="2"/>
                 <rect x="133" y="134" width="16" height="12" rx="4" fill="none" stroke="#1e293b" strokeWidth="2"/>
                 <line x1="125" y1="140" x2="133" y2="140" stroke="#1e293b" strokeWidth="2"/>
                 <line x1="93" y1="138" x2="109" y2="138" stroke="#1e293b" strokeWidth="1.5"/>
                 <line x1="149" y1="138" x2="163" y2="138" stroke="#1e293b" strokeWidth="1.5"/>
-                {/* Arm holding pencil */}
                 <path d="M168 205 Q190 215 195 230" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" fill="none"/>
-                {/* Pencil */}
                 <rect x="188" y="225" width="8" height="36" rx="4" fill="#fcd34d" transform="rotate(-30,192,243)"/>
                 <polygon points="192,255 196,255 194,265" fill="#f97316"/>
                 <rect x="188" y="223" width="8" height="6" rx="2" fill="#94a3b8" transform="rotate(-30,192,226)"/>
-                {/* Left arm */}
                 <path d="M92 205 Q70 215 75 240" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" fill="none"/>
-                {/* Hand on book */}
                 <ellipse cx="76" cy="244" rx="12" ry="9" fill="#fbbf24"/>
-                {/* Backpack strap hint */}
                 <path d="M100 185 Q115 220 110 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
                 <path d="M160 185 Q145 220 150 260" stroke="#1d4ed8" strokeWidth="5" strokeLinecap="round" fill="none"/>
 
-                {/* ── AI / ROBOT CHARACTER (right) ── */}
-                {/* Body */}
+                {/* AI / ROBOT CHARACTER */}
                 <rect x="235" y="175" width="85" height="100" rx="22" fill="#7c3aed"/>
-                {/* Chest panel */}
                 <rect x="248" y="195" width="58" height="42" rx="10" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
-                {/* Chest dots (LEDs) */}
                 <circle cx="263" cy="208" r="4" fill="#34d399"/>
                 <circle cx="278" cy="208" r="4" fill="#fbbf24" opacity="0.9"/>
                 <circle cx="293" cy="208" r="4" fill="#f87171" opacity="0.9"/>
-                {/* Chest bar */}
                 <rect x="258" y="220" width="40" height="6" rx="3" fill="rgba(255,255,255,0.3)"/>
                 <rect x="258" y="220" width="26" height="6" rx="3" fill="#34d399"/>
-
-                {/* Neck */}
                 <rect x="265" y="155" width="24" height="22" rx="5" fill="#6d28d9"/>
-
-                {/* Head */}
                 <rect x="230" y="100" width="95" height="60" rx="22" fill="#6d28d9"/>
-                {/* Antenna */}
                 <line x1="277" y1="100" x2="277" y2="78" stroke="#6d28d9" strokeWidth="4" strokeLinecap="round"/>
                 <circle cx="277" cy="72" r="8" fill="#f97316"/>
                 <circle cx="277" cy="72" r="4" fill="white" opacity="0.7"/>
-                {/* Ear panels */}
                 <rect x="225" y="112" width="8" height="30" rx="4" fill="#5b21b6"/>
                 <rect x="322" y="112" width="8" height="30" rx="4" fill="#5b21b6"/>
-                {/* Eye screens */}
                 <rect x="242" y="112" rx="10" width="32" height="28" fill="#0f172a"/>
                 <rect x="280" y="112" rx="10" width="32" height="28" fill="#0f172a"/>
-                {/* Eye glow */}
                 <rect x="246" y="116" rx="7" width="24" height="20" fill="#38bdf8" opacity="0.9"/>
                 <rect x="284" y="116" rx="7" width="24" height="20" fill="#38bdf8" opacity="0.9"/>
-                {/* Eye pupils (scan line) */}
                 <line x1="246" y1="126" x2="270" y2="126" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round"/>
                 <line x1="284" y1="126" x2="308" y2="126" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round"/>
-                {/* Smile LED strip */}
                 <path d="M252 147 Q278 158 308 147" stroke="#34d399" strokeWidth="3" fill="none" strokeLinecap="round"/>
-
-                {/* Arms */}
                 <rect x="318" y="185" width="20" height="60" rx="10" fill="#6d28d9"/>
                 <ellipse cx="328" cy="250" rx="12" ry="10" fill="#5b21b6"/>
                 <rect x="212" y="185" width="20" height="60" rx="10" fill="#6d28d9"/>
                 <ellipse cx="222" cy="250" rx="12" ry="10" fill="#5b21b6"/>
-
-                {/* Speech bubble from AI */}
                 <rect x="300" y="55" width="85" height="44" rx="14" fill="white" stroke="rgba(37,99,235,0.2)" strokeWidth="1.5"/>
                 <path d="M310 99 L305 112 L320 99Z" fill="white"/>
                 <text x="342" y="73" textAnchor="middle" fontSize="11" fontWeight="700" fill="#0f172a">TC AI</text>
                 <text x="342" y="88" textAnchor="middle" fontSize="10" fill="#64748b">พร้อมช่วย!</text>
 
-                {/* Floating elements */}
-                {/* Star 1 */}
                 <g style={{animation:'eduFloat 3s ease-in-out infinite'}}>
                   <text x="45" y="155" fontSize="22">⭐</text>
                 </g>
-                {/* Star 2 */}
                 <g style={{animation:'eduFloat 4s ease-in-out 1s infinite'}}>
                   <text x="350" y="310" fontSize="18">✨</text>
                 </g>
-                {/* Formula */}
                 <g style={{animation:'eduFloat 5s ease-in-out .5s infinite'}}>
                   <text x="30" y="230" fontSize="13" fill="#7c3aed" fontWeight="700">E=mc²</text>
                 </g>
-                {/* Plus sign */}
                 <g style={{animation:'eduFloat 3.5s ease-in-out 1.5s infinite'}}>
                   <text x="355" y="170" fontSize="26" fill="#2563eb" fontWeight="900">+</text>
                 </g>
-                {/* Light bulb */}
                 <g style={{animation:'eduFloat 4.5s ease-in-out .2s infinite'}}>
                   <text x="48" y="295" fontSize="22">💡</text>
                 </g>
-                {/* Atom */}
                 <g style={{animation:'eduFloat 4s ease-in-out 2s infinite'}}>
                   <text x="355" y="235" fontSize="18">⚛️</text>
                 </g>
               </svg>
 
-              {/* Floating badge: AI */}
               <div style={{position:'absolute',top:10,left:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(124,58,237,0.2)',border:'1.5px solid rgba(124,58,237,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat1 4s ease-in-out infinite',zIndex:10}}>
                 <span style={{fontSize:20}}>🤖</span>
                 <div>
                   <p style={{margin:0,fontSize:11,fontWeight:900,color:'#6d28d9'}}>TC AI Tutor</p>
-                  <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>ตอบทุกคำถาม Ai TC พี่หมี</p>
+                  <p style={{margin:0,fontSize:10,color:'#94a3b8',fontFamily:"'Sarabun',sans-serif"}}>ตอบทุกคำถาม 24/7</p>
                 </div>
               </div>
 
-              {/* Floating badge: streak */}
               <div style={{position:'absolute',bottom:40,right:-10,background:'white',borderRadius:16,padding:'10px 16px',boxShadow:'0 8px 28px rgba(249,115,22,0.2)',border:'1.5px solid rgba(249,115,22,0.15)',display:'flex',alignItems:'center',gap:8,animation:'tfFloat2 5s ease-in-out infinite',zIndex:10}}>
                 <span style={{fontSize:20}}>🔥</span>
                 <div>
@@ -736,7 +670,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Stats bar */}
         <div style={{position:'relative',zIndex:10,maxWidth:1240,margin:'48px auto 0',padding:'0 24px'}}>
           <div className="stats-bar">
             {[
@@ -832,16 +765,13 @@ export default function LandingPage() {
             {/* AI character preview */}
             <div style={{position:'relative',display:'none',flexDirection:'column',alignItems:'center'}} className="ai-char-show">
               <svg width="180" height="220" viewBox="0 0 180 220" xmlns="http://www.w3.org/2000/svg">
-                {/* Body */}
                 <rect x="45" y="130" width="90" height="80" rx="20" fill="#7c3aed"/>
                 <rect x="58" y="148" width="64" height="44" rx="10" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5"/>
                 <circle cx="72" cy="160" r="4" fill="#34d399"/>
                 <circle cx="90" cy="160" r="4" fill="#fbbf24"/>
                 <rect x="68" y="173" width="44" height="6" rx="3" fill="rgba(255,255,255,0.25)"/>
                 <rect x="68" y="173" width="30" height="6" rx="3" fill="#34d399"/>
-                {/* Neck */}
                 <rect x="78" y="108" width="24" height="24" rx="5" fill="#6d28d9"/>
-                {/* Head */}
                 <rect x="35" y="50" width="110" height="62" rx="24" fill="#6d28d9"/>
                 <line x1="90" y1="50" x2="90" y2="28" stroke="#6d28d9" strokeWidth="4" strokeLinecap="round"/>
                 <circle cx="90" cy="20" r="10" fill="#f97316"/>
@@ -853,7 +783,6 @@ export default function LandingPage() {
                 <rect x="54" y="64" rx="7" width="26" height="20" fill="#38bdf8" opacity=".9"/>
                 <rect x="100" y="64" rx="7" width="26" height="20" fill="#38bdf8" opacity=".9"/>
                 <path d="M56 95 Q90 108 124 95" stroke="#34d399" strokeWidth="3" fill="none" strokeLinecap="round"/>
-                {/* Arms */}
                 <rect x="133" y="140" width="18" height="55" rx="9" fill="#6d28d9"/>
                 <rect x="29" y="140" width="18" height="55" rx="9" fill="#6d28d9"/>
               </svg>
