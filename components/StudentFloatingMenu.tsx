@@ -21,7 +21,7 @@ export default function StudentFloatingMenu() {
   }
 
   return (
-    <div className="fixed bottom-24 right-5 lg:bottom-10 lg:right-10 z-[999] flex flex-col items-end gap-3">
+    <div className="fixed bottom-20 right-4 lg:bottom-8 lg:right-8 z-[999] flex flex-col items-end gap-3">
       {/* ── เมนูย่อย 3D (เด้งขึ้นมาเมื่อกด) ── */}
       <div className={`flex flex-col items-end gap-3 transition-all duration-300 origin-bottom ${isOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 translate-y-10 pointer-events-none'}`}>
         
@@ -55,7 +55,6 @@ export default function StudentFloatingMenu() {
           <div className="w-9 h-9 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors shadow-inner"><Calendar size={16}/></div>
         </Link>
 
-        {/* ✨ เพิ่มปุ่ม: ตารางเรียนของฉัน */}
         <Link href="/student/my-schedule" className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-100 shadow-xl px-5 py-3 rounded-full text-slate-700 hover:text-cyan-600 hover:scale-105 transition-all group">
           <span className="text-[11px] font-black uppercase tracking-widest">ตารางเรียนของฉัน</span>
           <div className="w-9 h-9 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center group-hover:bg-cyan-600 group-hover:text-white transition-colors shadow-inner"><Clock size={16}/></div>
