@@ -1,12 +1,11 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import {
   User, Sparkles, ChevronRight, GraduationCap, Users, Star,
   MessageCircle, Menu, X, LayoutDashboard, Heart, Rocket,
-  BookOpen, Zap, Trophy, Brain, Calculator, FlaskConical,
-  Globe, Music, Palette, ArrowRight
+  BookOpen, Zap, Brain
 } from 'lucide-react';
 import FloatingAIMascot from '@/components/FloatingAIMascot';
 
@@ -18,6 +17,9 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [activeSubject, setActiveSubject] = useState(0);
 
+  const [studentsCount, setStudentsCount] = useState<number>(150); 
+  const [tutorsCount, setTutorsCount] = useState<number>(20);      
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 30);
     window.addEventListener('scroll', handleScroll);
@@ -27,6 +29,28 @@ export default function LandingPage() {
   useEffect(() => {
     const timer = setInterval(() => setActiveSubject(p => (p + 1) % 4), 2500);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const fetchRealStats = async () => {
+      try {
+        const { count: tCount } = await supabase
+          .from('tutors')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: sCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .not('role', 'in', '("admin","ADMIN","tutor","TUTOR")');
+
+        if (tCount !== null) setTutorsCount(20 + tCount);
+        if (sCount !== null) setStudentsCount(150 + sCount);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+    
+    fetchRealStats();
   }, []);
 
   useEffect(() => {
@@ -52,6 +76,7 @@ export default function LandingPage() {
     if (userRole === 'TUTOR') return '/tutor';
     return '/student';
   };
+  
   const getDashboardText = () => {
     if (userRole === 'ADMIN') return 'Admin Panel';
     if (userRole === 'TUTOR') return 'Tutor Dashboard';
@@ -193,8 +218,9 @@ export default function LandingPage() {
         }
         @keyframes eyebrowPulse { 0%,100%{box-shadow:0 4px 16px rgba(249,115,22,0.12)} 50%{box-shadow:0 4px 24px rgba(249,115,22,0.28)} }
 
+        /* ✨ แก้ไขฟอนต์มือถือให้ไม่ใหญ่เกินไป */
         .hero-title {
-          font-size: clamp(40px, 7vw, 76px);
+          font-size: clamp(32px, 8vw, 76px);
           font-weight: 900;
           line-height: 1.12;
           color: #0f172a;
@@ -204,30 +230,30 @@ export default function LandingPage() {
         .grad-orange { background: linear-gradient(135deg,#f97316,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         .grad-blue   { background: linear-gradient(135deg,#2563eb,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 
-        .subject-ticker {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 6px 16px 6px 8px;
-          background: rgba(255,255,255,0.9);
-          border: 1.5px solid rgba(37,99,235,0.15);
-          border-radius: 100px;
-          box-shadow: 0 4px 16px rgba(37,99,235,0.1);
-          transition: all .4s ease;
-          min-width: 190px;
+        /* ✨ ปรับปรุง Ticker ให้ครอบคลุมการห่อตัวในมือถือ */
+        .subject-ticker-wrap {
+          display: inline-flex; align-items: center; gap: 6px; padding: 5px 5px 5px 10px;
+          background: rgba(255,255,255,0.9); border: 1.5px solid rgba(37,99,235,0.12);
+          border-radius: 100px; box-shadow: 0 4px 16px rgba(37,99,235,0.08);
+          margin-bottom: 28px;
         }
+        .subject-ticker-inner { display: flex; gap: 6px; }
+        @media(max-width: 640px) {
+          .subject-ticker-wrap { flex-direction: column; border-radius: 20px; padding: 12px; }
+          .subject-ticker-inner { flex-wrap: wrap; justify-content: center; }
+        }
+
         .ticker-dot { width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite; }
         @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:.7} }
 
-        /* ── Floating edu elements (pure CSS/SVG decorations) ── */
         .edu-float {
           position: absolute; pointer-events: none;
           animation: eduFloat 4s ease-in-out infinite;
         }
         @keyframes eduFloat { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-14px) rotate(4deg)} }
 
-        /* ── Hero illustration container ── */
         .hero-illo { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
 
-        /* ── Features section ── */
         .section { position: relative; z-index: 10; padding: 0 24px 80px; max-width: 1240px; margin: 0 auto; }
         .section-tag {
           display: inline-flex; align-items: center; gap: 6px;
@@ -240,7 +266,6 @@ export default function LandingPage() {
         }
         .section-title { font-size: clamp(28px,4vw,40px); font-weight: 900; color: #0f172a; margin: 0 0 40px; }
 
-        /* ── Edu card grid ── */
         .edu-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
         @media(max-width:900px) { .edu-grid { grid-template-columns: repeat(2,1fr); } }
         @media(max-width:600px) { .edu-grid { grid-template-columns: 1fr; } }
@@ -297,13 +322,14 @@ export default function LandingPage() {
           position: relative; z-index: 10; padding: 0 24px 80px;
           max-width: 1240px; margin: 0 auto;
         }
+        /* ✨ แก้ไขลด Padding บนมือถือ */
         .ai-banner {
           border-radius: 32px; overflow: hidden; position: relative;
           background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
           padding: 56px 48px;
           box-shadow: 0 24px 80px rgba(15,23,42,0.3);
         }
-        @media(max-width:768px) { .ai-banner { padding: 36px 28px; } }
+        @media(max-width:768px) { .ai-banner { padding: 24px 20px; } }
 
         .ai-grid-bg {
           position: absolute; inset: 0; pointer-events: none;
@@ -314,8 +340,8 @@ export default function LandingPage() {
         .ai-glow-1 { position: absolute; top:-100px; left:-100px; width:400px; height:400px; border-radius:50%; background:radial-gradient(circle,rgba(99,102,241,0.2) 0%,transparent 65%); pointer-events:none; }
         .ai-glow-2 { position: absolute; bottom:-100px; right:-50px; width:350px; height:350px; border-radius:50%; background:radial-gradient(circle,rgba(249,115,22,0.15) 0%,transparent 65%); pointer-events:none; }
 
-        /* ── Subject pills row ── */
         .subject-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 40px; }
+        @media(max-width:768px) { .subject-row { justify-content: center; } }
         .subject-pill {
           display: inline-flex; align-items: center; gap: 7px;
           padding: 8px 16px; border-radius: 100px;
@@ -328,7 +354,6 @@ export default function LandingPage() {
         }
         .subject-pill:hover { background: rgba(255,255,255,0.12); color: white; }
 
-        /* ── Testimonial floating cards ── */
         .testimonial-float {
           position: absolute;
           background: rgba(255,255,255,0.95);
@@ -345,7 +370,6 @@ export default function LandingPage() {
         @keyframes tfFloat1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
         @keyframes tfFloat2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
 
-        /* ── Mobile nav ── */
         .mobile-menu {
           position: fixed; top: 80px; left: 16px; right: 16px; z-index: 99;
           background: rgba(255,255,255,0.97);
@@ -367,10 +391,8 @@ export default function LandingPage() {
         }
         .mobile-link:hover { background: rgba(37,99,235,0.06); border-color: rgba(37,99,235,0.2); }
 
-        /* ── Footer ── */
         .footer { background: white; border-top: 1.5px solid rgba(37,99,235,0.08); padding: 48px 24px; text-align: center; }
 
-        /* ── Scroll snap cards on mobile ── */
         .card-scroll {
           display: flex; gap: 16px; overflow-x: auto;
           scroll-snap-type: x mandatory; padding-bottom: 8px;
@@ -380,14 +402,13 @@ export default function LandingPage() {
         .card-scroll .edu-card { min-width: min(80vw,320px); scroll-snap-align: start; flex-shrink: 0; }
         @media(min-width:601px) { .card-scroll { display: grid; grid-template-columns: repeat(3,1fr); margin: 0; padding: 0; } .card-scroll .edu-card { min-width: auto; } }
 
-        /* ── Hero layout ── */
         .hero-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; max-width: 1240px; margin: 0 auto; }
         @media(max-width:900px) { .hero-layout { grid-template-columns: 1fr; text-align: center; } .hero-ctas { justify-content: center; } }
         .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
 
-        /* ── Stats bar ── */
+        /* ✨ แก้ไข Stats Bar ให้รองรับมือถือ (Grid 2x2) */
         .stats-bar {
-          display: flex; align-items: center; gap: 0;
+          display: flex; align-items: center; justify-content: space-between;
           background: rgba(255,255,255,0.88);
           backdrop-filter: blur(20px);
           border: 1.5px solid rgba(255,255,255,0.95);
@@ -400,6 +421,15 @@ export default function LandingPage() {
         .stat-item:not(:last-child)::after { content:''; position:absolute; right:0; top:20%; bottom:20%; width:1px; background:rgba(37,99,235,0.1); }
         .stat-val { font-size: 28px; font-weight: 900; color: #0f172a; line-height: 1; margin-bottom: 4px; }
         .stat-lbl { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; }
+
+        @media(max-width: 640px) {
+          .stats-bar { display: grid; grid-template-columns: 1fr 1fr; border-radius: 16px; }
+          .stat-item { padding: 16px 12px; border-bottom: 1px solid rgba(37,99,235,0.05); border-right: 1px solid rgba(37,99,235,0.05); }
+          .stat-item:nth-child(2n) { border-right: none; }
+          .stat-item:nth-last-child(-n+2) { border-bottom: none; }
+          .stat-item::after { display: none !important; }
+          .stat-val { font-size: 22px; }
+        }
       `}</style>
 
       {/* Ambient blobs */}
@@ -514,17 +544,15 @@ export default function LandingPage() {
               {' '}🎯
             </h1>
 
-            {/* Subject ticker */}
-            <div style={{marginBottom:28}}>
-              <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 5px 5px 10px',background:'rgba(255,255,255,0.9)',border:'1.5px solid rgba(37,99,235,0.12)',borderRadius:100,boxShadow:'0 4px 16px rgba(37,99,235,0.08)'}}>
-                <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em'}}>ติวได้ทุกวิชา:</span>
-                <div style={{display:'flex',gap:6}}>
-                  {subjects.map((s,i) => (
-                    <div key={i} style={{padding:'5px 12px',borderRadius:100,fontSize:12,fontWeight:800,transition:'all .4s ease',background:i===activeSubject?s.color:'rgba(248,250,255,0.8)',color:i===activeSubject?'white':'#64748b',border:`1.5px solid ${i===activeSubject?s.color:'rgba(37,99,235,0.1)'}`}}>
-                      {s.emoji} {s.label}
-                    </div>
-                  ))}
-                </div>
+            {/* ✨ แก้ไข Subject ticker เพื่อให้ Wrap ในมือถือ */}
+            <div className="subject-ticker-wrap">
+              <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em'}}>ติวได้ทุกวิชา:</span>
+              <div className="subject-ticker-inner">
+                {subjects.map((s,i) => (
+                  <div key={i} style={{padding:'5px 12px',borderRadius:100,fontSize:12,fontWeight:800,transition:'all .4s ease',background:i===activeSubject?s.color:'rgba(248,250,255,0.8)',color:i===activeSubject?'white':'#64748b',border:`1.5px solid ${i===activeSubject?s.color:'rgba(37,99,235,0.1)'}`}}>
+                    {s.emoji} {s.label}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -712,9 +740,9 @@ export default function LandingPage() {
         <div style={{position:'relative',zIndex:10,maxWidth:1240,margin:'48px auto 0',padding:'0 24px'}}>
           <div className="stats-bar">
             {[
-              {val:'100+',lbl:'นักเรียน',emoji:'🎓'},
+              {val:`${studentsCount.toLocaleString()}+`,lbl:'นักเรียน',emoji:'🎓'},
               {val:'98%',lbl:'ผ่านสอบ',emoji:'⭐'},
-              {val:'50+',lbl:'ติวเตอร์',emoji:'👨‍🏫'},
+              {val:`${tutorsCount.toLocaleString()}+`,lbl:'ติวเตอร์',emoji:'👨‍🏫'},
               {val:'พี่หมี TC',lbl:'AI ช่วยสอน',emoji:'🤖'},
             ].map((s,i) => (
               <div className="stat-item" key={i}>
