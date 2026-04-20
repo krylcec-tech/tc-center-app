@@ -1,7 +1,8 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, DollarSign, CheckCircle2, AlertCircle, Edit3, ArrowLeft, GraduationCap, Search, Filter, Users } from 'lucide-react';
+// ✨ เพิ่ม X เข้าไปในนี้แล้วครับ!
+import { Loader2, DollarSign, CheckCircle2, AlertCircle, Edit3, ArrowLeft, GraduationCap, Search, Filter, Users, X } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminTutorPayouts() {
@@ -43,11 +44,10 @@ export default function AdminTutorPayouts() {
             student_name: studentWallet?.student_name || studentProfile?.full_name || 'ไม่ทราบชื่อ',
             student_email: studentProfile?.email || 'ไม่มีอีเมล',
             student_grade: studentProfile?.grade_level || 'ไม่ระบุระดับชั้น',
-            start_time_obj: new Date(b.slots.start_time)
+            start_time_obj: new Date(b.slots?.start_time || Date.now())
           };
         });
 
-        // ไม่ต้อง sort ตรงนี้แล้ว ย้ายไป sort ตอนแสดงผล (ล่างสุด) เพื่อแยกตาม Tab
         setPayouts(formatted);
         
         const initialInputs: any = {};
@@ -92,24 +92,20 @@ export default function AdminTutorPayouts() {
   const uniqueTutors = useMemo(() => {
     const tutorsMap = new Map();
     payouts.forEach(item => {
-      if (!tutorsMap.has(item.tutor_id)) {
-        tutorsMap.set(item.tutor_id, item.tutors.name);
+      if (item.tutor_id && !tutorsMap.has(item.tutor_id)) {
+        tutorsMap.set(item.tutor_id, item.tutors?.name || 'ไม่ทราบชื่อ');
       }
     });
     return Array.from(tutorsMap.entries()).map(([id, name]) => ({ id, name }));
   }, [payouts]);
 
-  // ✨ ระบบ Filter, Search (รวม Email) และ Sorting แยกตาม Tab
   const filteredPayouts = payouts.filter(item => {
-    // 1. กรองตาม Tab (รอจ่าย / จ่ายแล้ว)
     const isPaid = item.tutor_fee !== null && item.tutor_fee > 0;
     if (activeTab === 'PENDING' && isPaid) return false;
     if (activeTab === 'PAID' && !isPaid) return false;
 
-    // 2. กรองตามติวเตอร์ที่เลือกใน Dropdown
     if (selectedTutorId !== 'ALL' && item.tutor_id !== selectedTutorId) return false;
 
-    // 3. กรองตามช่องค้นหา (ชื่อเด็ก, ชื่อครู, อีเมลเด็ก, อีเมลครู)
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchStudentName = item.student_name?.toLowerCase().includes(q) || false;
@@ -122,12 +118,9 @@ export default function AdminTutorPayouts() {
 
     return true;
   }).sort((a, b) => {
-    // ✨ 4. เรียงลำดับข้อมูลแยกตาม Tab
     if (activeTab === 'PENDING') {
-      // รอจ่าย: เอาเก่าสุดขึ้นก่อน (ค้างจ่ายนานสุด)
       return a.start_time_obj.getTime() - b.start_time_obj.getTime();
     } else {
-      // จ่ายแล้ว: เอาใหม่สุดขึ้นก่อน (เพิ่งจ่ายล่าสุด)
       return b.start_time_obj.getTime() - a.start_time_obj.getTime();
     }
   });
@@ -147,7 +140,6 @@ export default function AdminTutorPayouts() {
 
         <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 mb-6 flex flex-col lg:flex-row gap-4 justify-between items-center z-20 relative">
           
-          {/* Tabs: รอจ่าย / จ่ายแล้ว */}
           <div className="flex bg-slate-100 p-1 rounded-2xl w-full lg:w-max">
             <button 
               onClick={() => setActiveTab('PENDING')}
@@ -163,9 +155,7 @@ export default function AdminTutorPayouts() {
             </button>
           </div>
 
-          {/* Search & Filter */}
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            {/* Dropdown ติวเตอร์ */}
             <div className="relative w-full sm:w-48">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                 <Users size={16} className="text-slate-400" />
@@ -182,7 +172,6 @@ export default function AdminTutorPayouts() {
               </select>
             </div>
 
-            {/* ช่องค้นหา */}
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
@@ -203,6 +192,7 @@ export default function AdminTutorPayouts() {
 
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden relative z-10">
           <div className="overflow-x-auto">
+            {/* ✨ แก้ไขกลับมาเป็น table ให้ถูกต้องแล้วครับ */}
             <table className="w-full text-left min-w-[800px]">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
@@ -221,13 +211,13 @@ export default function AdminTutorPayouts() {
                          <span className="text-slate-400 font-bold text-xs">•</span> 
                          <span className="text-blue-600">{item.start_time_obj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</span>
                       </p>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase mt-1.5 inline-block ${item.slots.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {item.slots.location_type}
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase mt-1.5 inline-block ${item.slots?.location_type === 'Online' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                        {item.slots?.location_type || 'ไม่ระบุ'}
                       </span>
                     </td>
                     <td className="p-6">
-                      <p className="font-black text-slate-800">ครู{item.tutors.name}</p>
-                      <p className="text-[10px] text-slate-500 font-bold break-all">{item.tutors.email}</p>
+                      <p className="font-black text-slate-800">ครู{item.tutors?.name || 'ไม่ทราบชื่อ'}</p>
+                      <p className="text-[10px] text-slate-500 font-bold break-all">{item.tutors?.email || 'ไม่มีอีเมล'}</p>
                     </td>
                     <td className="p-6">
                       <p className="font-black text-slate-800 mb-0.5">น้อง{item.student_name}</p>
