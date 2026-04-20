@@ -10,19 +10,16 @@ export default function StudentFloatingMenu() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
-  // ปิดเมนูอัตโนมัติเวลาเปลี่ยนหน้า
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
 
-  // เช็กว่าถ้าอยู่หน้า Dashboard หลัก ให้ซ่อนปุ่มนี้ไปเลย
   if (pathname === '/student') {
     return null;
   }
 
   return (
-    <div className="fixed bottom-20 right-4 lg:bottom-8 lg:right-8 z-[999] flex flex-col items-end gap-3">
-      {/* ── เมนูย่อย 3D (เด้งขึ้นมาเมื่อกด) ── */}
+    <div className="fixed bottom-[90px] right-3 lg:bottom-6 lg:right-6 z-[999] flex flex-col items-end gap-3">
       <div className={`flex flex-col items-end gap-3 transition-all duration-300 origin-bottom ${isOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 translate-y-10 pointer-events-none'}`}>
         
         <Link href="/student" className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-100 shadow-xl px-5 py-3 rounded-full text-slate-700 hover:text-blue-600 hover:scale-105 transition-all group">
@@ -61,7 +58,6 @@ export default function StudentFloatingMenu() {
         </Link>
       </div>
 
-      {/* ── ปุ่มกดหลัก (ลอยอยู่มุมจอ) ── */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={`w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(37,99,235,0.4)] transition-all duration-300 relative z-10 hover:scale-105 active:scale-95 border-2 border-white ${isOpen ? 'bg-slate-800 text-white shadow-slate-500/40' : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'}`}

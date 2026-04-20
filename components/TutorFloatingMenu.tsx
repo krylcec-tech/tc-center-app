@@ -19,8 +19,7 @@ export default function TutorFloatingMenu() {
   }
 
   return (
-    <div className="fixed bottom-20 right-4 lg:bottom-8 lg:right-8 z-[999] flex flex-col items-end gap-3">
-      
+    <div className="fixed bottom-[90px] right-3 lg:bottom-6 lg:right-6 z-[999] flex flex-col items-end gap-3">
       <div className={`flex flex-col items-end gap-3 transition-all duration-300 origin-bottom ${isOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 translate-y-10 pointer-events-none'}`}>
         
         <Link href="/tutor" className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-100 shadow-xl px-5 py-3 rounded-full text-slate-700 hover:text-blue-600 hover:scale-105 transition-all group">
