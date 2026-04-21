@@ -3,7 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Search, ShoppingCart, BookOpen, Clock, 
-  Tag, Loader2, PlayCircle, MessageCircle, Gift, ChevronRight, X, Upload, CheckCircle2,
+  Tag, Loader2, PlayCircle, MessageCircle, Gift, ChevronRight, ChevronLeft, X, Upload, CheckCircle2,
   Smartphone, Wallet, Info, Store, Layers, Filter, User, Flame, Lock, Crown, Timer
 } from 'lucide-react';
 import Link from 'next/link';
@@ -26,6 +26,9 @@ function CatalogContent() {
 
   const [selectedItem, setSelectedItem] = useState<any>(null); 
   const [viewingItem, setViewingItem] = useState<any>(null); 
+  
+  // ✨ State สำหรับดูรูปภาพเต็มจอ
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -188,6 +191,49 @@ function CatalogContent() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
+      {/* ✨ Modal รูปภาพเต็มจอ (Fullscreen Gallery) */}
+      {selectedImageIndex !== null && viewingItem?.image_url && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setSelectedImageIndex(null)}>
+          <button className="absolute top-4 right-4 text-gray-300 hover:text-white bg-white/10 hover:bg-white/20 p-3 rounded-full transition-all z-50">
+            <X size={24}/>
+          </button>
+          
+          {viewingItem.image_url.length > 1 && (
+            <>
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setSelectedImageIndex(prev => prev === 0 ? viewingItem.image_url.length - 1 : prev! - 1); 
+                }} 
+                className="absolute left-4 sm:left-8 text-white bg-white/10 hover:bg-white/20 p-3 rounded-full transition-all z-50 active:scale-95"
+              >
+                <ChevronLeft size={24}/>
+              </button>
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setSelectedImageIndex(prev => prev === viewingItem.image_url.length - 1 ? 0 : prev! + 1); 
+                }} 
+                className="absolute right-4 sm:right-8 text-white bg-white/10 hover:bg-white/20 p-3 rounded-full transition-all z-50 active:scale-95"
+              >
+                <ChevronRight size={24}/>
+              </button>
+            </>
+          )}
+
+          <img 
+            src={viewingItem.image_url[selectedImageIndex]} 
+            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" 
+            alt="Full screen view"
+            onClick={(e) => e.stopPropagation()}
+          />
+          
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-full text-xs font-bold tracking-widest backdrop-blur-md">
+            {selectedImageIndex + 1} / {viewingItem.image_url.length}
+          </div>
+        </div>
+      )}
+
       {/* Modal ดูรายละเอียดสินค้าแบบเต็ม */}
       {viewingItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewingItem(null)}>
@@ -197,7 +243,13 @@ function CatalogContent() {
             {viewingItem.image_url && viewingItem.image_url.length > 0 && (
               <div className="flex gap-3 overflow-x-auto no-scrollbar mb-6 pb-2">
                 {viewingItem.image_url.map((url: string, idx: number) => (
-                  <img key={idx} src={url} className="w-[85%] sm:w-2/3 h-52 sm:h-64 object-cover rounded-[1.5rem] shrink-0 border border-gray-100 shadow-sm" alt={`Preview ${idx+1}`} />
+                  <img 
+                    key={idx} 
+                    src={url} 
+                    onClick={() => setSelectedImageIndex(idx)}
+                    className="w-[85%] sm:w-2/3 h-52 sm:h-64 object-cover rounded-[1.5rem] shrink-0 border border-gray-100 shadow-sm cursor-pointer hover:opacity-90 hover:shadow-md transition-all active:scale-[0.98]" 
+                    alt={`Preview ${idx+1}`} 
+                  />
                 ))}
               </div>
             )}
@@ -359,7 +411,7 @@ function CatalogContent() {
       {/* Grid สินค้า */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 relative z-10 pb-24">
         {filteredItems.map((item) => {
-          const isPremium = item.is_private; // ✨ ตัวแปรเช็คว่าเป็นของพรีเมียมไหม
+          const isPremium = item.is_private; // ✨ เช็คความเป็น Premium
           const hasPromo = item.original_price > item.price;
           const discountPercent = hasPromo ? Math.round(((item.original_price - item.price) / item.original_price) * 100) : 0;
           const isLowStock = !item.is_unlimited && item.stock > 0 && item.stock <= 5;
@@ -368,18 +420,13 @@ function CatalogContent() {
           return (
             <div key={item.id} className={`bg-white rounded-[1.25rem] sm:rounded-[1.5rem] flex flex-col h-full group transition-all duration-500 relative overflow-hidden
               ${isPremium 
-                ? 'border-[1.5px] border-amber-300 bg-gradient-to-br from-amber-50/40 via-white to-white shadow-[0_8px_30px_rgba(251,191,36,0.15)] hover:shadow-[0_15px_40px_rgba(251,191,36,0.25)] hover:-translate-y-1.5' 
+                ? 'border-2 border-amber-400 bg-gradient-to-br from-amber-50/40 via-white to-white shadow-[0_8px_30px_rgba(251,191,36,0.2)] hover:shadow-[0_15px_40px_rgba(251,191,36,0.3)] hover:-translate-y-1.5' 
                 : hasPromo 
                   ? 'border border-red-200 shadow-sm hover:shadow-xl hover:-translate-y-1' 
                   : 'border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1'
               }`}
             >
               
-              {/* ✨ แถบขีดข้างสีทอง (Premium) */}
-              {isPremium && (
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-yellow-300 via-amber-500 to-orange-500 z-50"></div>
-              )}
-
               {/* ✨ ป้าย VIP Exclusive (Premium) */}
               {isPremium && (
                 <div className="absolute top-0 right-0 z-20 bg-gradient-to-r from-gray-900 to-gray-800 text-white font-black text-[10px] sm:text-xs px-3 py-1.5 rounded-bl-[1.2rem] shadow-lg flex items-center gap-1.5 border-b border-l border-gray-700/50">
@@ -421,7 +468,8 @@ function CatalogContent() {
                 )}
               </div>
               
-              <div className={`p-3 sm:p-5 flex flex-col flex-1 relative z-10 ${isPremium ? 'pl-4 sm:pl-6' : ''}`}>
+              {/* ✨ เอา Padding ที่เบี้ยวออก เพื่อให้ขอบ 2 ฝั่งเท่ากันเป๊ะ */}
+              <div className="p-3 sm:p-5 flex flex-col flex-1 relative z-10">
                 <h3 className={`font-black text-sm sm:text-xl mb-1 line-clamp-1 transition-colors cursor-pointer ${isPremium ? 'text-gray-900 group-hover:text-amber-600' : 'group-hover:text-blue-600'}`} onClick={() => setViewingItem(item)}>{item.title}</h3>
                 
                 {/* ✨ แถบเวลาจำกัด (Premium) */}

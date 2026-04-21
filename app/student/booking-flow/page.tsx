@@ -75,7 +75,13 @@ function BookingContent() {
   const fetchTutors = async () => {
     setLoading(true);
     const currentTierTitle = tiers.find(t => t.id === gradeLevel)?.title;
-    const { data: tutorsData } = await supabase.from('tutors').select('*').contains('grade_levels', [currentTierTitle]);
+    
+    // ✨ เพิ่ม .eq('is_active', true) เพื่อดึงเฉพาะติวเตอร์ที่แอดมินไม่ได้กดซ่อน
+    const { data: tutorsData } = await supabase
+      .from('tutors')
+      .select('*')
+      .contains('grade_levels', [currentTierTitle])
+      .eq('is_active', true); 
     
     if (tutorsData && tutorsData.length > 0) {
       const tutorIds = tutorsData.map(t => t.id);
@@ -153,7 +159,6 @@ function BookingContent() {
     );
   };
 
-  // ✨ ฟังก์ชันจัดการการจองเรียนพร้อมยิง LINE
   const handleBulkBooking = async () => {
     if (selectedSlotIds.length === 0) return alert("กรุณาเลือกเวลาเรียนอย่างน้อย 1 ช่วงเวลาครับ");
     
@@ -170,22 +175,17 @@ function BookingContent() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("ไม่พบข้อมูลผู้ใช้");
 
-        // 1. หักเงินใน Wallet
         await supabase.from('student_wallets').update({ [columnName]: userBalance - requiredHours }).eq('user_id', user.id);
         
-        // 2. อัปเดต Slot ว่าถูกจองแล้ว
         await supabase.from('slots').update({ is_booked: true }).in('id', selectedSlotIds);
         
-        // 3. บันทึกข้อมูลการจอง
         const bookingData = selectedSlotIds.map(slotId => ({
           slot_id: slotId, student_id: user.id, tutor_id: selectedTutor.id,
           status: 'confirmed', student_note: `[${locationType}] ${studentNote}`, is_completed: false
         }));
         await supabase.from('bookings').insert(bookingData);
 
-        // 🚀 ✨ เริ่มโค้ดแจ้งเตือน LINE เข้ากลุ่มแอดมิน ✨ 🚀
         try {
-          // ดึงข้อมูลวันและเวลาของ Slot แรกมาแสดงใน LINE เพื่อเป็นตัวอย่าง
           const firstSlot = tutorSlots.find(s => s.id === selectedSlotIds[0]);
           const displayDate = firstSlot ? new Date(firstSlot.start_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
           
@@ -209,7 +209,6 @@ function BookingContent() {
           });
         } catch (lineErr) {
           console.error("LINE Notify Error:", lineErr);
-          // ไม่ต้อง Throw error เพื่อให้นักเรียนจองสำเร็จต่อได้แม้ LINE จะเสีย
         }
 
         alert(`🎉 จองสำเร็จทั้งหมด ${requiredHours} ช่วงเวลาแล้วครับ!`);
