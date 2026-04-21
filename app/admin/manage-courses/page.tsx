@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { 
   ArrowLeft, Plus, Trash2, Edit3, Image as ImageIcon, 
-  Book, Clock, X, Loader2, Camera, Save, Gift, Wallet, Infinity, Eye, EyeOff, Box, Link as LinkIcon, ExternalLink, Tag, ArrowUpCircle, GraduationCap, User
+  Book, Clock, X, Loader2, Camera, Save, Gift, Wallet, Infinity, Eye, EyeOff, Box, Link as LinkIcon, ExternalLink, Tag, ArrowUpCircle, GraduationCap, User, Lock, Search
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -37,6 +37,12 @@ export default function ManageCoursesPage() {
   const [newTagInput, setNewTagInput] = useState('');
   const [allAvailableTags, setAllAvailableTags] = useState<string[]>([]);
 
+  // ✨ States สำหรับสินค้าเฉพาะบุคคล
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [targetUsers, setTargetUsers] = useState<string[]>([]);
+  const [studentsList, setStudentsList] = useState<any[]>([]);
+  const [studentSearch, setStudentSearch] = useState('');
+
   const subjects = ['คณิตศาสตร์', 'ภาษาอังกฤษ', 'ภาษาไทย', 'สังคมศึกษา', 'เคมี', 'ฟิสิกส์', 'ชีววิทยา', 'ประวัติศาสตร์', 'ทั่วไป'];
   const levels = ['ประถม', 'ม.ต้น', 'ม.ปลาย', 'มหาวิทยาลัย'];
 
@@ -55,7 +61,26 @@ export default function ManageCoursesPage() {
 
   useEffect(() => {
     fetchItems();
+    fetchStudents(); // ✨ โหลดรายชื่อนักเรียนตอนเปิดหน้า
   }, []);
+
+  // ✨ ฟังก์ชันดึงรายชื่อนักเรียนทั้งหมด
+// ✨ ฟังก์ชันดึงรายชื่อนักเรียนทั้งหมด (แก้ไขให้ดึงคนที่ role ว่าง/NULL มาด้วย)
+  const fetchStudents = async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*');
+
+    if (data) {
+      // กรองเอาเฉพาะคนที่ไม่ใช่ ADMIN และ TUTOR (คนที่เป็น NULL จะรอดมาด้วย)
+      const validStudents = data.filter(user => {
+        const userRole = user.role ? user.role.toUpperCase() : '';
+        return userRole !== 'ADMIN' && userRole !== 'TUTOR';
+      });
+      
+      setStudentsList(validStudents);
+    }
+  };
 
   const fetchItems = async () => {
     const { data, error } = await supabase
@@ -75,7 +100,6 @@ export default function ManageCoursesPage() {
           try {
             parsedTags = JSON.parse(item.tags);
           } catch {
-            // ✨ แก้ปัญหาขีดแดง TypeScript ตรงนี้ (เติม t: string)
             parsedTags = item.tags.replace(/^{|}$/g, '').split(',').map((t: string) => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
           }
         }
@@ -90,7 +114,9 @@ export default function ManageCoursesPage() {
           tags: parsedTags,
           seller_type: item.seller_type || 'institute',
           seller_name: item.seller_name || 'TC Center',
-          original_price: item.original_price || 0 
+          original_price: item.original_price || 0,
+          is_private: item.is_private || false, // ✨ ดึงค่า
+          target_users: item.target_users || [] // ✨ ดึงค่า
         };
       });
 
@@ -158,6 +184,8 @@ export default function ManageCoursesPage() {
   const handleSave = async () => {
     if (!title || !price) return alert("กรุณากรอกชื่อและราคาครับ");
     if (type === 'course' && !targetWalletType) return alert("กรุณาเลือกประเภทกระเป๋าที่จะเติมชั่วโมงด้วยครับ");
+    // ✨ ตรวจสอบถ้าเป็น Private ต้องเลือกอย่างน้อย 1 คน
+    if (isPrivate && targetUsers.length === 0) return alert("กรุณาเลือกนักเรียนอย่างน้อย 1 คนสำหรับสินค้าพิเศษนี้ครับ");
     
     let finalTagsToSave = [...selectedTags];
     const pendingTag = newTagInput.trim();
@@ -203,7 +231,10 @@ export default function ManageCoursesPage() {
         level: type === 'book' ? level : null,
         seller_type: sellerType,
         seller_name: sellerName,
-        approval_status: 'APPROVED'
+        approval_status: 'APPROVED',
+        // ✨ ส่งข้อมูล Private ไปยัง DB
+        is_private: isPrivate,
+        target_users: isPrivate ? targetUsers : []
       };
 
       const { error: dbError } = editingItem 
@@ -245,6 +276,9 @@ export default function ManageCoursesPage() {
     setLevel('ม.ปลาย');
     setSellerType('institute');
     setSellerName('TC Center');
+    setIsPrivate(false);     // ✨ Reset
+    setTargetUsers([]);      // ✨ Reset
+    setStudentSearch('');    // ✨ Reset
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -269,6 +303,9 @@ export default function ManageCoursesPage() {
     setLevel(item.level || 'ม.ปลาย');
     setSellerType(item.seller_type || 'institute');
     setSellerName(item.seller_name || 'TC Center');
+    setIsPrivate(item.is_private || false);   // ✨ ดึงค่า
+    setTargetUsers(item.target_users || []);  // ✨ ดึงค่า
+    setStudentSearch('');
     setImageFiles([]); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -296,8 +333,15 @@ export default function ManageCoursesPage() {
     const hasPromo = item.original_price > item.price; 
     
     return (
-      <div className={`bg-white p-4 rounded-[24px] shadow-sm border flex flex-col h-full group transition-all relative ${!item.is_active ? 'opacity-60 border-gray-200 bg-gray-50' : isOutOfStock ? 'border-red-100 bg-red-50/30' : 'border-gray-100 hover:shadow-md hover:-translate-y-1'}`}>
+      <div className={`bg-white p-4 rounded-[24px] shadow-sm border flex flex-col h-full group transition-all relative ${!item.is_active ? 'opacity-60 border-gray-200 bg-gray-50' : isOutOfStock ? 'border-red-100 bg-red-50/30' : item.is_private ? 'border-indigo-200 bg-indigo-50/20' : 'border-gray-100 hover:shadow-md hover:-translate-y-1'}`}>
         
+        {/* ✨ Badge สินค้าเฉพาะบุคคล */}
+        {item.is_private && (
+          <div className="absolute top-[-10px] left-4 z-20 bg-indigo-600 text-white text-[10px] font-black px-2.5 py-1 rounded-md shadow-md flex items-center gap-1">
+            <Lock size={12}/> เฉพาะบุคคล ({item.target_users?.length || 0} คน)
+          </div>
+        )}
+
         <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5 items-end">
           {item.sort_order > 0 && (
             <div className="bg-yellow-400 text-yellow-900 text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center justify-center shadow-md">
@@ -555,20 +599,76 @@ export default function ManageCoursesPage() {
                   </div>
                 )}
 
-                <div className="bg-gray-50 p-3.5 rounded-xl space-y-2 border border-gray-100">
-                   <div className="flex items-center gap-2 mb-1">
-                     <Box size={14} className="text-gray-400"/><span className="text-[10px] font-black text-gray-600 uppercase">จัดการสต็อก</span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <input type="checkbox" id="unlimitedStock" className="w-4 h-4 accent-blue-600 cursor-pointer rounded" checked={isUnlimited} onChange={(e) => setIsUnlimited(e.target.checked)}/>
-                     <label htmlFor="unlimitedStock" className="text-xs font-bold text-gray-700 cursor-pointer flex items-center gap-1"><Infinity size={12} className="text-blue-500" /> ไม่จำกัดจำนวน</label>
-                   </div>
-                   {!isUnlimited && (
-                     <div className="pl-6 pt-1">
-                       <label className="text-[9px] font-black text-gray-400 uppercase mb-1 block">ระบุจำนวนชิ้นที่มี</label>
-                       <input type="number" min="0" className="w-full p-2.5 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-black border border-gray-200 text-sm" value={stock} onChange={(e) => setStock(e.target.value)} />
+                {/* ✨ ส่วนตั้งค่าคลังสินค้าและ Private Item */}
+                <div className="bg-gray-50 p-3.5 rounded-xl space-y-4 border border-gray-100">
+                   
+                   {/* Stock */}
+                   <div>
+                     <div className="flex items-center gap-2 mb-1">
+                       <Box size={14} className="text-gray-400"/><span className="text-[10px] font-black text-gray-600 uppercase">จัดการสต็อก</span>
                      </div>
-                   )}
+                     <div className="flex items-center gap-2">
+                       <input type="checkbox" id="unlimitedStock" className="w-4 h-4 accent-blue-600 cursor-pointer rounded" checked={isUnlimited} onChange={(e) => setIsUnlimited(e.target.checked)}/>
+                       <label htmlFor="unlimitedStock" className="text-xs font-bold text-gray-700 cursor-pointer flex items-center gap-1"><Infinity size={12} className="text-blue-500" /> ไม่จำกัดจำนวน</label>
+                     </div>
+                     {!isUnlimited && (
+                       <div className="pl-6 pt-1">
+                         <label className="text-[9px] font-black text-gray-400 uppercase mb-1 block">ระบุจำนวนชิ้นที่มี</label>
+                         <input type="number" min="0" className="w-full p-2.5 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-black border border-gray-200 text-sm" value={stock} onChange={(e) => setStock(e.target.value)} />
+                       </div>
+                     )}
+                   </div>
+
+                   <hr className="border-gray-200" />
+
+                   {/* Private / Specific Users */}
+                   <div>
+                     <div className="flex items-center gap-2">
+                       <input type="checkbox" id="isPrivate" className="w-4 h-4 accent-indigo-600 cursor-pointer rounded" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)}/>
+                       <label htmlFor="isPrivate" className="text-xs font-bold text-indigo-700 cursor-pointer flex items-center gap-1"><Lock size={12}/> สินค้าพิเศษ (ขายให้เฉพาะบุคคล)</label>
+                     </div>
+                     
+                     {isPrivate && (
+                       <div className="mt-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg space-y-2">
+                         <label className="text-[10px] font-black text-indigo-500 uppercase flex items-center gap-1">👥 ค้นหาและเลือกนักเรียน</label>
+                         
+                         {/* Search Box */}
+                         <div className="relative">
+                            <Search size={14} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            <input 
+                              type="text" 
+                              placeholder="พิมพ์ชื่อ หรือ Email เพื่อค้นหา..." 
+                              className="w-full p-2 pl-7 text-xs rounded-md border border-indigo-200 outline-none focus:border-indigo-400"
+                              value={studentSearch}
+                              onChange={(e) => setStudentSearch(e.target.value)}
+                            />
+                         </div>
+
+                         {/* Student List */}
+                         <div className="max-h-32 overflow-y-auto bg-white rounded-md border border-indigo-100 p-1 space-y-1">
+                           {studentsList
+                             .filter(s => (s.full_name?.toLowerCase() || '').includes(studentSearch.toLowerCase()) || (s.email?.toLowerCase() || '').includes(studentSearch.toLowerCase()))
+                             .map(student => (
+                             <label key={student.id} className="flex items-center gap-2 text-[11px] font-bold text-gray-700 p-1.5 hover:bg-indigo-50 rounded cursor-pointer transition-colors">
+                               <input
+                                 type="checkbox"
+                                 checked={targetUsers.includes(student.id)}
+                                 onChange={(e) => {
+                                   if(e.target.checked) setTargetUsers([...targetUsers, student.id]);
+                                   else setTargetUsers(targetUsers.filter(id => id !== student.id));
+                                 }}
+                                 className="accent-indigo-600 w-3 h-3"
+                               />
+                               {student.full_name || student.email || student.id}
+                             </label>
+                           ))}
+                           {studentsList.length === 0 && <p className="text-[10px] text-gray-400 p-2 text-center">ไม่มีข้อมูลนักเรียนในระบบ</p>}
+                         </div>
+                         <p className="text-[9px] text-indigo-400 font-bold">เลือกแล้ว {targetUsers.length} คน</p>
+                       </div>
+                     )}
+                   </div>
+
                 </div>
 
                 <div className="space-y-1">

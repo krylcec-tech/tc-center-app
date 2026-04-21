@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Search, ShoppingCart, BookOpen, Clock, 
   Tag, Loader2, PlayCircle, MessageCircle, Gift, ChevronRight, X, Upload, CheckCircle2,
-  Smartphone, Wallet, Info, Store, Layers, Filter, User, Flame
+  Smartphone, Wallet, Info, Store, Layers, Filter, User, Flame, Lock, Crown, Timer
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -22,6 +22,7 @@ function CatalogContent() {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [selectedItem, setSelectedItem] = useState<any>(null); 
   const [viewingItem, setViewingItem] = useState<any>(null); 
@@ -38,26 +39,36 @@ function CatalogContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    checkUserStatus();
-    fetchActiveItems();
+    const initData = async () => {
+      setLoading(true);
+      await checkUserStatus();
+    };
+    initData();
   }, []);
 
   const checkUserStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
+    let currentAdminStatus = false;
+    let userId = null;
+
     if (user) {
       setIsLoggedIn(true);
-      const { data: profile } = await supabase.from('tutors').select('role').eq('user_id', user.id).maybeSingle();
+      setCurrentUserId(user.id);
+      userId = user.id;
+
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
       const role = profile?.role?.replace(/'/g, "").trim().toLowerCase();
-      setIsAdmin(role === 'admin');
+      currentAdminStatus = (role === 'admin');
+      setIsAdmin(currentAdminStatus);
     }
+
+    await fetchActiveItems(userId, currentAdminStatus);
   };
 
-  const fetchActiveItems = async () => {
-    setLoading(true);
-    
+  const fetchActiveItems = async (userId: string | null, isAdmin: boolean) => {
     const { data, error } = await supabase
       .from('courses')
-      .select('id, title, description, price, original_price, hours_count, referral_points, type, category, image_url, target_wallet_type, tags, seller_type, seller_name, stock, is_unlimited') 
+      .select('id, title, description, price, original_price, hours_count, referral_points, type, category, image_url, target_wallet_type, tags, seller_type, seller_name, stock, is_unlimited, is_private, target_users') 
       .eq('is_active', true) 
       .order('sort_order', { ascending: false })
       .order('created_at', { ascending: false });
@@ -65,7 +76,7 @@ function CatalogContent() {
     if (!error && data) {
       const tagsSet = new Set<string>();
 
-      const formattedItems = data.map(item => {
+      let formattedItems = data.map(item => {
         let parsedTags: string[] = [];
         if (Array.isArray(item.tags)) {
           parsedTags = item.tags;
@@ -84,8 +95,19 @@ function CatalogContent() {
           image_url: Array.isArray(item.image_url) ? item.image_url : (item.image_url ? [item.image_url] : []),
           tags: parsedTags,
           seller_type: item.seller_type || 'institute',
-          original_price: item.original_price || 0
+          original_price: item.original_price || 0,
+          is_private: item.is_private || false,
+          target_users: item.target_users || []
         };
+      });
+
+      formattedItems = formattedItems.filter(item => {
+        if (isAdmin) return true;
+        if (!item.is_private) return true;
+        if (item.is_private && userId) {
+           return item.target_users.includes(userId);
+        }
+        return false; 
       });
 
       setItems(formattedItems);
@@ -161,7 +183,6 @@ function CatalogContent() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen font-sans text-gray-900 relative">
       
-      {/* ซ่อน Scrollbar */}
       <style dangerouslySetInnerHTML={{__html: `
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -189,11 +210,16 @@ function CatalogContent() {
                  <span className="bg-orange-50 text-orange-600 px-2 py-1 rounded-md text-[10px] font-black uppercase flex items-center gap-1">
                    <User size={10}/> {viewingItem.seller_name || 'TC Center'}
                  </span>
+                 {viewingItem.is_private && (
+                   <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-2 py-1 rounded-md text-[10px] font-black uppercase flex items-center gap-1 shadow-sm">
+                     <Crown size={12}/> VIP EXCLUSIVE
+                   </span>
+                 )}
                </div>
                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight mb-2">{viewingItem.title}</h2>
             </div>
 
-            <div className="bg-gray-50 p-4 sm:p-5 rounded-2xl mb-6">
+            <div className="bg-gray-50 p-4 sm:p-5 rounded-2xl mb-6 border border-gray-100">
               <p className="text-gray-600 text-sm font-medium whitespace-pre-wrap leading-relaxed">{viewingItem.description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
             </div>
 
@@ -211,7 +237,9 @@ function CatalogContent() {
                    setViewingItem(null);
                    handleBuyClick(viewingItem);
                  }} 
-                 className="w-full sm:w-auto bg-gray-900 text-white px-8 py-4 rounded-[1rem] font-black text-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl shadow-gray-200"
+                 className={`w-full sm:w-auto px-8 py-4 rounded-[1rem] font-black text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl 
+                  ${viewingItem.is_private ? 'bg-gradient-to-r from-gray-900 to-gray-800 text-amber-400 hover:from-amber-500 hover:to-orange-500 hover:text-white shadow-amber-200/50' : 'bg-gray-900 text-white hover:bg-blue-600 shadow-gray-200'}
+                 `}
                >
                  สั่งซื้อรายการนี้ <ShoppingCart size={18} />
                </button>
@@ -273,7 +301,6 @@ function CatalogContent() {
         </div>
       )}
 
-      {/* ✨ ส่วนหัว ย้ายมาอยู่ Layer บนสุดด้วย relative z-50 */}
       <div className="relative z-50">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 pt-2">
           <div>
@@ -296,7 +323,6 @@ function CatalogContent() {
           </div>
         </div>
 
-        {/* ✨ แถบหมวดหมู่หลัก (แก้ให้เลื่อนอิสระ ป้องกันบั๊กใน Safari มือถือ) */}
         <div className="w-full overflow-x-auto no-scrollbar mb-4 overscroll-contain">
           <div className="flex gap-2 sm:gap-3 items-center pb-2 pr-4 w-max min-w-full">
             <button onClick={() => setActiveTab('all')} className={`shrink-0 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all active:scale-95 ${activeTab === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>ทั้งหมด</button>
@@ -317,7 +343,6 @@ function CatalogContent() {
           </div>
         </div>
 
-        {/* ✨ แถบกรองประเภทคนขาย */}
         <div className="w-full overflow-x-auto no-scrollbar mb-8 overscroll-contain">
           <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 w-max min-w-full pr-4">
              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
@@ -334,15 +359,37 @@ function CatalogContent() {
       {/* Grid สินค้า */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 relative z-10 pb-24">
         {filteredItems.map((item) => {
+          const isPremium = item.is_private; // ✨ ตัวแปรเช็คว่าเป็นของพรีเมียมไหม
           const hasPromo = item.original_price > item.price;
           const discountPercent = hasPromo ? Math.round(((item.original_price - item.price) / item.original_price) * 100) : 0;
           const isLowStock = !item.is_unlimited && item.stock > 0 && item.stock <= 5;
           const isOutOfStock = !item.is_unlimited && item.stock <= 0;
 
           return (
-            <div key={item.id} className={`bg-white rounded-[1.25rem] sm:rounded-[1.5rem] shadow-sm hover:shadow-xl border flex flex-col h-full group transition-all duration-300 overflow-hidden text-gray-900 relative ${hasPromo ? 'border-red-200' : 'border-gray-100'}`}>
+            <div key={item.id} className={`bg-white rounded-[1.25rem] sm:rounded-[1.5rem] flex flex-col h-full group transition-all duration-500 relative overflow-hidden
+              ${isPremium 
+                ? 'border-[1.5px] border-amber-300 bg-gradient-to-br from-amber-50/40 via-white to-white shadow-[0_8px_30px_rgba(251,191,36,0.15)] hover:shadow-[0_15px_40px_rgba(251,191,36,0.25)] hover:-translate-y-1.5' 
+                : hasPromo 
+                  ? 'border border-red-200 shadow-sm hover:shadow-xl hover:-translate-y-1' 
+                  : 'border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1'
+              }`}
+            >
               
-              {hasPromo && (
+              {/* ✨ แถบขีดข้างสีทอง (Premium) */}
+              {isPremium && (
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-yellow-300 via-amber-500 to-orange-500 z-50"></div>
+              )}
+
+              {/* ✨ ป้าย VIP Exclusive (Premium) */}
+              {isPremium && (
+                <div className="absolute top-0 right-0 z-20 bg-gradient-to-r from-gray-900 to-gray-800 text-white font-black text-[10px] sm:text-xs px-3 py-1.5 rounded-bl-[1.2rem] shadow-lg flex items-center gap-1.5 border-b border-l border-gray-700/50">
+                  <Crown size={14} className="text-amber-400" /> 
+                  <span className="bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent">VIP EXCLUSIVE</span>
+                </div>
+              )}
+
+              {/* ป้าย Promo (สำหรับสินค้าปกติ) */}
+              {!isPremium && hasPromo && (
                 <div className="absolute top-0 right-0 z-20 bg-gradient-to-r from-red-500 to-orange-500 text-white font-black text-[10px] sm:text-xs px-3 py-1.5 rounded-bl-[1.2rem] shadow-md flex items-center gap-1">
                   <Flame size={12} className="animate-pulse"/> ลด {discountPercent}%
                 </div>
@@ -374,9 +421,16 @@ function CatalogContent() {
                 )}
               </div>
               
-              <div className="p-3 sm:p-5 flex flex-col flex-1">
-                <h3 className="font-black text-sm sm:text-xl mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors cursor-pointer" onClick={() => setViewingItem(item)}>{item.title}</h3>
+              <div className={`p-3 sm:p-5 flex flex-col flex-1 relative z-10 ${isPremium ? 'pl-4 sm:pl-6' : ''}`}>
+                <h3 className={`font-black text-sm sm:text-xl mb-1 line-clamp-1 transition-colors cursor-pointer ${isPremium ? 'text-gray-900 group-hover:text-amber-600' : 'group-hover:text-blue-600'}`} onClick={() => setViewingItem(item)}>{item.title}</h3>
                 
+                {/* ✨ แถบเวลาจำกัด (Premium) */}
+                {isPremium && (
+                  <span className="text-[9px] sm:text-[10px] font-black text-amber-700 bg-gradient-to-r from-amber-100 to-orange-50 px-2 py-0.5 rounded-md w-max mb-1.5 border border-amber-200 flex items-center gap-1.5 shadow-sm">
+                    <Timer size={10} className="text-orange-500 animate-pulse"/> ดีลพิเศษ มีเวลาจำกัด!
+                  </span>
+                )}
+
                 {item.tags && item.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1.5 sm:mb-2">
                     {item.tags.map((t: string) => (
@@ -390,7 +444,7 @@ function CatalogContent() {
                 <div className="mt-auto pt-2 sm:pt-4 border-t border-gray-50 flex justify-between items-end">
                   <div className="flex flex-col">
                     {hasPromo && <span className="text-[8px] sm:text-[10px] font-black text-gray-400 line-through tracking-widest leading-none mb-0.5">฿{item.original_price.toLocaleString()}</span>}
-                    <span className={`text-sm sm:text-2xl font-black leading-none ${hasPromo ? 'text-red-500' : 'text-gray-900'}`}>
+                    <span className={`text-sm sm:text-2xl font-black leading-none ${hasPromo || isPremium ? 'text-red-500' : 'text-gray-900'}`}>
                       ฿{item.price.toLocaleString()}
                     </span>
                   </div>
@@ -402,11 +456,14 @@ function CatalogContent() {
                        <Info size={14} className="sm:w-4 sm:h-4" />
                        <span className="hidden sm:inline ml-1 text-xs">รายละเอียด</span>
                     </button>
+                    {/* ✨ ปุ่มสั่งซื้อสีทอง (Premium) */}
                     <button 
                       onClick={() => handleBuyClick(item)} 
                       disabled={isOutOfStock}
                       className={`p-1.5 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl font-black transition-all flex items-center justify-center gap-1 shadow-md
-                        ${isOutOfStock ? 'bg-gray-300 text-white cursor-not-allowed shadow-none' : 'bg-gray-900 text-white hover:bg-blue-600 active:scale-95'}
+                        ${isOutOfStock ? 'bg-gray-300 text-white cursor-not-allowed shadow-none' : 
+                          isPremium ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 active:scale-95 shadow-amber-200/50' : 
+                          'bg-gray-900 text-white hover:bg-blue-600 active:scale-95'}
                       `}
                     >
                       <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
