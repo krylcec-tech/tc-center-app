@@ -826,9 +826,9 @@ export default function LandingPage() {
         <div style={{position:'relative',zIndex:10,maxWidth:1240,margin:'48px auto 0',padding:'0 24px'}}>
           <div className="stats-bar">
             {[
-              {val:`${studentsCount.toLocaleString()}+`,lbl:'นักเรียน',emoji:'🎓'},
+              {val:`กำลังอัปเดต`,lbl:'นักเรียน',emoji:'🎓'},//${studentsCount.toLocaleString()}
               {val:'98%',lbl:'ผ่านสอบ',emoji:'⭐'},
-              {val:`${tutorsCount.toLocaleString()}+`,lbl:'ติวเตอร์',emoji:'👨‍🏫'},
+              {val:`กำลังอัปเดต`,lbl:'ติวเตอร์',emoji:'👨‍🏫'},//${tutorsCount.toLocaleString()}+
               {val:'พี่หมี TC',lbl:'AI ช่วยสอน',emoji:'🤖'},
             ].map((s,i) => (
               <div className="stat-item" key={i}>
