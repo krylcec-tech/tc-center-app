@@ -26,7 +26,8 @@ import {
   ShieldCheck,
   MoreHorizontal,
   RefreshCw,
-  DollarSign // ✨ เพิ่มไอคอนนี้สำหรับหน้าจ่ายเงินติวเตอร์
+  DollarSign,
+  Percent // ✨ เพิ่มไอคอน Percent
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -159,9 +160,13 @@ export default function AdminDashboard() {
             {stats.pendingWithdraws > 0 && <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">{stats.pendingWithdraws}</span>}
           </Link>
 
-          {/* ✨ เมนู: เพิ่มเงินให้ติวเตอร์ */}
           <Link href="/admin/tutor-payouts" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-green-50 hover:text-green-600 rounded-[1.2rem] font-bold transition-all">
             <DollarSign size={20} /> เพิ่มเงินให้ติวเตอร์
+          </Link>
+
+          {/* ✨ เมนูจัดการเรทเปอร์เซ็นต์ */}
+          <Link href="/admin/commissions" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-amber-50 hover:text-amber-600 rounded-[1.2rem] font-bold transition-all">
+            <Percent size={20} /> จัดการเรทหักเปอร์เซ็นต์
           </Link>
 
           <Link href="/admin/orders" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-green-50 hover:text-green-600 rounded-[1.2rem] font-bold transition-all"><Receipt size={20} /> ตรวจสอบแจ้งโอน</Link>
@@ -280,7 +285,6 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
-            {/* ✨ เพิ่มกล่อง: เพิ่มเงินติวเตอร์ (Tutor Payouts) */}
             <Link href="/admin/tutor-payouts" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-green-300 hover:shadow-lg hover:shadow-green-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
               <div>
                 <div className="w-12 h-12 bg-green-50 text-green-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><DollarSign size={24}/></div>
@@ -290,6 +294,19 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mt-8">
                 <span className="text-green-600 font-black text-sm">จัดการค่าสอน</span>
                 <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-colors"><ChevronRight size={20}/></div>
+              </div>
+            </Link>
+
+            {/* ✨ เพิ่มกล่อง: จัดการเปอร์เซ็นต์ (Commissions) */}
+            <Link href="/admin/commissions" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-amber-300 hover:shadow-lg hover:shadow-amber-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
+              <div>
+                <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><Percent size={24}/></div>
+                <h3 className="text-2xl font-black text-slate-800 leading-tight mb-2">จัดการเรทหัก<br/>เปอร์เซ็นต์</h3>
+                <p className="text-slate-500 text-xs font-bold">ปรับค่า Commission พิเศษรายบุคคล</p>
+              </div>
+              <div className="flex items-center justify-between mt-8">
+                <span className="text-amber-600 font-black text-sm">ตั้งค่าเปอร์เซ็นต์</span>
+                <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-colors"><ChevronRight size={20}/></div>
               </div>
             </Link>
 

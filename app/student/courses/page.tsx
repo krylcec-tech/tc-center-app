@@ -4,10 +4,17 @@ import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Search, ShoppingCart, BookOpen, Clock, 
   Tag, Loader2, PlayCircle, MessageCircle, Gift, ChevronRight, ChevronLeft, X, Upload, CheckCircle2,
-  Smartphone, Wallet, Info, Store, Layers, Filter, User, Flame, Lock, Crown, Timer
+  Smartphone, Wallet, Info, Store, Layers, Filter, User, Flame, Lock, Crown, Timer, TrendingUp,
+  BookMarked
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+// ✨ เพิ่มรายวิชาสำหรับปุ่ม Filter (ให้ตรงกับหน้า Seller Hub)
+const SUBJECT_FILTERS = [
+  'ALL_SUBJECTS', 'คณิตศาสตร์', 'ฟิสิกส์', 'เคมี', 'ชีววิทยา', 'วิทยาศาสตร์ (รวม)',
+  'ภาษาไทย', 'ภาษาอังกฤษ', 'สังคมศึกษา', 'คอร์สพิเศษ'
+];
 
 function CatalogContent() {
   const router = useRouter();
@@ -17,6 +24,10 @@ function CatalogContent() {
   
   const [activeTab, setActiveTab] = useState<string>('all');
   const [activeSellerType, setActiveSellerType] = useState<string>('ALL');
+  
+  // ✨ State สำหรับเก็บวิชาที่กด Filter
+  const [activeSubject, setActiveSubject] = useState<string>('ALL_SUBJECTS');
+  
   const [searchQuery, setSearchQuery] = useState('');
   
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -27,7 +38,6 @@ function CatalogContent() {
   const [selectedItem, setSelectedItem] = useState<any>(null); 
   const [viewingItem, setViewingItem] = useState<any>(null); 
   
-  // ✨ State สำหรับดูรูปภาพเต็มจอ
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   
   const [file, setFile] = useState<File | null>(null);
@@ -71,7 +81,10 @@ function CatalogContent() {
   const fetchActiveItems = async (userId: string | null, isAdmin: boolean) => {
     const { data, error } = await supabase
       .from('courses')
-      .select('id, title, description, price, original_price, hours_count, referral_points, type, category, image_url, target_wallet_type, tags, seller_type, seller_name, stock, is_unlimited, is_private, target_users') 
+      .select(`
+        id, title, description, price, original_price, hours_count, referral_points, type, category, subject, image_url, target_wallet_type, tags, seller_type, seller_name, stock, is_unlimited, is_private, target_users,
+        course_orders(id, status)
+      `) 
       .eq('is_active', true) 
       .order('sort_order', { ascending: false })
       .order('created_at', { ascending: false });
@@ -87,11 +100,13 @@ function CatalogContent() {
           try {
             parsedTags = JSON.parse(item.tags);
           } catch {
-            parsedTags = item.tags.replace(/^{|}$/g, '').split(',').map(t => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
+            parsedTags = item.tags.replace(/^{|}$/g, '').split(',').map((t: string) => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
           }
         }
 
-        parsedTags.forEach(t => tagsSet.add(t));
+        parsedTags.forEach((t: string) => tagsSet.add(t));
+
+        const salesCount = item.course_orders?.filter((order: any) => order.status === 'COMPLETED').length || 0;
 
         return {
           ...item,
@@ -100,7 +115,8 @@ function CatalogContent() {
           seller_type: item.seller_type || 'institute',
           original_price: item.original_price || 0,
           is_private: item.is_private || false,
-          target_users: item.target_users || []
+          target_users: item.target_users || [],
+          salesCount: salesCount 
         };
       });
 
@@ -111,6 +127,15 @@ function CatalogContent() {
            return item.target_users.includes(userId);
         }
         return false; 
+      });
+
+      formattedItems.sort((a: any, b: any) => {
+        if (a.type === 'book' && b.type === 'book') {
+          if (b.salesCount !== a.salesCount) {
+            return b.salesCount - a.salesCount; 
+          }
+        }
+        return (b.sort_order || 0) - (a.sort_order || 0);
       });
 
       setItems(formattedItems);
@@ -176,9 +201,18 @@ function CatalogContent() {
     if (activeSellerType === 'ALL') matchSeller = true;
     else matchSeller = item.seller_type === activeSellerType;
 
+    // ✨ เงื่อนไขการกรองรายวิชา (ถ้าไม่ใช่ ALL_SUBJECTS ให้เช็คว่า subject ใน DB มีคำที่เรากดเลือกไหม)
+    let matchSubject = false;
+    if (activeSubject === 'ALL_SUBJECTS') {
+      matchSubject = true;
+    } else {
+      // ถ้าเป็นคอร์สเรียนธรรมดา(ไม่ระบุวิชา) ให้ผ่านไปได้เลย หรือถ้าเป็นหนังสือก็เช็ควิชา
+      matchSubject = item.type === 'course' || (item.subject && item.subject.includes(activeSubject));
+    }
+
     const matchSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchTab && matchSearch && matchSeller;
+    return matchTab && matchSearch && matchSeller && matchSubject;
   });
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
@@ -191,7 +225,7 @@ function CatalogContent() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-      {/* ✨ Modal รูปภาพเต็มจอ (Fullscreen Gallery) */}
+      {/* Modal รูปภาพเต็มจอ (Fullscreen Gallery) */}
       {selectedImageIndex !== null && viewingItem?.image_url && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setSelectedImageIndex(null)}>
           <button className="absolute top-4 right-4 text-gray-300 hover:text-white bg-white/10 hover:bg-white/20 p-3 rounded-full transition-all z-50">
@@ -267,8 +301,14 @@ function CatalogContent() {
                      <Crown size={12}/> VIP EXCLUSIVE
                    </span>
                  )}
+                 {viewingItem.type === 'book' && viewingItem.salesCount > 0 && (
+                   <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-md text-[10px] font-black uppercase flex items-center gap-1">
+                     <TrendingUp size={10}/> ขายแล้ว {viewingItem.salesCount}
+                   </span>
+                 )}
                </div>
                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight mb-2">{viewingItem.title}</h2>
+               {viewingItem.subject && <p className="text-gray-400 text-xs font-bold flex items-center gap-1"><BookMarked size={12}/> {viewingItem.subject}</p>}
             </div>
 
             <div className="bg-gray-50 p-4 sm:p-5 rounded-2xl mb-6 border border-gray-100">
@@ -395,10 +435,10 @@ function CatalogContent() {
           </div>
         </div>
 
-        <div className="w-full overflow-x-auto no-scrollbar mb-8 overscroll-contain">
+        <div className="w-full overflow-x-auto no-scrollbar mb-4 overscroll-contain">
           <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 w-max min-w-full pr-4">
              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
-               <Filter size={12} /> กรองโดย
+               <User size={12} /> กรองโดยผู้ขาย
              </span>
              <button onClick={() => setActiveSellerType('ALL')} className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'ALL' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>ทุกแหล่งที่มา</button>
              <button onClick={() => setActiveSellerType('institute')} className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'institute' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยสถาบัน</button>
@@ -406,12 +446,33 @@ function CatalogContent() {
              <button onClick={() => setActiveSellerType('student')} className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all active:scale-95 ${activeSellerType === 'student' ? 'bg-orange-100 text-orange-600' : 'text-gray-500 hover:bg-gray-100'}`}>โดยนักเรียน</button>
           </div>
         </div>
+
+        {/* ✨ เพิ่มแถบกรองรายวิชา (เฉพาะเมื่อแท็บปัจจุบันคือ ALL หรือ หนังสือ & ชีท) */}
+        {(activeTab === 'all' || activeTab === 'book') && (
+          <div className="w-full overflow-x-auto no-scrollbar mb-8 overscroll-contain">
+            <div className="flex gap-2 items-center bg-white p-2 rounded-full shadow-sm border border-gray-100 w-max min-w-full pr-4">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 pr-2 flex items-center gap-1 shrink-0">
+                <BookMarked size={12} /> หมวดวิชา (ชีท)
+              </span>
+              {SUBJECT_FILTERS.map(sub => (
+                <button 
+                  key={sub} 
+                  onClick={() => setActiveSubject(sub)} 
+                  className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all active:scale-95 
+                    ${activeSubject === sub ? 'bg-orange-500 text-white shadow-md shadow-orange-200' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  {sub === 'ALL_SUBJECTS' ? 'รวมทุกวิชา' : sub}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Grid สินค้า */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 relative z-10 pb-24">
         {filteredItems.map((item) => {
-          const isPremium = item.is_private; // ✨ เช็คความเป็น Premium
+          const isPremium = item.is_private; 
           const hasPromo = item.original_price > item.price;
           const discountPercent = hasPromo ? Math.round(((item.original_price - item.price) / item.original_price) * 100) : 0;
           const isLowStock = !item.is_unlimited && item.stock > 0 && item.stock <= 5;
@@ -427,7 +488,6 @@ function CatalogContent() {
               }`}
             >
               
-              {/* ✨ ป้าย VIP Exclusive (Premium) */}
               {isPremium && (
                 <div className="absolute top-0 right-0 z-20 bg-gradient-to-r from-gray-900 to-gray-800 text-white font-black text-[10px] sm:text-xs px-3 py-1.5 rounded-bl-[1.2rem] shadow-lg flex items-center gap-1.5 border-b border-l border-gray-700/50">
                   <Crown size={14} className="text-amber-400" /> 
@@ -435,7 +495,6 @@ function CatalogContent() {
                 </div>
               )}
 
-              {/* ป้าย Promo (สำหรับสินค้าปกติ) */}
               {!isPremium && hasPromo && (
                 <div className="absolute top-0 right-0 z-20 bg-gradient-to-r from-red-500 to-orange-500 text-white font-black text-[10px] sm:text-xs px-3 py-1.5 rounded-bl-[1.2rem] shadow-md flex items-center gap-1">
                   <Flame size={12} className="animate-pulse"/> ลด {discountPercent}%
@@ -461,6 +520,12 @@ function CatalogContent() {
                   </div>
                 )}
 
+                {item.type === 'book' && item.salesCount > 0 && (
+                  <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 bg-gray-900/80 backdrop-blur-sm text-white px-2 py-0.5 sm:px-2 sm:py-1 rounded text-[7px] sm:text-[8px] font-black uppercase shadow-sm flex items-center gap-1">
+                    <TrendingUp size={8}/> ขายแล้ว {item.salesCount}
+                  </div>
+                )}
+
                 {isLowStock && (
                   <div className="absolute bottom-0 left-0 right-0 bg-red-600/90 backdrop-blur-sm text-white text-center py-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest">
                     🔥 รีบเลย! เหลือเพียง {item.stock} ชิ้น
@@ -468,11 +533,16 @@ function CatalogContent() {
                 )}
               </div>
               
-              {/* ✨ เอา Padding ที่เบี้ยวออก เพื่อให้ขอบ 2 ฝั่งเท่ากันเป๊ะ */}
               <div className="p-3 sm:p-5 flex flex-col flex-1 relative z-10">
                 <h3 className={`font-black text-sm sm:text-xl mb-1 line-clamp-1 transition-colors cursor-pointer ${isPremium ? 'text-gray-900 group-hover:text-amber-600' : 'group-hover:text-blue-600'}`} onClick={() => setViewingItem(item)}>{item.title}</h3>
                 
-                {/* ✨ แถบเวลาจำกัด (Premium) */}
+                {/* ✨ แสดงรายวิชาใต้ชื่อ */}
+                {item.subject && (
+                   <p className="text-[8px] sm:text-[10px] font-bold text-gray-400 mb-1.5 line-clamp-1 flex items-center gap-1">
+                     <BookMarked size={10}/> {item.subject}
+                   </p>
+                )}
+                
                 {isPremium && (
                   <span className="text-[9px] sm:text-[10px] font-black text-amber-700 bg-gradient-to-r from-amber-100 to-orange-50 px-2 py-0.5 rounded-md w-max mb-1.5 border border-amber-200 flex items-center gap-1.5 shadow-sm">
                     <Timer size={10} className="text-orange-500 animate-pulse"/> ดีลพิเศษ มีเวลาจำกัด!
@@ -504,7 +574,6 @@ function CatalogContent() {
                        <Info size={14} className="sm:w-4 sm:h-4" />
                        <span className="hidden sm:inline ml-1 text-xs">รายละเอียด</span>
                     </button>
-                    {/* ✨ ปุ่มสั่งซื้อสีทอง (Premium) */}
                     <button 
                       onClick={() => handleBuyClick(item)} 
                       disabled={isOutOfStock}

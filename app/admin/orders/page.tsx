@@ -76,12 +76,36 @@ export default function AdminOrdersPage() {
           image_url: order.courses.image_url?.[0] || null,
           source_type: 'SHOP'
         }]);
-        // จ่ายเงินคนขาย 70% (เฉพาะ Marketplace)
+
+        // ✨ Logic จ่ายเงินคนขาย (เพิ่มระบบ Commission ขั้นบันได)
         if (order.courses.seller_id && order.courses.seller_type !== 'institute') {
-            const netEarn = Math.floor((order.amount_paid || 0) * 0.7);
+            const sellerId = order.courses.seller_id;
+            
+            // 1. ดึงยอดขายทั้งหมดของผู้ขายคนนี้เพื่อมาเช็ก Tier
+            const { data: allItems } = await supabase.from('courses').select('sales_count').eq('seller_id', sellerId);
+            const totalSoldCount = allItems?.reduce((sum, item) => sum + (item.sales_count || 0), 0) || 0;
+
+            // 2. ดึงค่า custom_fee เผื่อ Admin ตั้งค่าแยกไว้ให้
+            const { data: profile } = await supabase.from('profiles').select('custom_fee').eq('id', sellerId).maybeSingle();
+            
+            let platformFee = 30; // เริ่มต้นหัก 30%
+            if (profile?.custom_fee !== null && profile?.custom_fee !== undefined) {
+              platformFee = profile.custom_fee; // ใช้ค่าคงที่ถ้า Admin ระบุไว้
+            } else {
+              // ถ้า Admin ไม่ได้ระบุ ให้ลดตามยอดขาย
+              if (totalSoldCount >= 30) platformFee = 10;
+              else if (totalSoldCount >= 10) platformFee = 20;
+            }
+
+            // 3. คำนวณรายได้สุทธิที่คนขายจะได้ (หักค่าธรรมเนียมออก)
+            const netEarnPercent = (100 - platformFee) / 100;
+            const netEarn = Math.floor((order.amount_paid || 0) * netEarnPercent);
+            
             const walletTable = order.courses.seller_type === 'tutor' ? 'affiliate_wallets' : 'student_wallets';
-            const { data: sw } = await supabase.from(walletTable).select('sales_balance').eq('user_id', order.courses.seller_id).maybeSingle();
-            if (sw) await supabase.from(walletTable).update({ sales_balance: (sw.sales_balance || 0) + netEarn }).eq('user_id', order.courses.seller_id);
+            const { data: sw } = await supabase.from(walletTable).select('sales_balance').eq('user_id', sellerId).maybeSingle();
+            
+            // 4. อัปเดตเงินเข้ากระเป๋าคนขาย และเพิ่มยอด sales_count ของหนังสือเล่มนี้
+            if (sw) await supabase.from(walletTable).update({ sales_balance: (sw.sales_balance || 0) + netEarn }).eq('user_id', sellerId);
             await supabase.from('courses').update({ sales_count: (order.courses.sales_count || 0) + 1 }).eq('id', order.courses.id);
         }
       }
@@ -180,7 +204,6 @@ export default function AdminOrdersPage() {
             </div>
           </div>
         ) : (
-          /* ✨ ส่วน Marketplace (หน้าเดิมที่ CEO ต้องการ) ✨ */
           <div className="space-y-6">
             <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
               <div className="flex gap-2 overflow-x-auto no-scrollbar">
