@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   Search, User, Wallet, Save, Loader2, 
   ArrowLeft, ChevronRight, AlertCircle, RefreshCcw, 
-  Star, Users, Network, Phone, GraduationCap, Briefcase
+  Star, Users, Network, Phone, GraduationCap, Briefcase, Share2, UserCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -20,7 +20,10 @@ export default function AdminWalletManager() {
   // State สำหรับติวเตอร์
   const [tutors, setTutors] = useState<any[]>([]);
   const [selectedTutor, setSelectedTutor] = useState<any>(null);
-  const [referralTree, setReferralTree] = useState<any[]>([]); 
+  
+  // ✨ State เก็บโครงสร้างสายงานของติวเตอร์ (สำหรับแอดมินดู)
+  const [networkTree, setNetworkTree] = useState<any[]>([]); 
+  const [networkLoading, setNetworkLoading] = useState(false);
 
   const [editValues, setEditValues] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -113,12 +116,14 @@ export default function AdminWalletManager() {
     });
   };
 
+  // ✨ ฟังก์ชันเมื่อแอดมินคลิกติวเตอร์ (ป้องกันค่า Undefined 100%)
   const selectTutor = async (tutor: any) => {
     setSelectedTutor(tutor);
+    setNetworkLoading(true); 
+    setNetworkTree([]); // รีเซ็ตสายงานเก่าทิ้งก่อน
     
     let tutorPoints = 0;
     try {
-      // ✨ ดึงแต้มจากตาราง affiliate_wallets ตามโครงสร้างของคุณ
       const { data: wallet } = await supabase
         .from('affiliate_wallets')
         .select('points_balance')
@@ -127,23 +132,81 @@ export default function AdminWalletManager() {
       
       if (wallet) tutorPoints = wallet.points_balance || 0;
     } catch (e) {
-      console.error(e);
+      console.error("Wallet Error:", e);
     }
 
     setEditValues({
-      points_balance: tutorPoints, // ✨ เปลี่ยนตัวแปรให้ตรงตาราง
+      points_balance: tutorPoints,
     });
 
+    // ✨ ดึงข้อมูลเครือข่ายเหมือนหน้า Affiliate ของติวเตอร์
     try {
-      const refCode = tutor.referral_code || tutor.id; 
-      const { data: refs } = await supabase
+      const tutorUserId = tutor.user_id;
+
+      // ดักจับถ้า user_id ไม่มี จะได้ไม่เกิด Error {} ใน Console
+      if (!tutorUserId) {
+        console.warn("ไม่พบ User ID ของติวเตอร์คนนี้ในระบบ");
+        setNetworkLoading(false);
+        return;
+      }
+
+      // 1. ดึงลูกข่ายชั้นที่ 1 (Direct Referrals) 
+      const { data: tier1, error: t1Error } = await supabase
         .from('profiles')
-        .select('full_name, phone, role, created_at')
-        .eq('referred_by', refCode);
-      
-      setReferralTree(refs || []);
-    } catch (err) {
-      console.error("Error fetching referrals:", err);
+        .select('id, created_at, email, school_name') 
+        .eq('referred_by_id', tutorUserId)
+        .order('created_at', { ascending: false });
+
+      if (t1Error) throw t1Error;
+
+      if (tier1 && tier1.length > 0) {
+        const fullTree = await Promise.all(tier1.map(async (member: any) => {
+          
+          // ดึงชื่อจาก Wallet
+          const { data: wallet } = await supabase
+            .from('student_wallets')
+            .select('student_name, parent_name')
+            .eq('user_id', member.id)
+            .maybeSingle();
+
+          // ป้องกัน Error กรณี Email เป็น Null
+          const emailName = member.email ? member.email.split('@')[0] : 'ไม่ทราบชื่อ';
+          const displayName = wallet?.student_name || emailName;
+
+          // 2. ดึงลูกข่ายชั้นที่ 2 (ลูกทีมของลูกทีม)
+          const { data: tier2 } = await supabase
+            .from('profiles')
+            .select('id, created_at, email')
+            .eq('referred_by_id', member.id);
+
+          const tier2WithNames = tier2 ? await Promise.all(tier2.map(async (sub: any) => {
+             const { data: subWallet } = await supabase
+               .from('student_wallets')
+               .select('student_name')
+               .eq('user_id', sub.id)
+               .maybeSingle();
+             
+             const subEmailName = sub.email ? sub.email.split('@')[0] : 'ไม่ทราบชื่อ';
+             return { 
+               ...sub, 
+               displayName: subWallet?.student_name || subEmailName 
+             };
+          })) : [];
+          
+          return { 
+            ...member, 
+            displayName,
+            parent_name: wallet?.parent_name,
+            sub_members: tier2WithNames 
+          };
+        }));
+
+        setNetworkTree(fullTree);
+      }
+    } catch (err: any) {
+      console.error("Error fetching network tree:", err.message || err);
+    } finally {
+      setNetworkLoading(false); 
     }
   };
 
@@ -163,7 +226,6 @@ export default function AdminWalletManager() {
       } else {
         if (!confirm(`ยืนยันการปรับยอด แต้มร้านค้าของ "ครู${selectedTutor.name}"?`)) return;
         
-        // ✨ บันทึกแต้มติวเตอร์ลงตาราง affiliate_wallets
         const { error } = await supabase.from('affiliate_wallets').upsert({
           user_id: selectedTutor.user_id,
           points_balance: editValues.points_balance,
@@ -270,6 +332,7 @@ export default function AdminWalletManager() {
 
           {/* ฝั่งขวา: การแก้ไข & แสดงข้อมูล */}
           <div className="lg:col-span-8">
+            
             {/* 🎓 ฝั่งนักเรียน */}
             {activeTab === 'student' && selectedStudent && (
               <div className="space-y-6 animate-in fade-in duration-300 text-left">
@@ -330,8 +393,8 @@ export default function AdminWalletManager() {
                     <div className="flex items-end gap-3 z-10 w-full md:w-1/2">
                       <input 
                         type="number" step="1"
-                        value={editValues.points_balance ?? 0} // ✨ แก้ไขเป็น points_balance
-                        onChange={(e) => setEditValues({...editValues, points_balance: parseInt(e.target.value) || 0})} // ✨ แก้ไขเป็น points_balance
+                        value={editValues.points_balance ?? 0}
+                        onChange={(e) => setEditValues({...editValues, points_balance: parseInt(e.target.value) || 0})}
                         className="bg-white w-full text-5xl font-black px-6 py-4 rounded-2xl border-2 border-purple-100 focus:border-purple-400 transition-all outline-none text-purple-900"
                       />
                       <span className="mb-4 font-black text-purple-300 text-lg uppercase">แต้ม</span>
@@ -339,7 +402,7 @@ export default function AdminWalletManager() {
                   </div>
                 </div>
 
-                {/* สายโยงผู้แนะนำ (Referral Tree) */}
+                {/* ✨ สายโยงผู้แนะนำ (Referral Tree) สำหรับให้แอดมินดู ✨ */}
                 <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-xl border border-gray-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600"><Network size={24}/></div>
@@ -350,29 +413,63 @@ export default function AdminWalletManager() {
                   </div>
 
                   <div className="bg-gray-50 rounded-[2rem] p-6 border border-gray-100">
-                    {referralTree.length === 0 ? (
+                    {networkLoading ? (
+                      <div className="text-center py-10">
+                        <Loader2 className="mx-auto text-indigo-600 animate-spin mb-4" size={48}/>
+                        <p className="text-gray-400 font-bold">กำลังโหลดสายงาน...</p>
+                      </div>
+                    ) : networkTree.length === 0 ? (
                       <div className="text-center py-10">
                         <Users className="text-gray-300 mx-auto mb-3" size={48} />
-                        <p className="text-gray-400 font-bold">ยังไม่มีผู้สมัครผ่านรหัสแนะนำนี้</p>
+                        <p className="text-gray-400 font-bold">ยังไม่มีใครสมัครผ่านรหัสแนะนำนี้</p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {referralTree.map((user, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center font-black text-indigo-600">
-                                {idx + 1}
+                      <div className="space-y-4">
+                        {networkTree.map((member) => (
+                          <div key={member.id} className="space-y-2">
+                            
+                            {/* ชั้นที่ 1 (ลูกทีมสายตรง) */}
+                            <div className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-all">
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-black">
+                                  <UserCircle size={32} />
+                                </div>
+                                <div>
+                                  <p className="font-black text-gray-900">
+                                    {member.displayName}
+                                  </p>
+                                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">ระดับที่ 1 (Direct)</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-black text-gray-900 text-sm leading-tight">{user.full_name || 'ไม่ระบุชื่อ'}</p>
-                                <p className="text-[10px] text-gray-400 font-bold mt-0.5 flex items-center gap-1">
-                                  <Phone size={10} /> {user.phone || 'ไม่ระบุเบอร์'}
-                                </p>
+                              <div className="text-right">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">เข้าร่วมเมื่อ</p>
+                                <p className="text-xs font-bold text-gray-600">{new Date(member.created_at).toLocaleDateString('th-TH')}</p>
                               </div>
                             </div>
-                            <span className="px-3 py-1 bg-gray-100 text-gray-500 text-[9px] font-black uppercase rounded-lg">
-                              {user.role === 'student' ? 'นักเรียน' : user.role === 'tutor' ? 'ติวเตอร์' : user.role}
-                            </span>
+
+                            {/* ชั้นที่ 2 (ลูกโซ่ต่อจากชั้นที่ 1) */}
+                            {member.sub_members?.length > 0 && (
+                              <div className="ml-10 space-y-2 relative">
+                                <div className="absolute -left-6 top-0 bottom-4 w-0.5 bg-gray-200"></div>
+                                {member.sub_members.map((sub: any) => (
+                                  <div key={sub.id} className="bg-gray-100 p-4 rounded-[1.5rem] border border-gray-200 flex items-center justify-between relative">
+                                    <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-6 h-0.5 bg-gray-200"></div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 bg-white text-blue-500 rounded-xl flex items-center justify-center shadow-sm">
+                                        <Users size={16} />
+                                      </div>
+                                      <div>
+                                        <p className="font-bold text-gray-700 text-sm">
+                                          {sub.displayName}
+                                        </p>
+                                        <p className="text-[9px] font-black text-blue-400 uppercase">ระดับที่ 2 (Sub-team)</p>
+                                      </div>
+                                    </div>
+                                    <div className="text-[9px] font-bold text-gray-400 italic">สายงานของ {member.displayName}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
