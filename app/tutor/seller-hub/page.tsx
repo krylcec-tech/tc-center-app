@@ -14,7 +14,7 @@ const AVAILABLE_SUBJECTS = [
   'ภาษาไทย', 'ภาษาอังกฤษ', 'สังคมศึกษา', 'คอร์สพิเศษ'
 ];
 
-export default function StudentSellerHub() {
+export default function TutorSellerHub() {
   const [loading, setLoading] = useState(true);
   const [wallet, setWallet] = useState<any>(null);
   const [myItems, setMyItems] = useState<any[]>([]);
@@ -22,10 +22,10 @@ export default function StudentSellerHub() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  // ✨ State สำหรับระบบ Commission ใหม่
+  // ✨ State สำหรับระบบ Commission (คงไว้ตามเดิม)
   const [platformFee, setPlatformFee] = useState(30); 
   const [totalSalesCount, setTotalSalesCount] = useState(0);
-  const [isCustomFee, setIsCustomFee] = useState(false); // ✨ State เช็คเรทพิเศษ
+  const [isCustomFee, setIsCustomFee] = useState(false); 
 
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
 
@@ -48,16 +48,17 @@ export default function StudentSellerHub() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   useEffect(() => {
-    fetchSellerData();
+    fetchTutorData();
   }, []);
 
-  const fetchSellerData = async () => {
+  const fetchTutorData = async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: walletData } = await supabase.from('student_wallets').select('*').eq('user_id', user.id).single();
+      // ดึงข้อมูลจาก tutor_wallets
+      const { data: walletData } = await supabase.from('tutor_wallets').select('*').eq('user_id', user.id).maybeSingle();
       setWallet(walletData);
 
       const { data: items } = await supabase.from('courses').select('*').eq('seller_id', user.id).order('created_at', { ascending: false });
@@ -67,21 +68,20 @@ export default function StudentSellerHub() {
       const soldCount = items?.reduce((sum, item) => sum + (item.sales_count || 0), 0) || 0;
       setTotalSalesCount(soldCount);
 
-      // ✨ เช็กว่ามีเรทพิเศษจาก Admin ไหม
+      // ✨ เช็กเรทพิเศษจาก Admin หรือ Step ตามยอดขาย
       const { data: profile } = await supabase.from('profiles').select('custom_fee').eq('id', user.id).maybeSingle();
       
-      let fee = 30; // เริ่มต้นที่ 30%
+      let fee = 30; 
       let isCustom = false;
       if (profile?.custom_fee !== null && profile?.custom_fee !== undefined) {
-        fee = profile.custom_fee; // ถูกกำหนดโดย Admin เป็นรายบุคคล
+        fee = profile.custom_fee; 
         isCustom = true;
       } else {
-        // ใช้ Step ตามยอดขาย
         if (soldCount >= 30) fee = 10;
         else if (soldCount >= 10) fee = 20;
       }
       setPlatformFee(fee);
-      setIsCustomFee(isCustom); // บันทึกสถานะเพื่อใช้ซ่อน/แสดงข้อความอธิบาย
+      setIsCustomFee(isCustom);
 
       const { data: history } = await supabase.from('withdraw_requests').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       setWithdrawHistory(history || []);
@@ -98,14 +98,13 @@ export default function StudentSellerHub() {
       alert(`⚠️ รายการนี้มียอดขายแล้ว ${salesCount} รายการ ไม่สามารถลบได้ครับ แนะนำให้ติดต่อ Admin เพื่อซ่อนรายการแทน`);
       return;
     }
-    const confirm1 = confirm(`❓ ยืนยันการลบ "${title}" ?`);
-    if (!confirm1) return;
+    if (!confirm(`❓ ยืนยันการลบ "${title}" ?`)) return;
     setIsDeleting(id);
     try {
       const { error } = await supabase.from('courses').delete().eq('id', id);
       if (error) throw error;
       alert('🗑️ ลบรายการเรียบร้อยแล้ว');
-      fetchSellerData();
+      fetchTutorData();
     } catch (err: any) { alert('Error: ' + err.message); } finally { setIsDeleting(null); }
   };
 
@@ -123,9 +122,7 @@ export default function StudentSellerHub() {
   };
 
   const toggleSubject = (sub: string) => {
-    setSelectedSubjects(prev => 
-      prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]
-    );
+    setSelectedSubjects(prev => prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]);
   };
 
   const handleUploadSheet = async () => {
@@ -151,14 +148,13 @@ export default function StudentSellerHub() {
         title, description, price, category, 
         subject: selectedSubjects.join(', '), 
         document_url: documentLink, image_url: imageUrls,
-        type: 'book', seller_id: user?.id, seller_name: wallet?.student_name || 'นักเรียน',
-        seller_type: 'student', approval_status: 'PENDING', is_active: false 
+        type: 'book', seller_id: user?.id, seller_name: wallet?.full_name || 'Tutor',
+        seller_type: 'tutor', approval_status: 'PENDING', is_active: false 
       }]);
       if (error) throw error;
       alert('🚀 ส่งข้อมูลสำเร็จ! รอแอดมินตรวจสอบนะครับ');
-      setTitle(''); setDescription(''); setPrice(0); setDocumentLink(''); setSelectedFiles([]); setPreviews([]); 
-      setSelectedSubjects([]); 
-      fetchSellerData();
+      setTitle(''); setDescription(''); setPrice(0); setDocumentLink(''); setSelectedFiles([]); setPreviews([]); setSelectedSubjects([]); 
+      fetchTutorData();
     } catch (err: any) { alert("Error: " + err.message); } finally { setIsSubmitting(false); }
   };
 
@@ -176,10 +172,10 @@ export default function StudentSellerHub() {
       }]);
       if (withdrawError) throw withdrawError;
 
-      await supabase.from('student_wallets').update({ sales_balance: (wallet?.sales_balance || 0) - withdrawAmount }).eq('user_id', user?.id);
+      await supabase.from('tutor_wallets').update({ sales_balance: (wallet?.sales_balance || 0) - withdrawAmount }).eq('user_id', user?.id);
       alert('💸 ส่งคำขอถอนเงินเรียบร้อย!');
       setShowWithdrawModal(false);
-      fetchSellerData();
+      fetchTutorData();
     } catch (err: any) { alert(err.message); } finally { setIsWithdrawing(false); }
   };
 
@@ -193,8 +189,8 @@ export default function StudentSellerHub() {
         
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <Link href="/student/my-books" className="text-gray-400 font-black text-xs uppercase mb-2 flex items-center gap-2 hover:text-orange-600 transition-all group w-max">
-              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform"/> กลับคลังหนังสือ
+            <Link href="/" className="text-gray-400 font-black text-xs uppercase mb-2 flex items-center gap-2 hover:text-orange-600 transition-all group w-max">
+              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform"/> กลับหน้าหลัก
             </Link>
             <h1 className="text-4xl font-black tracking-tight flex items-center gap-3 text-slate-800">
               <Store className="text-orange-500" size={36}/> Seller Hub
@@ -236,56 +232,33 @@ export default function StudentSellerHub() {
                 <input type="number" placeholder="ราคาขาย" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-black text-orange-600 outline-none" value={price || ''} onChange={(e) => setPrice(Number(e.target.value))} />
                 
                 <div className="bg-gray-50 p-4 rounded-2xl">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 block flex items-center gap-1.5">
-                    <BookOpen size={12}/> เลือกวิชาที่สอน (เลือกได้มากกว่า 1)
-                  </label>
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 block flex items-center gap-1.5"><BookOpen size={12}/> เลือกวิชาที่สอน (เลือกได้มากกว่า 1)</label>
                   <div className="flex flex-wrap gap-2">
                     {AVAILABLE_SUBJECTS.map(sub => (
-                      <button
-                        key={sub}
-                        type="button"
-                        onClick={() => toggleSubject(sub)}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black transition-all active:scale-95 border-2 
-                          ${selectedSubjects.includes(sub) 
-                            ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-200' 
-                            : 'bg-white border-gray-200 text-gray-500 hover:border-orange-300'}`}
-                      >
-                        {sub}
-                      </button>
+                      <button key={sub} type="button" onClick={() => toggleSubject(sub)} className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black transition-all border-2 ${selectedSubjects.includes(sub) ? 'bg-orange-500 border-orange-500 text-white shadow-md' : 'bg-white border-gray-200 text-gray-500 hover:border-orange-300'}`}>{sub}</button>
                     ))}
                   </div>
                 </div>
                 
+                {/* ✨ ส่วนคำนวณรายได้สุทธิ (เหมือนเดิมเป๊ะ) */}
                 {price > 0 && (
                   <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 space-y-1">
                     <div className="flex justify-between items-center mb-3 pb-3 border-b border-orange-200/50">
-                       <span className="text-[10px] font-black text-orange-600 bg-orange-100 px-2 py-1 rounded-md uppercase">
-                         ยอดขายรวม: {totalSalesCount} เล่ม
-                       </span>
+                       <span className="text-[10px] font-black text-orange-600 bg-orange-100 px-2 py-1 rounded-md uppercase">ยอดขายรวม: {totalSalesCount} เล่ม</span>
                        <span className="text-[10px] font-black text-orange-800">
                          {platformFee === 10 ? '👑 ระดับสูงสุด (หัก 10%)' : platformFee === 20 ? '🌟 ระดับกลาง (หัก 20%)' : platformFee === 30 ? '🌱 ระดับเริ่มต้น (หัก 30%)' : `🛠️ เรทพิเศษจาก Admin (หัก ${platformFee}%)`}
                        </span>
                     </div>
+                    <div className="flex justify-between text-xs font-bold text-gray-500"><span>ค่าแพลตฟอร์ม ({platformFee}%)</span><span className="text-red-500">- ฿{(price * (platformFee / 100)).toFixed(0)}</span></div>
+                    <div className="flex justify-between text-sm font-black text-orange-700 pt-2 border-t border-orange-200"><span>รายได้สุทธิ ({100 - platformFee}%)</span><span>฿{(price * ((100 - platformFee) / 100)).toFixed(0)}</span></div>
 
-                    <div className="flex justify-between text-xs font-bold text-gray-500">
-                      <span>ค่าแพลตฟอร์ม ({platformFee}%)</span>
-                      <span className="text-red-500">- ฿{(price * (platformFee / 100)).toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-black text-orange-700 pt-2 border-t border-orange-200">
-                      <span>รายได้สุทธิ ({100 - platformFee}%)</span>
-                      <span>฿{(price * ((100 - platformFee) / 100)).toFixed(0)}</span>
-                    </div>
-
-                    {/* ✨ อธิบายเงื่อนไขให้ผู้ขายเข้าใจ */}
                     {!isCustomFee && (
                       <div className="mt-3 pt-3 border-t border-orange-200/50">
                         <div className="text-[10px] font-bold text-gray-500 flex items-start gap-1.5 leading-relaxed">
                           <Info size={14} className="shrink-0 mt-0.5 text-orange-400"/> 
                           <div>
                             <span className="text-orange-700 font-black">ระบบลดค่าธรรมเนียมอัตโนมัติ (นับจากยอดขายรวม):</span><br/>
-                            • ขายได้ <span className="text-gray-700">1 - 9</span> เล่ม ➡️ หัก <span className="text-red-500">30%</span> <br/>
-                            • ขายได้ <span className="text-gray-700">10 - 29</span> เล่ม ➡️ หัก <span className="text-red-500">20%</span> <br/>
-                            • ขายได้ <span className="text-gray-700">30</span> เล่มขึ้นไป ➡️ หักเพียง <span className="text-red-500">10%</span> 🎉
+                            • ขายได้ 1-9 เล่ม ➡️ หัก 30% | 10-29 เล่ม ➡️ หัก 20% | 30 เล่มขึ้นไป ➡️ หัก 10% 🎉
                           </div>
                         </div>
                       </div>
@@ -302,9 +275,9 @@ export default function StudentSellerHub() {
              <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8">
                   <h2 className="text-xl font-black flex items-center gap-2"><Package size={20} className="text-blue-500"/> รายการของฉัน</h2>
-                  <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto hide-scrollbar">
+                  <div className="flex bg-gray-100 p-1 rounded-xl">
                     {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(t => (
-                      <button key={t} onClick={() => setActiveTab(t as any)} className={`px-4 py-2 rounded-lg text-[10px] font-black whitespace-nowrap transition-all ${activeTab === t ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>{t === 'ALL' ? 'ทั้งหมด' : t === 'PENDING' ? 'รออนุมัติ' : t === 'APPROVED' ? 'อนุมัติแล้ว' : 'ถูกปฏิเสธ'}</button>
+                      <button key={t} onClick={() => setActiveTab(t as any)} className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all ${activeTab === t ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>{t === 'ALL' ? 'ทั้งหมด' : t === 'PENDING' ? 'รออนุมัติ' : t === 'APPROVED' ? 'อนุมัติแล้ว' : 'ถูกปฏิเสธ'}</button>
                     ))}
                   </div>
                 </div>
@@ -320,7 +293,6 @@ export default function StudentSellerHub() {
                           <h3 className="font-black text-gray-900 line-clamp-1">{item.title}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] font-black text-orange-600">฿{item.price}</span>
-                            <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
                             <span className={`text-[10px] font-black uppercase ${item.approval_status === 'APPROVED' ? 'text-green-500' : item.approval_status === 'REJECTED' ? 'text-red-500' : 'text-orange-500'}`}>{item.approval_status === 'APPROVED' ? '✅ อนุมัติแล้ว' : item.approval_status === 'REJECTED' ? '❌ ถูกปฏิเสธ' : '⏳ รอตรวจสอบ'}</span>
                           </div>
                           <div className="text-[9px] text-gray-400 font-bold mt-1 line-clamp-1">{item.subject}</div>
@@ -341,20 +313,13 @@ export default function StudentSellerHub() {
                       withdrawHistory.map((w) => (
                         <div key={w.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-100 transition-all">
                            <div className="flex items-center gap-4">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${w.status === 'COMPLETED' ? 'bg-green-100 text-green-600' : w.status === 'REJECTED' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
-                                 <DollarSign size={20}/>
-                              </div>
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${w.status === 'COMPLETED' ? 'bg-green-100 text-green-600' : w.status === 'REJECTED' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}><DollarSign size={20}/></div>
                               <div>
                                  <p className="font-black text-slate-800">฿{w.amount.toLocaleString()}</p>
                                  <p className="text-[10px] text-gray-400 font-bold">{new Date(w.created_at).toLocaleDateString('th-TH')} • {w.bank_info?.bank}</p>
                               </div>
                            </div>
-                           <div className="text-right">
-                              <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${w.status === 'COMPLETED' ? 'bg-green-500 text-white' : w.status === 'REJECTED' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
-                                 {w.status === 'COMPLETED' ? 'โอนสำเร็จ' : w.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รอแอดมินโอน'}
-                              </span>
-                              {w.status === 'REJECTED' && w.reject_reason && <p className="text-[8px] text-red-500 font-bold mt-1 max-w-[100px] truncate">{w.reject_reason}</p>}
-                           </div>
+                           <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${w.status === 'COMPLETED' ? 'bg-green-500 text-white' : w.status === 'REJECTED' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>{w.status === 'COMPLETED' ? 'โอนสำเร็จ' : w.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'รอแอดมินโอน'}</span>
                         </div>
                       ))
                    )}
@@ -365,7 +330,7 @@ export default function StudentSellerHub() {
 
         {/* Modal ถอนเงิน */}
         {showWithdrawModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowWithdrawModal(false)}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowWithdrawModal(false)}>
             <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
               <button onClick={() => setShowWithdrawModal(false)} className="absolute top-6 right-6 text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-colors"><X size={24}/></button>
               <h2 className="text-2xl font-black mb-6 flex items-center gap-3"><Landmark className="text-blue-600" /> แจ้งถอนรายได้</h2>
@@ -373,7 +338,7 @@ export default function StudentSellerHub() {
                 <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100"><p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">ยอดเงินคงเหลือ</p><p className="text-4xl font-black text-blue-700">฿{(wallet?.sales_balance || 0).toLocaleString()}</p></div>
                 <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 flex justify-between">ระบุจำนวนเงินที่จะถอน <span>ขั้นต่ำ 100.-</span></label><div className="relative mt-1"><DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600" size={18} /><input type="number" className="w-full pl-11 pr-4 p-4 bg-gray-50 border-none rounded-2xl font-black text-blue-700 focus:ring-2 focus:ring-blue-400 outline-none text-xl" value={withdrawAmount || ''} onChange={(e) => setWithdrawAmount(Number(e.target.value))} /></div></div>
                 <div className="space-y-3 pt-2 border-t border-gray-100"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><CreditCard size={14}/> ข้อมูลบัญชีธนาคาร</p><input type="text" placeholder="ชื่อธนาคาร (เช่น กสิกรไทย)" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-400" value={bankName} onChange={(e) => setBankName(e.target.value)} /><input type="text" placeholder="เลขที่บัญชี" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-400" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} /><input type="text" placeholder="ชื่อเจ้าของบัญชี" className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-400" value={accountName} onChange={(e) => setAccountName(e.target.value)} /></div>
-                <button onClick={handleWithdrawRequest} disabled={isWithdrawing || withdrawAmount < 100 || withdrawAmount > (wallet?.sales_balance || 0)} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black text-lg hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:bg-gray-200 mt-4">{isWithdrawing ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20}/>} ยืนยันการถอนเงิน</button>
+                <button onClick={handleWithdrawRequest} disabled={isWithdrawing || withdrawAmount < 100} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black text-lg hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:bg-gray-200 mt-4">{isWithdrawing ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20}/>} ยืนยันการถอนเงิน</button>
               </div>
             </div>
           </div>
