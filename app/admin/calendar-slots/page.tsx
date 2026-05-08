@@ -7,7 +7,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import { 
-  ArrowLeft, Calendar, User, Clock, LayoutList, Globe, Search, LogOut 
+  ArrowLeft, Calendar, User, Clock, LayoutList, Globe, Search, LogOut, X 
 } from 'lucide-react'; 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -29,7 +29,12 @@ export default function CalendarManagePage() {
   const [viewTutor, setViewTutor] = useState<string>('all');
 
   const [selectedTutor, setSelectedTutor] = useState('');
-  const [date, setDate] = useState('');
+  
+  // States สำหรับจัดการวันที่
+  const [startDate, setStartDate] = useState(''); // วันที่เริ่ม
+  const [endDate, setEndDate] = useState('');     // วันที่สิ้นสุด (สำหรับ Range)
+  const [selectedDates, setSelectedDates] = useState<string[]>([]); 
+  
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [locationType, setLocationType] = useState('Online');
@@ -89,28 +94,20 @@ export default function CalendarManagePage() {
       if (error) throw error;
 
       if (data) {
-        // ✨ LOGIC ใหม่: คัดกรองคิวที่เวลาชนกัน 
-        
-        // 1. หาว่าครูแต่ละคน มี "เวลาไหน" ที่ถูกจองไปแล้วบ้าง (เก็บเป็น Key เช่น "tutorId_2026-04-07T10:00")
         const bookedTimeKeys = new Set(
           data.filter((s: any) => s.is_booked).map((s: any) => `${s.tutor_id}_${s.start_time}`)
         );
 
-        // 2. กรองข้อมูล (ถ้าว่าง แต่เวลาชนกับคิวที่จองแล้ว ให้ซ่อนทิ้งไปเลย)
         const visibleSlots = data.filter((slot: any) => {
-          if (slot.is_booked) return true; // คิวที่จองแล้ว โชว์เสมอ
-          
+          if (slot.is_booked) return true;
           const timeKey = `${slot.tutor_id}_${slot.start_time}`;
-          if (bookedTimeKeys.has(timeKey)) return false; // 🚫 คิวว่าง แต่เวลาชนกับคิวที่จองแล้ว -> ซ่อน
-          
-          return true; // คิวว่าง และเวลาไม่ชน -> โชว์ปกติ
+          if (bookedTimeKeys.has(timeKey)) return false;
+          return true;
         });
 
-        // 3. เอาข้อมูลที่กรองแล้วมาทำเป็น ปฏิทิน Event
         const calendarEvents = visibleSlots.map((slot: any) => {
           const hasLog = slot.teaching_logs && slot.teaching_logs.length > 0;
           const booking = slot.bookings && slot.bookings.length > 0 ? slot.bookings[0] : null;
-          
           const isVerified = booking?.student_verified === true || booking?.status === 'VERIFIED' || booking?.status === 'COMPLETED' || booking?.status === 'SUCCESS';
 
           let bgColor = '#dcfce7'; let borderColor = '#22c55e'; let textColor = '#166534';
@@ -160,8 +157,8 @@ export default function CalendarManagePage() {
     const slotId = info.event.id;
 
     if (hasLog && isVerified) return alert("คิวนี้เรียนจบและนักเรียนยืนยันสมบูรณ์แล้วครับ ✅");
-    if (hasLog && !isVerified) return alert("คุณบันทึกการสอนไปแล้ว ⏳ ตอนนี้กำลังรอนักเรียนกดยืนยันในระบบครับ");
-    if (!isBooked) return alert("คิวนี้ยังไม่มีการจองครับ (สามารถลบได้ในรูปแบบ 'ตาราง')");
+    if (hasLog && !isVerified) return alert("คุณบันทึกการสอนไปแล้ว ⏳");
+    if (!isBooked) return alert("คิวนี้ยังไม่มีการจองครับ");
 
     const studentName = window.prompt(`👤 บันทึกการสอนของ ${tutorName}\nกรุณาระบุชื่อนักเรียน:`, "นักเรียน");
     if (!studentName) return;
@@ -169,7 +166,7 @@ export default function CalendarManagePage() {
     const note = window.prompt("📝 บันทึกรายละเอียดการเรียนสอน:", "");
     if (note === null) return;
 
-    if (window.confirm(`ยืนยันการส่งรายงานใช่ไหมครับ?\n(เมื่อส่งแล้ว ระบบจะรอให้นักเรียนกดยืนยันอีกครั้ง)`)) {
+    if (window.confirm(`ยืนยันการส่งรายงานใช่ไหมครับ?`)) {
       const { error } = await supabase.from('teaching_logs').insert({
         tutor_id: tutorId, 
         slot_id: slotId,
@@ -181,7 +178,7 @@ export default function CalendarManagePage() {
       });
 
       if (!error) { 
-        alert("✅ ส่งรายงานให้ระบบรอนักเรียนยืนยันแล้ว!"); 
+        alert("✅ ส่งรายงานแล้ว!"); 
         fetchSlots(); 
       } 
       else { 
@@ -190,21 +187,69 @@ export default function CalendarManagePage() {
     }
   };
 
+  const toggleDate = (dateVal: string) => {
+    if (!dateVal) return;
+    if (selectedDates.includes(dateVal)) {
+      setSelectedDates(selectedDates.filter(d => d !== dateVal));
+    } else {
+      setSelectedDates([...selectedDates, dateVal].sort());
+    }
+  };
+
+  // ฟังก์ชันใหม่: เพิ่มวันที่แบบช่วง (Range)
+  const addDateRange = () => {
+    if (!startDate || !endDate) return alert("กรุณาเลือกทั้งวันที่เริ่มและวันที่สิ้นสุด");
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (start > end) return alert("วันที่เริ่มต้องไม่มากกว่าวันที่สิ้นสุด");
+
+    const newDates = [...selectedDates];
+    let current = new Date(start);
+
+    while (current <= end) {
+      const dateString = current.toISOString().split('T')[0];
+      if (!newDates.includes(dateString)) {
+        newDates.push(dateString);
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    
+    setSelectedDates(newDates.sort());
+    setStartDate('');
+    setEndDate('');
+  };
+
   const addBulkSlots = async () => {
-    if (!selectedTutor || !date || !startTime || !endTime) return alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+    if (!selectedTutor || selectedDates.length === 0 || !startTime || !endTime) {
+      return alert("กรุณากรอกข้อมูลให้ครบถ้วน (เลือกวันที่อย่างน้อย 1 วัน)");
+    }
     
     const startHour = parseInt(startTime.split(':')[0]);
     const endHour = parseInt(endTime.split(':')[0]);
     if (startHour >= endHour) return alert("เวลาเริ่มต้องน้อยกว่าเวลาเลิกเรียนครับ");
 
-    const newSlots = [];
-    for (let h = startHour; h < endHour; h++) {
-      const startIso = new Date(`${date}T${h.toString().padStart(2, '0')}:00`).toISOString();
-      newSlots.push({ tutor_id: selectedTutor, start_time: startIso, is_booked: false, location_type: locationType });
-    }
+    const newSlots: any[] = [];
+    
+    selectedDates.forEach(dateStr => {
+      for (let h = startHour; h < endHour; h++) {
+        const startIso = new Date(`${dateStr}T${h.toString().padStart(2, '0')}:00`).toISOString();
+        newSlots.push({ 
+          tutor_id: selectedTutor, 
+          start_time: startIso, 
+          is_booked: false, 
+          location_type: locationType 
+        });
+      }
+    });
 
     const { error } = await supabase.from('slots').insert(newSlots);
-    if (!error) { alert(`✅ เพิ่มคิวสำเร็จ ${newSlots.length} ช่วงเวลา!`); fetchSlots(); } 
+    if (!error) { 
+      alert(`✅ เพิ่มคิวสำเร็จรวม ${newSlots.length} ช่วงเวลา (${selectedDates.length} วัน)!`); 
+      setSelectedDates([]); 
+      fetchSlots(); 
+    } 
     else { alert("❌ เกิดข้อผิดพลาด: " + error.message); }
   };
 
@@ -242,46 +287,95 @@ export default function CalendarManagePage() {
         </div>
       </div>
 
-      {/* --- ส่วนฟอร์มเพิ่มคิว --- */}
+      {/* --- ส่วนฟอร์มเพิ่มคิว (เปลี่ยนมาใช้ Flex แบบล็อก % ป้องกันบัคกล่องเบียดกัน) --- */}
       <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 mb-8">
-        <h3 className="font-black text-lg mb-4 flex items-center gap-2"><Clock className="text-blue-600" size={20}/> เปิดเวลาสอน</h3>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 items-end">
-          <div className="col-span-2 md:col-span-1 flex flex-col gap-2">
+        <h3 className="font-black text-lg mb-4 flex items-center gap-2 text-gray-800"><Clock className="text-blue-600" size={20}/> เปิดเวลาสอน</h3>
+        
+        <div className="flex flex-col lg:flex-row items-end gap-3 w-full">
+          
+          {/* 1. ติวเตอร์ (15%) */}
+          <div className="flex flex-col gap-2 w-full lg:w-[15%]">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ติวเตอร์</label>
-            <select disabled={!isAdmin} className={`border-2 p-3 rounded-2xl text-sm font-bold outline-none transition-all ${!isAdmin ? 'bg-gray-50 text-gray-400' : 'bg-white focus:border-blue-400'}`} onChange={(e) => setSelectedTutor(e.target.value)} value={selectedTutor}>
+            <select disabled={!isAdmin} className="border-2 px-3 py-2.5 rounded-xl text-sm font-bold outline-none transition-all bg-white focus:border-blue-400 w-full" onChange={(e) => setSelectedTutor(e.target.value)} value={selectedTutor}>
               {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
-          <div className="col-span-2 md:col-span-1 flex flex-col gap-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">วันที่สอน</label>
-            <input type="date" className="border-2 p-3 rounded-2xl bg-white text-sm font-bold outline-none focus:border-blue-400 w-full" value={date} onChange={(e) => setDate(e.target.value)} />
+
+          {/* 2. เลือกช่วงวันที่ (33%) */}
+          <div className="flex flex-col gap-2 w-full lg:w-[33%]">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ช่วงวันที่ (เริ่ม - สิ้นสุด)</label>
+            <div className="flex items-center gap-1.5 w-full">
+              <input 
+                type="date" 
+                className="border-2 px-2 py-2.5 rounded-xl bg-white text-xs font-bold outline-none focus:border-blue-400 w-full min-w-0" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)} 
+              />
+              <span className="text-gray-400 font-bold shrink-0">-</span>
+              <input 
+                type="date" 
+                className="border-2 px-2 py-2.5 rounded-xl bg-white text-xs font-bold outline-none focus:border-blue-400 w-full min-w-0" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)} 
+              />
+              <button 
+                onClick={addDateRange}
+                type="button"
+                className="bg-blue-600 text-white px-3 py-2.5 rounded-xl font-black text-[10px] hover:bg-blue-700 transition-all shadow-md whitespace-nowrap shrink-0 h-[42px]"
+              >
+                เพิ่ม
+              </button>
+            </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">เริ่ม (น.)</label>
-            <select className="border-2 p-3 rounded-2xl bg-white text-sm font-bold outline-none focus:border-blue-400" value={startTime} onChange={(e) => setStartTime(e.target.value)}>
+
+          {/* 3. เริ่ม (11%) */}
+          <div className="flex flex-col gap-2 w-full lg:w-[11%]">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">เริ่ม</label>
+            <select className="border-2 px-2 py-2.5 rounded-xl bg-white text-sm font-bold outline-none focus:border-blue-400 w-full" value={startTime} onChange={(e) => setStartTime(e.target.value)}>
               <option value="">เวลา</option>
               {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
             </select>
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ถึง (น.)</label>
-            <select className="border-2 p-3 rounded-2xl bg-white text-sm font-bold outline-none focus:border-blue-400" value={endTime} onChange={(e) => setEndTime(e.target.value)}>
+
+          {/* 4. ถึง (11%) */}
+          <div className="flex flex-col gap-2 w-full lg:w-[11%]">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ถึง</label>
+            <select className="border-2 px-2 py-2.5 rounded-xl bg-white text-sm font-bold outline-none focus:border-blue-400 w-full" value={endTime} onChange={(e) => setEndTime(e.target.value)}>
               <option value="">เวลา</option>
               {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
             </select>
           </div>
-          <div className="col-span-2 md:col-span-1 flex flex-col gap-2">
+
+          {/* 5. รูปแบบ (15%) */}
+          <div className="flex flex-col gap-2 w-full lg:w-[15%]">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">รูปแบบ</label>
-            <select className="border-2 p-3 rounded-2xl bg-white text-sm font-bold outline-none focus:border-blue-400" value={locationType} onChange={(e) => setLocationType(e.target.value)}>
+            <select className="border-2 px-3 py-2.5 rounded-xl bg-white text-sm font-bold outline-none focus:border-blue-400 w-full" value={locationType} onChange={(e) => setLocationType(e.target.value)}>
               <option value="Online">Online</option>
               <option value="Onsite">Onsite</option>
               <option value="นอกสถานที่">นอกสถานที่</option>
             </select>
           </div>
-          <button onClick={addBulkSlots} className="col-span-2 md:col-span-1 bg-gray-900 text-white p-3.5 rounded-2xl font-black hover:bg-blue-600 shadow-md uppercase text-[10px] tracking-[0.2em] active:scale-95 transition-all w-full h-max">
-            {isAdmin ? 'เพิ่มคิว' : '+ เปิดเวลา'}
-          </button>
+
+          {/* 6. ปุ่มยืนยันเพิ่มคิว (15%) */}
+          <div className="w-full lg:w-[15%]">
+            <button onClick={addBulkSlots} className="bg-gray-900 text-white px-3 py-2.5 rounded-xl font-black hover:bg-blue-600 shadow-md uppercase text-[10px] tracking-[0.1em] active:scale-95 transition-all w-full h-[42px] flex items-center justify-center whitespace-nowrap">
+              {isAdmin ? '+ เพิ่มคิว' : '+ เปิดเวลา'}
+            </button>
+          </div>
         </div>
+
+        {/* แถวแสดงป้ายวันที่ที่เลือกไว้ */}
+        {selectedDates.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-5 p-3 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <div className="w-full text-[9px] font-black text-gray-400 uppercase mb-1">วันที่เลือกไว้เตรียมเพิ่มคิว ({selectedDates.length} วัน):</div>
+            {selectedDates.map(d => (
+              <span key={d} className="bg-white text-blue-700 px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 border border-blue-100 shadow-sm">
+                {d} <X size={12} className="cursor-pointer text-red-400 hover:text-red-600 hover:scale-110 transition-all" onClick={() => toggleDate(d)} />
+              </span>
+            ))}
+            <button onClick={() => setSelectedDates([])} className="text-[9px] font-black text-red-500 underline uppercase ml-1 hover:text-red-700">ล้างทั้งหมด</button>
+          </div>
+        )}
       </div>
 
       {/* --- Filter & Jump Date --- */}
@@ -310,7 +404,7 @@ export default function CalendarManagePage() {
         </div>
       </div>
 
-      {/* --- Legend (คำอธิบายสีใหม่) --- */}
+      {/* --- Legend --- */}
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-[9px] font-black uppercase tracking-[0.2em] mb-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></div> Online</div>
           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#a855f7]"></div> Onsite</div>
@@ -341,14 +435,13 @@ export default function CalendarManagePage() {
           height={isMobile ? "auto" : "700px"}
           eventClick={handleEventClick} 
           dateClick={(info) => {
-            setDate(info.dateStr.split('T')[0]);
+            toggleDate(info.dateStr.split('T')[0]);
             const time = info.dateStr.split('T')[1]?.substring(0, 5);
             if (time) setStartTime(time);
           }}
         />
       </div>
 
-      {/* CSS */}
       <style jsx global>{`
         .fc-premium-theme .fc { 
           --fc-border-color: #f1f5f9; 
@@ -374,7 +467,6 @@ export default function CalendarManagePage() {
           .fc-toolbar { flex-wrap: wrap; gap: 10px; justify-content: center !important; }
         }
       `}</style>
-
     </div>
   );
 }
