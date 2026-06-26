@@ -8,7 +8,7 @@ import {
   History, Settings, Users, Gift, Share2, Copy, 
   Check, Loader2, ArrowRight, ShoppingCart,
   LayoutDashboard, Globe, MapPin, User, Home, Sparkles, Heart,
-  Bot, ChevronRight, Zap, AlertCircle, Menu, X
+  Bot, ChevronRight, Zap, AlertCircle, Menu, X, MessageCircle
 } from 'lucide-react';
 
 import FloatingAIMascot from '@/components/FloatingAIMascot';
@@ -21,8 +21,11 @@ export default function StudentDashboard() {
   const [wallet, setWallet] = useState<any>(null);
   const [copied, setCopied] = useState(false);
 
-  // ✨ State สำหรับคุมการเปิด/ปิด "เมนูเพิ่มเติม" แบบเลื่อนขึ้น
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  
+  // State สำหรับคุม Popup Online และ Onsite
+  const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
+  const [isOnsiteModalOpen, setIsOnsiteModalOpen] = useState(false);
 
   useEffect(() => {
     setHasMounted(true);
@@ -59,11 +62,25 @@ export default function StudentDashboard() {
     router.replace('/login');
   };
 
-  const checkProfileBeforeAction = (e: React.MouseEvent) => {
+  const checkProfileBeforeAction = (e?: React.MouseEvent) => {
     if (!studentData?.grade_level) {
-      e.preventDefault();
+      if (e) e.preventDefault();
       alert('⚠️ กรุณาไปที่ "ตั้งค่าโปรไฟล์" เพื่อระบุ "ระดับชั้น" ของคุณให้เรียบร้อยก่อนใช้งานระบบจองเรียนครับ');
       router.push('/student/profile');
+      return false;
+    }
+    return true;
+  };
+
+  const handleOpenOnlineModal = () => {
+    if (checkProfileBeforeAction()) {
+      setIsOnlineModalOpen(true);
+    }
+  };
+
+  const handleOpenOnsiteModal = () => {
+    if (checkProfileBeforeAction()) {
+      setIsOnsiteModalOpen(true);
     }
   };
 
@@ -107,16 +124,8 @@ export default function StudentDashboard() {
         .logo-ring { background: conic-gradient(from 0deg, #2563eb, #f97316, #ec4899, #2563eb); animation: spinRing 6s linear infinite; border-radius: 1.2rem; padding: 2px; }
         @keyframes spinRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         
-        .tier-card { background: #ffffff; border: 1px solid rgba(241, 245, 249, 1); box-shadow: 0 10px 30px -10px rgba(37,99,235,0.05); transition: all 0.3s ease; overflow: hidden; }
-        .tier-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -10px rgba(37,99,235,0.1); }
-        
-        .hero-wallet { background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #7c3aed 100%); }
         .fade-up { animation: fadeUp 0.6s ease both; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .tier-blue  { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-        .tier-purple{ background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-        .tier-orange{ background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
         
         .shortcut-card { transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05); }
         .shortcut-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 12px 30px -10px rgba(37,99,235,0.15); }
@@ -140,8 +149,6 @@ export default function StudentDashboard() {
 
       {/* ===== SIDEBAR (Desktop) ===== */}
       <aside className="sidebar-glass w-72 hidden lg:flex flex-col fixed inset-y-0 left-0 z-50 h-screen">
-        
-        {/* Logo */}
         <div className="p-7 pt-8 border-b border-slate-100/60">
           <div className="flex items-center gap-3 mb-5">
             <div className="relative logo-ring">
@@ -155,7 +162,6 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* Profile chip */}
           <div className="flex items-center gap-3 bg-blue-50/70 px-3 py-3 rounded-2xl border border-blue-100/80">
             {studentData?.avatar_url ? (
               <img src={studentData.avatar_url} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0"/>
@@ -171,18 +177,16 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto hide-scrollbar">
-          
           <Link href="/student" className="nav-item flex items-center gap-3 px-4 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-md shadow-blue-200">
             <LayoutDashboard size={18}/> แดชบอร์ด
           </Link>
 
           <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-6 mb-2">การเรียน</p>
 
-          <Link href="/student/booking-flow" onClick={checkProfileBeforeAction} className="nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl font-bold text-sm transition-all">
+          <button onClick={handleOpenOnlineModal} className="w-full nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl font-bold text-sm transition-all">
             <Calendar size={18}/> จองคิวเรียน
-          </Link>
+          </button>
           <Link href="/student/my-schedule" className="nav-item flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-pink-50 hover:text-pink-600 rounded-2xl font-bold text-sm transition-all">
             <Clock size={18}/> ตารางเรียน / เข้าเรียน
           </Link>
@@ -210,7 +214,6 @@ export default function StudentDashboard() {
           </Link>
         </nav>
 
-        {/* Logout */}
         <div className="p-4 border-t border-slate-100/80">
           <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-black text-sm text-red-500 bg-red-50 hover:bg-red-500 hover:text-white transition-all active:scale-95 border border-red-100/80">
             <LogOut size={16}/> ออกจากระบบ
@@ -236,7 +239,6 @@ export default function StudentDashboard() {
           <span className="text-[9px] font-black uppercase tracking-wide">ตาราง</span>
         </Link>
 
-        {/* ซื้อคอร์ส (มือถือ) */}
         <Link href="/student/courses" onClick={checkProfileBeforeAction} className="flex flex-col items-center flex-1 relative pb-1">
           <div className="absolute -top-12 w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center shadow-lg shadow-orange-500/40 border-[4px] border-white">
             <ShoppingCart size={24} className="text-white"/>
@@ -251,7 +253,6 @@ export default function StudentDashboard() {
           <span className="text-[9px] font-black uppercase tracking-wide">ชีทเรียน</span>
         </Link>
 
-        {/* ✨ เปลี่ยนปุ่ม Profile เป็นปุ่ม เมนูเพิ่มเติม (More) */}
         <button onClick={() => setIsMoreMenuOpen(true)} className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-slate-800 flex-1 pb-1 transition-colors relative">
           <div className="w-10 h-10 rounded-[1.2rem] bg-transparent flex items-center justify-center relative">
             <Menu size={22}/>
@@ -261,14 +262,12 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      {/* ===== ✨ MORE MENU OVERLAY (Bottom Sheet สำหรับมือถือ) ===== */}
+      {/* ===== MORE MENU OVERLAY ===== */}
       {isMoreMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-[120] flex flex-col justify-end">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsMoreMenuOpen(false)}></div>
           
           <div className="bg-white w-full rounded-t-[2.5rem] p-6 pb-10 relative z-10 animate-in slide-in-from-bottom duration-300 max-h-[85vh] flex flex-col shadow-2xl">
-            
-            {/* Header ของเมนู */}
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-black text-slate-800">เมนูทั้งหมด</h2>
@@ -279,17 +278,14 @@ export default function StudentDashboard() {
               </button>
             </div>
 
-            {/* รายการเมนู (Grid) */}
             <div className="overflow-y-auto custom-scrollbar pr-2 flex-1 space-y-6">
-              
-              {/* หมวดการเรียน */}
               <div>
                 <p className="text-[10px] font-black text-blue-500 bg-blue-50 w-max px-2 py-1 rounded uppercase tracking-widest mb-3">หมวดการเรียน</p>
                 <div className="grid grid-cols-4 gap-y-4 gap-x-2">
-                  <Link href="/student/booking-flow" onClick={(e) => { checkProfileBeforeAction(e); setIsMoreMenuOpen(false); }} className="flex flex-col items-center gap-2 text-center group">
+                  <button onClick={() => { handleOpenOnlineModal(); setIsMoreMenuOpen(false); }} className="flex flex-col items-center gap-2 text-center group">
                     <div className="w-14 h-14 bg-blue-50 border border-blue-100 text-blue-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><Calendar size={24}/></div>
                     <span className="text-[10px] font-bold text-slate-600 leading-tight">จองคิว<br/>เรียน</span>
-                  </Link>
+                  </button>
                   <Link href="/student/my-schedule" onClick={() => setIsMoreMenuOpen(false)} className="flex flex-col items-center gap-2 text-center group">
                     <div className="w-14 h-14 bg-pink-50 border border-pink-100 text-pink-600 rounded-[1.2rem] flex items-center justify-center group-active:scale-95 transition-transform"><Clock size={24}/></div>
                     <span className="text-[10px] font-bold text-slate-600 leading-tight">ตาราง<br/>เรียน</span>
@@ -309,7 +305,6 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              {/* หมวดร้านค้าและบัญชี */}
               <div className="pt-2">
                 <p className="text-[10px] font-black text-orange-500 bg-orange-50 w-max px-2 py-1 rounded uppercase tracking-widest mb-3">ร้านค้า & บัญชี</p>
                 <div className="grid grid-cols-4 gap-y-4 gap-x-2">
@@ -340,7 +335,6 @@ export default function StudentDashboard() {
                   <LogOut size={18}/> ออกจากระบบ
                 </button>
               </div>
-
             </div>
           </div>
         </div>
@@ -350,7 +344,6 @@ export default function StudentDashboard() {
       <main className="flex-1 lg:ml-72 overflow-y-auto hide-scrollbar min-h-screen relative z-10">
         <div className="p-4 sm:p-7 md:p-9 lg:p-10 pb-40 lg:pb-12 max-w-[1200px] mx-auto space-y-8 md:space-y-10">
 
-          {/* ── HEADER ── */}
           <header className="fade-up pt-4 lg:pt-2">
             <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative overflow-hidden">
               <div className="absolute right-0 top-0 w-40 h-40 bg-blue-100/50 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
@@ -385,7 +378,6 @@ export default function StudentDashboard() {
             </div>
           </header>
 
-          {/* BANNER แจ้งเตือนให้ตั้งค่าโปรไฟล์ */}
           {needsProfileUpdate && (
             <div className="fade-up bg-orange-50 border border-orange-200 rounded-[2rem] p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5 relative overflow-hidden shadow-sm">
               <div className="absolute -right-4 -top-4 w-32 h-32 bg-orange-200/30 rounded-full blur-2xl pointer-events-none"></div>
@@ -404,92 +396,49 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {/* ── TIER HOURS SECTION ── */}
+          {/* ── ✨ BOOKING BUTTONS (BIG BUTTONS NO HOURS) ── */}
           <section className="fade-up">
-            <div className="flex items-center justify-between mb-5 px-1">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-[1.2rem] bg-blue-100 flex items-center justify-center shadow-sm">
-                  <Wallet size={20} className="text-blue-600"/>
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-slate-800 leading-none">ชั่วโมงเรียนคงเหลือ</h2>
-                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">เช็กยอดชั่วโมงตามคอร์ส</p>
-                </div>
+            <div className="flex items-center gap-3 mb-5 px-1">
+              <div className="w-10 h-10 rounded-[1.2rem] bg-blue-100 flex items-center justify-center shadow-sm">
+                <Calendar size={20} className="text-blue-600"/>
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-800 leading-none">จองเวลาเรียน</h2>
+                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">เลือกรุปแบบการเรียน</p>
               </div>
             </div>
 
-            <div className="flex lg:grid lg:grid-cols-3 gap-5 overflow-x-auto snap-x snap-mandatory hide-scrollbar pb-4 -mx-4 px-4 sm:-mx-7 sm:px-7 lg:mx-0 lg:px-0 lg:pb-0">
-              {[
-                {
-                  label: 'ประถม - ม.ต้น', tier: 'tier1',
-                  headerClass: 'tier-blue',
-                  onlineBal: wallet?.tier1_online_balance || 0,
-                  onsiteBal: wallet?.tier1_onsite_balance || 0,
-                  accentColor: '#3b82f6',
-                  onlineBtnClass: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
-                  onsiteBtnClass: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                },
-                {
-                  label: 'สอบเข้า ม.4', tier: 'tier2',
-                  headerClass: 'tier-purple',
-                  onlineBal: wallet?.tier2_online_balance || 0,
-                  onsiteBal: wallet?.tier2_onsite_balance || 0,
-                  accentColor: '#8b5cf6',
-                  onlineBtnClass: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
-                  onsiteBtnClass: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                },
-                {
-                  label: 'ม.ปลาย / มหาลัย', tier: 'tier3',
-                  headerClass: 'tier-orange',
-                  onlineBal: wallet?.tier3_online_balance || 0,
-                  onsiteBal: wallet?.tier3_onsite_balance || 0,
-                  accentColor: '#f97316',
-                  onlineBtnClass: 'bg-orange-50 text-orange-600 hover:bg-orange-100',
-                  onsiteBtnClass: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                },
-              ].map((t, i) => (
-                <div key={i} className="tier-card rounded-[2.5rem] flex flex-col min-w-[85vw] sm:min-w-[320px] lg:min-w-0 snap-start shrink-0 relative">
-                  <div className={`${t.headerClass} px-6 py-5 flex items-center justify-between`}>
-                    <span className="text-white font-black text-base">{t.label}</span>
-                    <Sparkles size={18} className="text-white/40"/>
+            <div className="w-full pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* ปุ่มจอง Online */}
+                <button onClick={handleOpenOnlineModal}
+                  className="bg-white border border-blue-100 shadow-[0_8px_30px_rgb(37,99,235,0.08)] hover:shadow-[0_8px_30px_rgb(37,99,235,0.15)] rounded-[2rem] p-8 flex flex-col items-center justify-center gap-4 transition-all hover:-translate-y-1 group">
+                  <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Globe size={32} className="text-blue-500" />
                   </div>
-
-                  <div className="p-6 md:p-8 flex-1 flex flex-col gap-6">
-                    <div className="flex items-center justify-between px-2">
-                      <div className="text-center flex-1">
-                        <div className="flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest mb-2" style={{color: t.accentColor}}>
-                          <Globe size={14}/> Online
-                        </div>
-                        <p className="text-5xl font-black tracking-tight" style={{color: t.accentColor}}>{t.onlineBal}</p>
-                        <p className="text-xs text-slate-400 font-bold mt-1">ชั่วโมง</p>
-                      </div>
-                      <div className="w-px h-16 bg-slate-100 mx-2"></div>
-                      <div className="text-center flex-1">
-                        <div className="flex items-center justify-center gap-1.5 text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">
-                          <MapPin size={14}/> Onsite
-                        </div>
-                        <p className="text-5xl font-black tracking-tight text-emerald-500">{t.onsiteBal}</p>
-                        <p className="text-xs text-slate-400 font-bold mt-1">ชั่วโมง</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mt-auto">
-                      <Link href={`/student/booking-flow?tier=${t.tier}&type=Online`} onClick={checkProfileBeforeAction}
-                        className={`${t.onlineBtnClass} py-3.5 rounded-full font-black text-[11px] text-center transition-all active:scale-95`}>
-                        จองเรียน Online
-                      </Link>
-                      <Link href={`/student/booking-flow?tier=${t.tier}&type=Onsite`} onClick={checkProfileBeforeAction}
-                        className={`${t.onsiteBtnClass} py-3.5 rounded-full font-black text-[11px] text-center transition-all active:scale-95`}>
-                        จองเรียน Onsite
-                      </Link>
-                    </div>
+                  <div className="text-center">
+                    <h3 className="font-black text-blue-700 text-xl">เรียน Online</h3>
+                    <p className="text-xs font-bold text-blue-400 mt-1">ผ่าน Google Meet / Zoom</p>
                   </div>
-                </div>
-              ))}
+                </button>
+
+                {/* ปุ่มจอง Onsite */}
+                <button onClick={handleOpenOnsiteModal}
+                  className="bg-white border border-emerald-100 shadow-[0_8px_30px_rgb(16,185,129,0.08)] hover:shadow-[0_8px_30px_rgb(16,185,129,0.15)] rounded-[2rem] p-8 flex flex-col items-center justify-center gap-4 transition-all hover:-translate-y-1 group">
+                  <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <MapPin size={32} className="text-emerald-500" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="font-black text-emerald-700 text-xl">เรียน Onsite</h3>
+                    <p className="text-xs font-bold text-emerald-400 mt-1">เดินทางมาเจอตัวติวเตอร์</p>
+                  </div>
+                </button>
+
+              </div>
             </div>
           </section>
 
-          {/* ── SHORTCUTS BENTO ── */}
           {/* ── SHORTCUTS BENTO ── */}
           <section className="fade-up pt-4">
             <div className="flex items-center gap-3 mb-6 px-1">
@@ -500,8 +449,6 @@ export default function StudentDashboard() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-
-              {/* ซื้อคอร์สเรียน */}
               <Link href="/student/courses" onClick={checkProfileBeforeAction}
                 className="shortcut-card xl:col-span-2 bg-slate-900 text-white p-7 rounded-[2.5rem] flex flex-col justify-between h-44 relative overflow-hidden group border-none">
                 <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl group-hover:bg-orange-500/30 transition-colors"></div>
@@ -514,9 +461,8 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* จองคิวเรียน */}
-              <Link href="/student/booking-flow" onClick={checkProfileBeforeAction}
-                className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden group">
+              <button onClick={handleOpenOnlineModal}
+                className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden group text-left">
                 {needsProfileUpdate && <div className="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>}
                 <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Calendar size={24} className="text-blue-500"/>
@@ -524,9 +470,8 @@ export default function StudentDashboard() {
                 <div>
                   <h3 className="font-black text-slate-800 text-sm leading-tight">จองคิว<br/>เรียนสด</h3>
                 </div>
-              </Link>
+              </button>
 
-              {/* ✨ ตารางเรียน (เพิ่มกลับมาแล้ว!) */}
               <Link href="/student/my-schedule"
                 className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden group">
                 <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -537,7 +482,6 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* พี่หมี AI */}
               <Link href="/student/ai-tutor"
                 className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden shadow-lg border-none group"
                 style={{background: 'linear-gradient(135deg, #7c3aed, #4f46e5)'}}>
@@ -550,7 +494,6 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* คลังชีท */}
               <Link href="/student/my-books"
                 className="shortcut-card rounded-[2.5rem] p-7 flex flex-col justify-between h-44 relative overflow-hidden shadow-lg border-none group"
                 style={{background: 'linear-gradient(135deg, #f97316, #fb923c)'}}>
@@ -563,7 +506,6 @@ export default function StudentDashboard() {
                 </div>
               </Link>
 
-              {/* ประวัติการซื้อ */}
               <Link href="/student/orders"
                 className="shortcut-card bg-white border border-slate-100 rounded-[2.5rem] p-7 flex flex-col justify-between h-44 group">
                 <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -573,13 +515,11 @@ export default function StudentDashboard() {
                   <h3 className="font-black text-slate-800 text-sm leading-tight">ประวัติ<br/>การซื้อคอร์ส</h3>
                 </div>
               </Link>
-
             </div>
           </section>
 
           {/* ── REFERRAL + REWARD ── */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 pt-4 fade-up">
-
             <div className="ref-card lg:col-span-3 rounded-[2.5rem] p-8 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden border-none shadow-sm">
               <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full pointer-events-none" style={{background: 'radial-gradient(circle, rgba(37,99,235,0.05) 0%, transparent 65%)'}}></div>
               <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 shrink-0">
@@ -618,6 +558,97 @@ export default function StudentDashboard() {
         </div>
       </main>
 
+      {/* ===== ✨ ONLINE BOOKING MODAL (มีจำนวนชั่วโมงกำกับ) ===== */}
+      {isOnlineModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsOnlineModalOpen(false)}></div>
+          
+          <div className="bg-white rounded-[2rem] p-6 w-full max-w-sm relative z-10 animate-in zoom-in-95 duration-200 shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800">จองเรียน Online</h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">เลือกระดับชั้นเพื่อจองคิว</p>
+              </div>
+              <button onClick={() => setIsOnlineModalOpen(false)} className="w-10 h-10 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-200 active:scale-95 transition-all">
+                <X size={20}/>
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <Link href="/student/booking-flow?tier=tier1&type=Online" className="p-4 rounded-[1.2rem] bg-blue-50 border border-blue-100 hover:bg-blue-100 text-blue-700 font-black flex items-center justify-between transition-all active:scale-95">
+                <span>ประถม - ม.ต้น</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] text-blue-500 font-bold uppercase tracking-wider leading-none mb-1">คงเหลือ</span>
+                  <span className="text-sm bg-white px-3 py-1 rounded-lg text-blue-600 shadow-sm">{wallet?.tier1_online_balance || 0} ชม.</span>
+                </div>
+              </Link>
+              
+              <Link href="/student/booking-flow?tier=tier2&type=Online" className="p-4 rounded-[1.2rem] bg-purple-50 border border-purple-100 hover:bg-purple-100 text-purple-700 font-black flex items-center justify-between transition-all active:scale-95">
+                <span>สอบเข้า ม.4</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] text-purple-500 font-bold uppercase tracking-wider leading-none mb-1">คงเหลือ</span>
+                  <span className="text-sm bg-white px-3 py-1 rounded-lg text-purple-600 shadow-sm">{wallet?.tier2_online_balance || 0} ชม.</span>
+                </div>
+              </Link>
+              
+              <Link href="/student/booking-flow?tier=tier3&type=Online" className="p-4 rounded-[1.2rem] bg-orange-50 border border-orange-100 hover:bg-orange-100 text-orange-700 font-black flex items-center justify-between transition-all active:scale-95">
+                <span>ม.ปลาย / มหาลัย</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] text-orange-500 font-bold uppercase tracking-wider leading-none mb-1">คงเหลือ</span>
+                  <span className="text-sm bg-white px-3 py-1 rounded-lg text-orange-600 shadow-sm">{wallet?.tier3_online_balance || 0} ชม.</span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== ✨ ONSITE BOOKING MODAL (แสดงชั่วโมงแยกตามรายวิชา) ===== */}
+      {isOnsiteModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsOnsiteModalOpen(false)}></div>
+          
+          <div className="bg-white rounded-[2rem] p-6 w-full max-w-md relative z-10 animate-in zoom-in-95 duration-200 shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800">ชั่วโมงเรียน Onsite</h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">สรุปชั่วโมงคงเหลือรายวิชา</p>
+              </div>
+              <button onClick={() => setIsOnsiteModalOpen(false)} className="w-10 h-10 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-200 active:scale-95 transition-all shrink-0">
+                <X size={20}/>
+              </button>
+            </div>
+            
+            {/* รายวิชา (มี Scrollbar ถ้าเนื้อหาเยอะเกิน) */}
+            <div className="flex flex-col gap-2 mb-6 overflow-y-auto custom-scrollbar pr-2">
+              {[
+                { name: 'คณิตศาสตร์', balance: wallet?.onsite_math || 0, color: 'blue' },
+                { name: 'วิทยาศาสตร์', balance: wallet?.onsite_science || 0, color: 'emerald' },
+                { name: 'ภาษาอังกฤษ', balance: wallet?.onsite_english || 0, color: 'pink' },
+                { name: 'ฟิสิกส์', balance: wallet?.onsite_physics || 0, color: 'purple' },
+                { name: 'เคมี', balance: wallet?.onsite_chemistry || 0, color: 'orange' },
+                { name: 'ชีววิทยา', balance: wallet?.onsite_bio || 0, color: 'teal' },
+                { name: 'ภาษาไทย-สังคม', balance: wallet?.onsite_thai_soc || 0, color: 'rose' },
+                { name: 'คอร์สพิเศษ', balance: wallet?.onsite_special || 0, color: 'slate' }
+              ].map((subject, idx) => (
+                <div key={idx} className={`p-3.5 rounded-[1.2rem] bg-${subject.color}-50 border border-${subject.color}-100 text-${subject.color}-700 font-black flex items-center justify-between`}>
+                  <span className="text-sm">{subject.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase opacity-70">คงเหลือ</span>
+                    <span className={`text-sm bg-white px-3 py-1 rounded-lg text-${subject.color}-600 shadow-sm`}>{subject.balance} ชม.</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <a href="https://lin.ee/nKdVyOv" target="_blank" rel="noopener noreferrer" 
+               className="w-full py-4 rounded-2xl bg-[#06C755] hover:bg-[#05b34c] text-white font-black text-center transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-green-200/50 shrink-0">
+               <MessageCircle size={20} />
+               ติดต่อแอดมินเพื่อลงคิวเรียน
+            </a>
+          </div>
+        </div>
+      )}
       <FloatingAIMascot />
     </div>
   );

@@ -27,7 +27,8 @@ import {
   MoreHorizontal,
   RefreshCw,
   DollarSign,
-  Percent // ✨ เพิ่มไอคอน Percent
+  Percent,
+  MapPin // ✨ เพิ่มไอคอน MapPin สำหรับระบบ Onsite
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -148,6 +149,11 @@ export default function AdminDashboard() {
           <Link href="/admin/my-books" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all"><Book size={20} /> คลังหนังสือรายคน</Link>
           <Link href="/admin/wallets" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all"><Wallet size={20} /> จัดการกระเป๋าเงิน (6-Tier)</Link>
           
+          {/* ✨ เมนูระบบจัดการ Onsite */}
+          <Link href="/admin/onsite-manager" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-rose-50 hover:text-rose-600 rounded-[1.2rem] font-bold transition-all">
+            <MapPin size={20} /> ระบบจัดการเรียน Onsite
+          </Link>
+
           <Link href="/admin/reschedule" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-orange-50 hover:text-orange-600 rounded-[1.2rem] font-bold transition-all">
             <RefreshCw size={20} /> ระบบย้ายเวลาเรียน
           </Link>
@@ -164,7 +170,6 @@ export default function AdminDashboard() {
             <DollarSign size={20} /> เพิ่มเงินให้ติวเตอร์
           </Link>
 
-          {/* ✨ เมนูจัดการเรทเปอร์เซ็นต์ */}
           <Link href="/admin/commissions" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-amber-50 hover:text-amber-600 rounded-[1.2rem] font-bold transition-all">
             <Percent size={20} /> จัดการเรทหักเปอร์เซ็นต์
           </Link>
@@ -266,14 +271,27 @@ export default function AdminDashboard() {
                <div className="relative z-10">
                   <div className="bg-white/20 w-12 h-12 rounded-[1rem] flex items-center justify-center mb-6 backdrop-blur-sm border border-white/20 shadow-inner"><Wallet size={24}/></div>
                   <h2 className="text-3xl md:text-4xl font-black mb-3 leading-tight text-white drop-shadow-sm">จัดการกระเป๋าเงิน<br/>นักเรียน (6-Tier)</h2>
-                  <p className="text-blue-100 font-medium max-w-sm text-sm">แก้ไขชั่วโมงเรียนรายบุคคล ครบทุกระดับชั้นทั้งรูปแบบ Online และ Onsite</p>
+                  <p className="text-blue-100 font-medium max-w-sm text-sm">แก้ไขชั่วโมงเรียนรายบุคคล ครบทุกระดับชั้นทั้งรูปแบบ Online</p>
                </div>
                <div className="relative z-10 mt-8 flex items-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-[1.2rem] font-black text-sm w-max shadow-md group-hover:bg-blue-50 transition-colors">
                  จัดการ Wallet ทันที <ArrowRight size={16} />
                </div>
             </Link>
 
-            <Link href="/admin/withdrawals" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-100/50 transition-all group flex flex-col justify-between min-h-[280px]">
+            {/* ✨ เพิ่มกล่อง: ระบบจัดการเรียน Onsite (3-in-1) */}
+            <Link href="/admin/onsite-manager" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-rose-300 hover:shadow-lg hover:shadow-rose-100/50 transition-all group flex flex-col justify-between min-h-[280px]">
+              <div>
+                <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><MapPin size={24}/></div>
+                <h3 className="text-2xl font-black text-slate-800 leading-tight mb-2">ระบบจัดการ<br/>เรียน Onsite</h3>
+                <p className="text-slate-500 text-xs font-bold">จัดการชั่วโมงรายวิชา, ยิงคิวให้นักเรียน และติดตามสถานะ</p>
+              </div>
+              <div className="flex items-center justify-between mt-8">
+                <span className="text-rose-600 font-black text-sm">เข้าสู่ระบบ Onsite</span>
+                <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-colors"><ChevronRight size={20}/></div>
+              </div>
+            </Link>
+
+            <Link href="/admin/withdrawals" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
               <div>
                 <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><Landmark size={24}/></div>
                 <h3 className="text-2xl font-black text-slate-800 leading-tight mb-2">ตรวจสอบ<br/>การถอนเงิน</h3>
@@ -297,7 +315,6 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
-            {/* ✨ เพิ่มกล่อง: จัดการเปอร์เซ็นต์ (Commissions) */}
             <Link href="/admin/commissions" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-amber-300 hover:shadow-lg hover:shadow-amber-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
               <div>
                 <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><Percent size={24}/></div>

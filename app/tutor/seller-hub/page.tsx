@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Store, DollarSign, PlusCircle, Package, 
@@ -22,7 +22,7 @@ export default function TutorSellerHub() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  // ✨ State สำหรับระบบ Commission (คงไว้ตามเดิม)
+  // ✨ State สำหรับระบบ Commission
   const [platformFee, setPlatformFee] = useState(30); 
   const [totalSalesCount, setTotalSalesCount] = useState(0);
   const [isCustomFee, setIsCustomFee] = useState(false); 
@@ -57,18 +57,15 @@ export default function TutorSellerHub() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // ดึงข้อมูลจาก tutor_wallets
       const { data: walletData } = await supabase.from('tutor_wallets').select('*').eq('user_id', user.id).maybeSingle();
       setWallet(walletData);
 
       const { data: items } = await supabase.from('courses').select('*').eq('seller_id', user.id).order('created_at', { ascending: false });
       setMyItems(items || []);
 
-      // ✨ คำนวณยอดขายรวมทั้งหมดของผู้ขายคนนี้
       const soldCount = items?.reduce((sum, item) => sum + (item.sales_count || 0), 0) || 0;
       setTotalSalesCount(soldCount);
 
-      // ✨ เช็กเรทพิเศษจาก Admin หรือ Step ตามยอดขาย
       const { data: profile } = await supabase.from('profiles').select('custom_fee').eq('id', user.id).maybeSingle();
       
       let fee = 30; 
@@ -189,8 +186,9 @@ export default function TutorSellerHub() {
         
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <Link href="/" className="text-gray-400 font-black text-xs uppercase mb-2 flex items-center gap-2 hover:text-orange-600 transition-all group w-max">
-              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform"/> กลับหน้าหลัก
+            {/* ✨ แก้ไขลิงก์ตรงนี้ให้ชี้ไปที่ /tutor */}
+            <Link href="/tutor" className="text-gray-400 font-black text-xs uppercase mb-2 flex items-center gap-2 hover:text-orange-600 transition-all group w-max">
+              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform"/> กลับหน้าหลัก Tutor
             </Link>
             <h1 className="text-4xl font-black tracking-tight flex items-center gap-3 text-slate-800">
               <Store className="text-orange-500" size={36}/> Seller Hub
@@ -240,7 +238,6 @@ export default function TutorSellerHub() {
                   </div>
                 </div>
                 
-                {/* ✨ ส่วนคำนวณรายได้สุทธิ (เหมือนเดิมเป๊ะ) */}
                 {price > 0 && (
                   <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 space-y-1">
                     <div className="flex justify-between items-center mb-3 pb-3 border-b border-orange-200/50">

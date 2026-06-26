@@ -5,7 +5,7 @@ import {
   ArrowLeft, Calendar, Clock, XCircle, MessageCircle, 
   Loader2, CalendarCheck, Video, CheckCircle2, ChevronLeft, ChevronRight, 
   LayoutGrid, Search, AlertCircle, Save, Mail, Filter, X,
-  RefreshCw, ExternalLink // ✨ เพิ่ม Import เพื่อแก้บั๊กและใส่ปุ่มลิงก์
+  RefreshCw, ExternalLink, Check // ✨ เพิ่ม Import Check
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,6 +14,7 @@ export default function MySchedulePage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null); // ✨ เพิ่ม State สำหรับปุ่มกดยืนยัน Onsite
   
   const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null);
   const [studentNotes, setStudentNotes] = useState<{ [key: string]: string }>({});
@@ -37,7 +38,7 @@ export default function MySchedulePage() {
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          id, status, is_completed, meeting_url, student_note, tutor_note,
+          id, status, is_completed, meeting_url, student_note, tutor_note, is_student_accepted,
           slots!inner ( 
             id, start_time, location_type,
             teaching_logs ( id, created_at, notes ) 
@@ -61,6 +62,26 @@ export default function MySchedulePage() {
       setErrorMsg(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✨ เพิ่มฟังก์ชันกดยืนยันคิว Onsite
+  const handleAcceptOnsite = async (bookingId: string) => {
+    if (!confirm('ยืนยันตารางเรียน Onsite นี้ใช่ไหม?')) return;
+    setAcceptingId(bookingId);
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ is_student_accepted: true })
+        .eq('id', bookingId);
+
+      if (error) throw error;
+      alert('ยืนยันตารางเรียนเรียบร้อยครับ! ✨');
+      fetchMyBookings();
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    } finally {
+      setAcceptingId(null);
     }
   };
 
@@ -301,19 +322,33 @@ export default function MySchedulePage() {
                     </div>
 
                     <div className="w-full md:w-auto flex flex-col gap-2 min-w-[160px]">
-                      {!verified && item.meeting_url && (
-                        <a 
-                          href={item.meeting_url} 
-                          target="_blank" 
-                          className={`w-full md:w-auto py-3 px-6 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 ${canJoin ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                      {/* ✨ เช็คว่าต้องกดยืนยัน Onsite ไหม */}
+                      {!verified && item.slots.location_type === 'Onsite' && item.is_student_accepted === false ? (
+                        <button 
+                          onClick={() => handleAcceptOnsite(item.id)}
+                          disabled={acceptingId === item.id}
+                          className="w-full md:w-auto py-3 px-6 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 bg-orange-500 hover:bg-orange-600 text-white animate-pulse disabled:bg-gray-400"
                         >
-                            <Video size={14}/> เข้าห้องเรียนออนไลน์
-                        </a>
-                      )}
-                      {!verified && !item.meeting_url && (
-                        <div className="text-[9px] font-bold text-gray-400 text-center flex items-center justify-center gap-1 bg-gray-50 py-2 rounded-xl">
-                          <AlertCircle size={12}/> รอลิงก์จากครู
-                        </div>
+                          {acceptingId === item.id ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
+                          ยืนยันตารางเรียน Onsite
+                        </button>
+                      ) : (
+                        <>
+                          {!verified && item.meeting_url && (
+                            <a 
+                              href={item.meeting_url} 
+                              target="_blank" 
+                              className={`w-full md:w-auto py-3 px-6 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 ${canJoin ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                            >
+                                <Video size={14}/> {item.slots.location_type === 'Onsite' ? 'ดูรายละเอียด Onsite' : 'เข้าห้องเรียนออนไลน์'}
+                            </a>
+                          )}
+                          {!verified && !item.meeting_url && (
+                            <div className="text-[9px] font-bold text-gray-400 text-center flex items-center justify-center gap-1 bg-gray-50 py-2 rounded-xl">
+                              <AlertCircle size={12}/> รอข้อมูลจากครู
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

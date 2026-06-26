@@ -350,7 +350,6 @@ export default function TutorDashboard() {
             <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight text-slate-800">
               สวัสดีครับ <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-orange-500">ครู{tutorData.name}</span>
             </h1>
-            <p className="text-slate-500 font-bold mt-2">วันนี้คุณมีภารกิจสอนทั้งหมด <span className="text-orange-500 bg-orange-50 px-2 py-0.5 rounded-md">{stats.todaySlots} คิว</span></p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
