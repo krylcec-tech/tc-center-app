@@ -28,7 +28,8 @@ import {
   RefreshCw,
   DollarSign,
   Percent,
-  MapPin // ✨ เพิ่มไอคอน MapPin สำหรับระบบ Onsite
+  MapPin,
+  UserPlus // ✨ เพิ่มไอคอนสำหรับเมนูผูกผู้ปกครอง
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -146,10 +147,15 @@ export default function AdminDashboard() {
           <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 bg-blue-600 text-white rounded-[1.2rem] font-bold shadow-md shadow-blue-200"><LayoutDashboard size={20} /> แผงควบคุม</Link>
           
           <Link href="/admin/users" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all"><UserCheck size={20} /> จัดการผู้ใช้งาน</Link>
+          
+          {/* ✨ เมนูผูกบัญชีผู้ปกครอง ใน Sidebar */}
+          <Link href="/admin/link-parent" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-[1.2rem] font-bold transition-all">
+            <UserPlus size={20} /> ผูกบัญชีผู้ปกครอง
+          </Link>
+
           <Link href="/admin/my-books" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all"><Book size={20} /> คลังหนังสือรายคน</Link>
           <Link href="/admin/wallets" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-[1.2rem] font-bold transition-all"><Wallet size={20} /> จัดการกระเป๋าเงิน (6-Tier)</Link>
           
-          {/* ✨ เมนูระบบจัดการ Onsite */}
           <Link href="/admin/onsite-manager" className="flex items-center gap-3 px-4 py-3.5 text-slate-600 hover:bg-rose-50 hover:text-rose-600 rounded-[1.2rem] font-bold transition-all">
             <MapPin size={20} /> ระบบจัดการเรียน Onsite
           </Link>
@@ -278,7 +284,6 @@ export default function AdminDashboard() {
                </div>
             </Link>
 
-            {/* ✨ เพิ่มกล่อง: ระบบจัดการเรียน Onsite (3-in-1) */}
             <Link href="/admin/onsite-manager" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-rose-300 hover:shadow-lg hover:shadow-rose-100/50 transition-all group flex flex-col justify-between min-h-[280px]">
               <div>
                 <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><MapPin size={24}/></div>
@@ -300,6 +305,19 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mt-8">
                 <span className="text-emerald-600 font-black text-sm">ดูรายการ</span>
                 <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors"><ChevronRight size={20}/></div>
+              </div>
+            </Link>
+
+            {/* ✨ เพิ่มกล่อง: ระบบผูกบัญชีผู้ปกครอง (Bento Grid) */}
+            <Link href="/admin/link-parent" className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all group flex flex-col justify-between min-h-[240px]">
+              <div>
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-[1rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><UserPlus size={24}/></div>
+                <h3 className="text-2xl font-black text-slate-800 leading-tight mb-2">ผูกบัญชี<br/>ผู้ปกครอง</h3>
+                <p className="text-slate-500 text-xs font-bold">เชื่อมโยงข้อมูลนักเรียนเพื่อให้ผู้ปกครองเข้าถึงและติดตามได้</p>
+              </div>
+              <div className="flex items-center justify-between mt-8">
+                <span className="text-indigo-600 font-black text-sm">จัดการบัญชี</span>
+                <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors"><ChevronRight size={20}/></div>
               </div>
             </Link>
 

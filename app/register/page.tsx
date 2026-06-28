@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { 
   UserPlus, Mail, Lock, User, Phone, Loader2, 
   ArrowLeft, GraduationCap, Building2, Gift, CheckCircle2, 
-  MessageCircle, ChevronRight, BookOpen // ✨ เพิ่ม BookOpen Icon
+  MessageCircle, ChevronRight, BookOpen, Users
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,21 +14,24 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false); 
   
+  // ✨ State สำหรับแยกประเภทการสมัคร (Student หรือ Parent)
+  const [role, setRole] = useState<'student' | 'parent'>('student');
+  
   // Form States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [parentName, setParentName] = useState('');
+  const [fullName, setFullName] = useState(''); // ใช้เก็บชื่อคนสมัคร (ผู้ปกครอง หรือ ชื่อจริงนักเรียน)
   const [studentNickname, setStudentNickname] = useState('');
   const [phone, setPhone] = useState('');
   const [schoolName, setSchoolName] = useState('');
-  const [gradeLevel, setGradeLevel] = useState(''); // ✨ เพิ่ม State เก็บระดับชั้นตอนสมัคร
+  const [gradeLevel, setGradeLevel] = useState(''); 
   const [referralCode, setReferralCode] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // ✨ ดักจับกรณียังไม่เลือกระดับชั้น
-    if (!gradeLevel) {
+    // ดักจับกรณียังไม่เลือกระดับชั้น (เฉพาะนักเรียน)
+    if (role === 'student' && !gradeLevel) {
       alert("กรุณาเลือกระดับชั้นของนักเรียนด้วยครับ");
       return;
     }
@@ -39,8 +42,8 @@ export default function RegisterPage() {
       let referredById = null;
       let initialHours = 0;
 
-      // 0. ตรวจสอบรหัสผู้แนะนำ
-      if (referralCode.trim() !== '') {
+      // 0. ตรวจสอบรหัสผู้แนะนำ (เฉพาะนักเรียน)
+      if (role === 'student' && referralCode.trim() !== '') {
         const { data: referrer, error: referrerError } = await supabase
           .from('profiles')
           .select('id')
@@ -55,7 +58,7 @@ export default function RegisterPage() {
         initialHours = 1; 
       }
 
-      // 1. สมัครใน Auth
+      // 1. สมัครใน Auth ของ Supabase
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -63,36 +66,54 @@ export default function RegisterPage() {
 
       if (authError) throw authError;
 
-      if (authData.user) {
-        const newMyReferralCode = `TC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      // ✨ ดักจับกรณีอีเมลซ้ำ (ถ้าใช้อีเมลซ้ำ Supabase จะคืนค่า identities เป็น Array ว่าง)
+      if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
+        alert("อีเมลนี้มีคนใช้งานในระบบแล้วครับ กรุณาใช้อีเมลอื่น หรือทำการเข้าสู่ระบบแทนครับ 📧");
+        setLoading(false);
+        return; // หยุดการทำงานตรงนี้ ไม่ต้องไปต่อถึงขั้นตอนสร้าง Profile
+      }
 
-        // 2. บันทึก Profile (เพิ่ม grade_level เข้าไปเก็บตั้งแต่ตอนสมัคร)
+      if (authData.user) {
+        // ✨ ข้อมูลพื้นฐานที่จะอัปเดตลงตาราง Profile ทุก Role
+        const profilePayload: any = {
+          id: authData.user.id,
+          role: role, // ระบุ Role ให้ชัดเจน (student หรือ parent)
+          full_name: fullName, // เก็บชื่อคนสมัครลง Profile ไว้ด้วย
+          phone: phone,
+        };
+
+        // ถ้าเป็นนักเรียน ให้เพิ่มข้อมูลเฉพาะของเด็กเข้าไป
+        if (role === 'student') {
+          const newMyReferralCode = `TC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+          profilePayload.school_name = schoolName;
+          profilePayload.grade_level = gradeLevel;
+          profilePayload.referred_by_id = referredById;
+          profilePayload.referral_code = newMyReferralCode;
+        }
+
+        // 2. บันทึก Profile
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert([{
-            id: authData.user.id,
-            school_name: schoolName,
-            grade_level: gradeLevel, // ✨ บันทึกระดับชั้นลงฐานข้อมูล
-            referred_by_id: referredById,
-            referral_code: newMyReferralCode
-          }], { onConflict: 'id' });
+          .upsert([profilePayload], { onConflict: 'id' });
 
         if (profileError) throw profileError;
 
-        // 3. สร้าง Wallet (ใช้ upsert ป้องกันข้อมูลซ้ำ)
-        const { error: walletError } = await supabase
-          .from('student_wallets')
-          .upsert([{
-            user_id: authData.user.id,
-            student_name: studentNickname,
-            parent_name: parentName,
-            phone: phone, 
-            email: email, 
-            total_hours_balance: initialHours,
-            marketing_points: 0
-          }], { onConflict: 'user_id' });
+        // 3. สร้าง Wallet (✨ สร้างเฉพาะถ้าระบุว่าเป็น 'นักเรียน' เท่านั้น ผู้ปกครองไม่มี Wallet)
+        if (role === 'student') {
+          const { error: walletError } = await supabase
+            .from('student_wallets')
+            .upsert([{
+              user_id: authData.user.id,
+              student_name: studentNickname,
+              parent_name: fullName,
+              phone: phone, 
+              email: email, 
+              total_hours_balance: initialHours,
+              marketing_points: 0
+            }], { onConflict: 'user_id' });
 
-        if (walletError) throw walletError;
+          if (walletError) throw walletError;
+        }
 
         setIsSuccess(true);
       }
@@ -163,49 +184,42 @@ export default function RegisterPage() {
             <ArrowLeft size={16}/> กลับไปหน้าล็อคอิน
           </Link>
           
-          <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">สมัครสมาชิกใหม่สำหรับนักเรียน 🎓</h1>
-          <p className="text-gray-500 font-bold mb-8">เพื่อเข้าสู่ระบบการเรียนระดับพรีเมียม</p>
+          <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">
+            {role === 'student' ? 'สมัครสำหรับนักเรียน 🎓' : 'สำหรับผู้ปกครอง 👨‍👩‍👧‍👦'}
+          </h1>
+          <p className="text-gray-500 font-bold mb-6">
+            {role === 'student' ? 'เพื่อเข้าสู่ระบบการเรียนระดับพรีเมียม' : 'เพื่อติดตามการเรียนและชั่วโมงของบุตรหลาน'}
+          </p>
+
+          {/* ✨ Toggle สลับระหว่าง นักเรียน / ผู้ปกครอง */}
+          <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-8 gap-1">
+            <button 
+              type="button" 
+              onClick={() => setRole('student')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${role === 'student' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <User size={16} /> นักเรียน
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setRole('parent')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${role === 'parent' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <Users size={16} /> ผู้ปกครอง
+            </button>
+          </div>
 
           <form onSubmit={handleRegister} className="space-y-4">
+            
+            {/* ข้อมูลที่ต้องกรอกทุกคน (ชื่อ, เบอร์, อีเมล, รหัสผ่าน) */}
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase ml-4">ชื่อจริงผู้ปกครอง / นักเรียน</label>
+              <label className="text-[10px] font-black text-gray-400 uppercase ml-4">
+                {role === 'student' ? 'ชื่อจริงผู้ปกครอง / นักเรียน' : 'ชื่อ-นามสกุล ผู้ปกครอง'}
+              </label>
               <div className="relative">
                 <User className="absolute left-4 top-4 text-gray-400" size={18} />
                 <input required type="text" placeholder="ชื่อ-นามสกุล" className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold" 
-                  value={parentName} onChange={(e) => setParentName(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">ชื่อเล่น</label>
-                <input required type="text" placeholder="ชื่อเล่น" className="w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold" 
-                  value={studentNickname} onChange={(e) => setStudentNickname(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">โรงเรียน</label>
-                <input required type="text" placeholder="ชื่อโรงเรียน" className="w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold" 
-                  value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
-              </div>
-            </div>
-
-            {/* ✨ เพิ่มช่องระดับชั้น (Dropdown) ตรงนี้ */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase ml-4">ระดับชั้นของนักเรียน</label>
-              <div className="relative">
-                <BookOpen className="absolute left-4 top-4 text-gray-400" size={18} />
-                <select 
-                  required
-                  value={gradeLevel} 
-                  onChange={(e) => setGradeLevel(e.target.value)} 
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold appearance-none cursor-pointer"
-                >
-                  <option value="" disabled>เลือกระดับชั้น...</option>
-                  <option value="ประถมศึกษา">ประถมศึกษา (ป.1 - ป.6)</option>
-                  <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น (ม.1 - ม.3)</option>
-                  <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย (ม.4 - ม.6)</option>
-                  <option value="มหาวิทยาลัย">มหาวิทยาลัย / อื่นๆ</option>
-                </select>
+                  value={fullName} onChange={(e) => setFullName(e.target.value)} />
               </div>
             </div>
 
@@ -218,7 +232,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="space-y-1 pt-4 border-t border-gray-100">
+            <div className="space-y-1">
               <label className="text-[10px] font-black text-gray-400 uppercase ml-4">อีเมล</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-4 text-gray-400" size={18} />
@@ -236,29 +250,66 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="pt-2">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-[2rem] border border-blue-100 shadow-inner text-gray-900">
-                <label className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-1 mb-2">
-                  <Gift size={14} className="animate-bounce" /> รหัสผู้แนะนำ (ถ้ามี)
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="กรอกรหัสเพื่อรับโปรโมชั่นสุดพิเศษ!" 
-                  className="w-full px-5 py-3 bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-400 border-none transition-all font-black text-blue-700 placeholder:text-blue-200 uppercase tracking-widest" 
-                  value={referralCode} 
-                  onChange={(e) => setReferralCode(e.target.value)} 
-                />
-                {referralCode.length >= 6 && (
-                  <p className="text-[9px] text-green-600 font-bold mt-2 flex items-center gap-1">
-                    <CheckCircle2 size={10} /> คุณจะได้รับ 1 ชม. ฟรีเมื่อสมัครสำเร็จ
-                  </p>
-                )}
-              </div>
-            </div>
+            {/* ✨ โซนที่แสดงเฉพาะเมื่อสมัครเป็น "นักเรียน" เท่านั้น */}
+            {role === 'student' && (
+              <div className="pt-4 mt-4 border-t border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-4">ชื่อเล่นนักเรียน</label>
+                    <input required type="text" placeholder="ชื่อเล่น" className="w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold" 
+                      value={studentNickname} onChange={(e) => setStudentNickname(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-4">โรงเรียน</label>
+                    <input required type="text" placeholder="ชื่อโรงเรียน" className="w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold" 
+                      value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
+                  </div>
+                </div>
 
-            <button disabled={loading} className="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black text-lg shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 disabled:bg-gray-400">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-4">ระดับชั้นของนักเรียน</label>
+                  <div className="relative">
+                    <BookOpen className="absolute left-4 top-4 text-gray-400" size={18} />
+                    <select 
+                      required
+                      value={gradeLevel} 
+                      onChange={(e) => setGradeLevel(e.target.value)} 
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl outline-none focus:border-blue-400 border-2 border-transparent transition-all font-bold appearance-none cursor-pointer"
+                    >
+                      <option value="" disabled>เลือกระดับชั้น...</option>
+                      <option value="ประถมศึกษา">ประถมศึกษา (ป.1 - ป.6)</option>
+                      <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น (ม.1 - ม.3)</option>
+                      <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย (ม.4 - ม.6)</option>
+                      <option value="มหาวิทยาลัย">มหาวิทยาลัย / อื่นๆ</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-[2rem] border border-blue-100 shadow-inner text-gray-900">
+                    <label className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-1 mb-2">
+                      <Gift size={14} className="animate-bounce" /> รหัสผู้แนะนำ (ถ้ามี)
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="กรอกรหัสเพื่อรับโปรโมชั่นสุดพิเศษ!" 
+                      className="w-full px-5 py-3 bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-400 border-none transition-all font-black text-blue-700 placeholder:text-blue-200 uppercase tracking-widest" 
+                      value={referralCode} 
+                      onChange={(e) => setReferralCode(e.target.value)} 
+                    />
+                    {referralCode.length >= 6 && (
+                      <p className="text-[9px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                        <CheckCircle2 size={10} /> คุณจะได้รับ 1 ชม. ฟรีเมื่อสมัครสำเร็จ
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button disabled={loading} className={`w-full text-white py-5 rounded-[2rem] font-black text-lg shadow-xl hover:opacity-90 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 disabled:bg-gray-400 ${role === 'parent' ? 'bg-orange-500 shadow-orange-200' : 'bg-blue-600 shadow-blue-200'}`}>
               {loading ? <Loader2 className="animate-spin" /> : <UserPlus size={22} />}
-              สมัครสมาชิก
+              {role === 'parent' ? 'สมัครบัญชีผู้ปกครอง' : 'สมัครสมาชิกนักเรียน'}
             </button>
           </form>
 
