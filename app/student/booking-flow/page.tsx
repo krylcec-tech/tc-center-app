@@ -32,7 +32,7 @@ function BookingContent() {
   const [allWalletData, setAllWalletData] = useState<any>(null); 
   const [studentNote, setStudentNote] = useState('');
 
-  const subjects = ['ทั้งหมด', 'คณิตศาสตร์', 'ภาษาอังกฤษ', 'วิทยาศาสตร์', 'ฟิสิกส์', 'เคมี', 'ชีววิทยา', 'ภาษาไทย' , 'คอร์สพิเศษ'];
+  const subjects = ['ทั้งหมด', 'คณิตศาสตร์', 'ภาษาอังกฤษ','ภาษาจีน', 'วิทยาศาสตร์', 'ฟิสิกส์', 'เคมี', 'ชีววิทยา', 'ภาษาไทย' , 'คอร์สพิเศษ'];
 
   const tiers = [
     { id: 'tier1', title: 'ประถม - ม.ต้น', desc: 'เนื้อหา ป.2-ป.5, สอบเข้า ม.1, ม.1-ม.3', priceTag: 'ราคามาตรฐาน' },

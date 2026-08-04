@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase'; 
 import { 
   ArrowLeft, Trash2, BookOpen, UserPlus, Image as ImageIcon, 
-  Edit2, Save, Loader2, Tag, GraduationCap, Eye, EyeOff, Mail // ✨ เพิ่ม Mail เข้ามาตรงนี้
+  Edit2, Save, Loader2, Tag, GraduationCap, Eye, EyeOff, Mail, Star // ✨ เพิ่ม Star เข้ามาตรงนี้
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,6 +14,13 @@ const GRADE_LEVELS = [
   'ม.ปลาย / เข้ามหาวิทยาลัย'
 ];
 
+// ✨ ยศมาตรฐาน 3 ระดับ
+const TUTOR_RANKS = [
+  'ติวเตอร์ใหม่',
+  'ติวเตอร์หลัก',
+  'ติวเตอร์ TC Center'
+];
+
 export default function ManageTutorsPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [tutors, setTutors] = useState<any[]>([]);
@@ -21,9 +28,10 @@ export default function ManageTutorsPage() {
   
   const [editingTutor, setEditingTutor] = useState<any>(null);
   const [tutorName, setTutorName] = useState('');
+  const [selectedRank, setSelectedRank] = useState<string>('ติวเตอร์ใหม่'); // ✨ State สำหรับยศ
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
-  const [isActive, setIsActive] = useState<boolean>(true); // ✨ State สำหรับซ่อน/แสดง
+  const [isActive, setIsActive] = useState<boolean>(true); 
   
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -76,7 +84,6 @@ export default function ManageTutorsPage() {
     setSelectedLevels(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]);
   };
 
-  // ✨ ฟังก์ชัน Quick Toggle เปิด/ปิดจากรายชื่อโดยตรง
   const toggleTutorVisibility = async (id: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase.from('tutors').update({ is_active: !currentStatus }).eq('id', id);
@@ -96,12 +103,15 @@ export default function ManageTutorsPage() {
       let finalImageUrl = editingTutor?.image_url || null;
       if (file) finalImageUrl = await uploadImage(file, editingTutor?.image_url);
 
+      // ✨ นำยศ (Rank) มารวมกับวิชา (Tags) เพื่อบันทึกลงตาราง
+      const finalTags = [selectedRank, ...selectedTags];
+
       const tutorData = {
         name: tutorName,
-        tags: selectedTags, 
+        tags: finalTags, 
         grade_levels: selectedLevels,
         image_url: finalImageUrl,
-        is_active: isActive, // ✨ บันทึกสถานะการซ่อน/แสดง
+        is_active: isActive,
         role: 'tutor' 
       };
 
@@ -126,9 +136,10 @@ export default function ManageTutorsPage() {
   const resetForm = () => {
     setEditingTutor(null);
     setTutorName('');
+    setSelectedRank('ติวเตอร์ใหม่'); // ✨ คืนค่าเริ่มต้นให้เป็นติวเตอร์ใหม่
     setSelectedTags([]); 
     setSelectedLevels([]);
-    setIsActive(true); // ✨ คืนค่าเริ่มต้นให้เป็นแสดงผล
+    setIsActive(true); 
     setFile(null);
     setPreviewUrl(null);
   };
@@ -214,7 +225,6 @@ export default function ManageTutorsPage() {
               </div>
             </div>
 
-            {/* ✨ สวิตช์สำหรับกำหนดสถานะ ซ่อน/แสดง */}
             <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between">
               <div>
                 <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest flex items-center gap-1.5 mb-1">
@@ -232,7 +242,25 @@ export default function ManageTutorsPage() {
               </button>
             </div>
 
-            {/* โซนเลือกระดับชั้น (Grade Levels) */}
+            {/* ✨ โซนเลือกยศ (Tutor Rank) */}
+            <div className="bg-yellow-50 p-6 rounded-[2rem] border border-yellow-100">
+              <label className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Star size={14}/> ยศ / สถานะติวเตอร์</label>
+              <div className="flex flex-wrap gap-2">
+                {TUTOR_RANKS.map(rank => (
+                  <button
+                    key={rank}
+                    onClick={() => setSelectedRank(rank)}
+                    className={`px-4 py-2 rounded-xl text-sm font-black border-2 transition-all active:scale-95 flex items-center gap-1.5
+                      ${selectedRank === rank 
+                        ? 'bg-yellow-500 text-white border-yellow-500 shadow-md shadow-yellow-200' 
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-yellow-300'}`}
+                  >
+                    {rank}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="bg-purple-50 p-6 rounded-[2rem] border border-purple-100">
               <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><GraduationCap size={14}/> ระดับชั้นที่รับสอน</label>
               <div className="flex flex-wrap gap-2">
@@ -251,7 +279,6 @@ export default function ManageTutorsPage() {
               </div>
             </div>
 
-            {/* โซนเลือก Tags วิชา */}
             <div className="bg-blue-50 p-6 rounded-[2rem] border border-blue-100">
               <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><BookOpen size={14}/> เลือกวิชาที่สอน (Tags)</label>
               <div className="flex flex-wrap gap-2">
@@ -297,7 +324,6 @@ export default function ManageTutorsPage() {
                       <div className="w-16 h-16 bg-gray-200 rounded-2xl overflow-hidden shadow-sm">
                         {t.image_url ? <img src={t.image_url} className={`w-full h-full object-cover ${t.is_active === false ? 'grayscale' : ''}`} /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><UserPlus size={24}/></div>}
                       </div>
-                      {/* ✨ ป้ายบอกสถานะการซ่อน */}
                       {t.is_active === false && (
                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase shadow-md border-2 border-white">
                           ซ่อนอยู่
@@ -310,7 +336,6 @@ export default function ManageTutorsPage() {
                         {t.is_active === false && <EyeOff size={14} className="text-red-500"/>}
                       </h4>
                       
-                      {/* ✨ เพิ่มส่วนแสดง Email ของติวเตอร์ตรงนี้ */}
                       {t.email && (
                         <p className="text-[11px] text-gray-500 font-bold flex items-center gap-1 mb-2">
                           <Mail size={12} className="text-gray-400" /> {t.email}
@@ -326,8 +351,9 @@ export default function ManageTutorsPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-1">
+                        {/* ✨ แสดงทั้งยศและวิชา (เพราะถูกเซฟรวมอยู่ใน t.tags) */}
                         {(t.tags || []).map((tag: string) => (
-                          <span key={tag} className="px-2.5 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-lg uppercase tracking-wide">
+                          <span key={tag} className={`px-2.5 py-1 text-[10px] font-black rounded-lg uppercase tracking-wide ${TUTOR_RANKS.includes(tag) ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-50 text-blue-600'}`}>
                             {tag}
                           </span>
                         ))}
@@ -337,7 +363,6 @@ export default function ManageTutorsPage() {
                   
                   {/* ปุ่ม Action ต่างๆ */}
                   <div className="flex gap-2 w-full md:w-auto justify-end md:self-center">
-                    {/* ✨ ปุ่ม Quick Toggle ซ่อน/แสดง */}
                     <button onClick={() => toggleTutorVisibility(t.id, t.is_active !== false)} 
                       className={`p-3 rounded-xl transition-colors ${t.is_active !== false ? 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-600 hover:text-white'}`}
                       title={t.is_active !== false ? "ซ่อนติวเตอร์" : "แสดงติวเตอร์"}
@@ -348,9 +373,16 @@ export default function ManageTutorsPage() {
                     <button onClick={() => {
                       setEditingTutor(t);
                       setTutorName(t.name);
-                      setSelectedTags(t.tags || []); 
+                      
+                      // ✨ แยก "ยศ" ออกจาก "วิชา" เพื่อโหลดใส่ state แยกกันให้ถูกต้อง
+                      const existingTags = t.tags || [];
+                      const rank = existingTags.find((tag: string) => TUTOR_RANKS.includes(tag)) || 'ติวเตอร์ใหม่';
+                      const subjectTags = existingTags.filter((tag: string) => !TUTOR_RANKS.includes(tag));
+                      
+                      setSelectedRank(rank);
+                      setSelectedTags(subjectTags); 
                       setSelectedLevels(t.grade_levels || []);
-                      setIsActive(t.is_active !== false); // โหลดสถานะเดิม
+                      setIsActive(t.is_active !== false); 
                       setPreviewUrl(t.image_url);
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-colors"><Edit2 size={18}/></button>
