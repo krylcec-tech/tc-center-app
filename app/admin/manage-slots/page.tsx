@@ -148,7 +148,7 @@ export default function ManageSlotsTable() {
       setDates([]); 
       alert(`✅ เพิ่มคิวสำเร็จทั้งหมด ${newSlots.length} คิว!`); 
     } else {
-      alert("❌ เกิดข้อผิดพลาด: " + error.message);
+      alert("❌ เกิดข้อผิดพลาดด: " + error.message);
     }
   };
 
