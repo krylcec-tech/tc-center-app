@@ -23,7 +23,8 @@ function BookingContent() {
 
   const [tutorSlots, setTutorSlots] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(''); 
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  // ✨ เปลี่ยนมาใช้ YYYY-MM เพื่อรองรับการจองข้ามปีแบบไม่บัค
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(`${new Date().getFullYear()}-${new Date().getMonth()}`);
   const [activeSubject, setActiveSubject] = useState('ทั้งหมด'); 
   
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
@@ -74,80 +75,138 @@ function BookingContent() {
 
   const fetchTutors = async () => {
     setLoading(true);
-    const currentTierTitle = tiers.find(t => t.id === gradeLevel)?.title;
-    
-    // ✨ เพิ่ม .eq('is_active', true) เพื่อดึงเฉพาะติวเตอร์ที่แอดมินไม่ได้กดซ่อน
-    const { data: tutorsData } = await supabase
-      .from('tutors')
-      .select('*')
-      .contains('grade_levels', [currentTierTitle])
-      .eq('is_active', true); 
-    
-    if (tutorsData && tutorsData.length > 0) {
-      const tutorIds = tutorsData.map(t => t.id);
-      const now = new Date().toISOString();
+    try {
+      const currentTierTitle = tiers.find(t => t.id === gradeLevel)?.title;
+      const currentLoc = (locationType || searchParams.get('type') || 'Online').trim();
+      
+      const { data: tutorsData } = await supabase
+        .from('tutors')
+        .select('*')
+        .contains('grade_levels', [currentTierTitle])
+        .eq('is_active', true); 
+      
+      if (tutorsData && tutorsData.length > 0) {
+        const safeNow = new Date();
+        safeNow.setHours(safeNow.getHours() - 1); 
+        const nowIso = safeNow.toISOString();
 
-      const { data: slotsData } = await supabase
-        .from('slots')
-        .select('tutor_id')
-        .in('tutor_id', tutorIds)
-        .eq('is_booked', false)
-        .eq('location_type', locationType)
-        .gte('start_time', now);
+        const tutorsWithAvailability = await Promise.all(
+          tutorsData.map(async (tutor) => {
+            const { data: slotCheck, error } = await supabase
+              .from('slots')
+              .select('id')
+              .eq('tutor_id', tutor.id)
+              .ilike('location_type', currentLoc)
+              .eq('is_booked', false)
+              .gte('start_time', nowIso)
+              .limit(1); 
+            
+            if (error) console.error(`Error checking slots for ${tutor.name}:`, error.message);
 
-      const slotCounts: any = {};
-      slotsData?.forEach(slot => {
-        slotCounts[slot.tutor_id] = (slotCounts[slot.tutor_id] || 0) + 1;
-      });
+            return {
+              ...tutor,
+              hasSlots: slotCheck && slotCheck.length > 0
+            };
+          })
+        );
 
-      const tutorsWithAvailability = tutorsData.map(t => ({
-        ...t,
-        hasSlots: (slotCounts[t.id] || 0) > 0
-      })).sort((a, b) => {
-        if (a.hasSlots === b.hasSlots) return 0;
-        return a.hasSlots ? -1 : 1; 
-      });
+        tutorsWithAvailability.sort((a, b) => {
+          if (a.hasSlots === b.hasSlots) return 0;
+          return a.hasSlots ? -1 : 1; 
+        });
 
-      setTutors(tutorsWithAvailability);
-    } else {
-      setTutors([]);
+        setTutors(tutorsWithAvailability);
+      } else {
+        setTutors([]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
+  // ✨ ฟังก์ชันที่ 2: ดึงเวลาเมื่อกดจองคิวติวเตอร์คนนั้น (แก้ปัญหาคิวมาไม่ครบด้วย Pagination Loop)
   const fetchTutorSlots = async () => {
     setLoading(true);
-    const now = new Date().toISOString(); 
+    try {
+      const currentLoc = (locationType || searchParams.get('type') || 'Online').trim();
+      const safeNow = new Date();
+      safeNow.setHours(safeNow.getHours() - 1);
+      const nowIso = safeNow.toISOString();
 
-    const { data } = await supabase
-      .from('slots')
-      .select('*')
-      .eq('tutor_id', selectedTutor.id)
-      .eq('is_booked', false)
-      .eq('location_type', locationType)
-      .gte('start_time', now)
-      .order('start_time', { ascending: true });
-    
-    setTutorSlots(data || []);
-    if (data && data.length > 0) {
-      const firstSlotDate = new Date(data[0].start_time);
-      setSelectedDate(firstSlotDate.toDateString());
-      setSelectedMonth(firstSlotDate.getMonth());
+      let allSlots: any[] = [];
+      let hasMore = true;
+      let from = 0;
+      const stepLimit = 1000;
+
+      // วนลูปดึงทีละ 1000 แถวเพื่อทะลุกำแพง Supabase API Limit
+      while (hasMore) {
+        const { data: availableSlots, error } = await supabase
+          .from('slots')
+          .select('*')
+          .eq('tutor_id', selectedTutor.id)
+          .ilike('location_type', currentLoc)
+          .eq('is_booked', false) 
+          .gte('start_time', nowIso)
+          .order('start_time', { ascending: true })
+          .range(from, from + stepLimit - 1); 
+        
+        if (error) {
+          console.error("Error fetching available slots:", error.message);
+          break;
+        }
+        
+        if (availableSlots && availableSlots.length > 0) {
+          allSlots = [...allSlots, ...availableSlots];
+          from += stepLimit;
+          // ถ้าดึงมาได้น้อยกว่า 1000 แปลว่าหมดแล้ว สั่งจบวงลูป
+          if (availableSlots.length < stepLimit) {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setTutorSlots(allSlots);
+      
+      if (allSlots.length > 0) {
+        const firstSlotDate = new Date(allSlots[0].start_time);
+        setSelectedDate(firstSlotDate.toDateString());
+        setSelectedMonthKey(`${firstSlotDate.getFullYear()}-${firstSlotDate.getMonth()}`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const filteredTutors = tutors.filter(t => 
     activeSubject === 'ทั้งหมด' || t.tags?.includes(activeSubject)
   );
 
+  // ✨ ประมวลผลเดือนให้รองรับการข้ามปี
+  const availableMonths = Array.from(new Set(tutorSlots.map(s => {
+    const d = new Date(s.start_time);
+    return `${d.getFullYear()}-${d.getMonth()}`;
+  }))).map(key => {
+    const [y, m] = key.split('-');
+    return { key, year: parseInt(y), month: parseInt(m) };
+  }).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.month - b.month;
+  });
+
   const availableDates = Array.from(new Set(
     tutorSlots
-      .filter(s => new Date(s.start_time).getMonth() === selectedMonth)
+      .filter(s => {
+        const d = new Date(s.start_time);
+        return `${d.getFullYear()}-${d.getMonth()}` === selectedMonthKey;
+      })
       .map(s => new Date(s.start_time).toDateString())
   ));
-
-  const availableMonths = Array.from(new Set(tutorSlots.map(s => new Date(s.start_time).getMonth()))).sort((a, b) => a - b);
 
   const displaySlots = tutorSlots.filter(slot => 
     new Date(slot.start_time).toDateString() === selectedDate
@@ -483,9 +542,9 @@ function BookingContent() {
                             </h2>
                             <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar w-full md:w-auto">
                                 {availableMonths.map(m => (
-                                    <button key={m} onClick={() => { setSelectedMonth(m); setSelectedDate(''); }}
-                                        className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all ${selectedMonth === m ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>
-                                        {monthNames[m]}
+                                    <button key={m.key} onClick={() => { setSelectedMonthKey(m.key); setSelectedDate(''); }}
+                                        className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all ${selectedMonthKey === m.key ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>
+                                        {monthNames[m.month]} {(m.year + 543).toString().slice(-2)}
                                     </button>
                                 ))}
                             </div>

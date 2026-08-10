@@ -85,7 +85,10 @@ export default function CalendarManagePage() {
 
   const fetchSlots = async () => {
     try {
-      let query = supabase.from('slots').select('*, tutors(name), teaching_logs(id), bookings(status, student_verified)');
+      // ✨ เพิ่ม .limit(30000) เพื่อให้ปฏิทินดึงคิวทั้งหมดขึ้นมาแสดงได้ครบ
+      let query = supabase.from('slots')
+        .select('*, tutors(name), teaching_logs(id), bookings(status, student_verified)')
+        .limit(30000);
       
       if (!isAdmin && currentTutorId) query = query.eq('tutor_id', currentTutorId);
       else if (isAdmin && viewTutor !== 'all') query = query.eq('tutor_id', viewTutor);

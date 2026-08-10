@@ -8,8 +8,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+// ยศมาตรฐานสำหรับแยกแยะ Badge
+const TUTOR_RANKS = ['ติวเตอร์ใหม่', 'ติวเตอร์หลัก', 'ติวเตอร์ TC Center'];
+
 export default function TutorsCatalogPage() {
   const [tutors, setTutors] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<string[]>(['ทั้งหมด']);
   const [loading, setLoading] = useState(true);
   const [activeSubject, setActiveSubject] = useState('ทั้งหมด');
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,23 +21,37 @@ export default function TutorsCatalogPage() {
   // State สำหรับ Video Modal
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
-  const subjects = ['ทั้งหมด', 'คณิตศาสตร์', 'ภาษาอังกฤษ', 'วิทยาศาสตร์', 'ฟิสิกส์', 'เคมี', 'ชีววิทยา', 'ภาษาไทย' , 'คอร์สพิเศษ'];
-
   useEffect(() => {
-    fetchTutors();
+    fetchInitialData();
   }, []);
 
-  const fetchTutors = async () => {
+  const fetchInitialData = async () => {
     setLoading(true);
-    // ✨ ดึงเฉพาะติวเตอร์ที่ไม่ได้ถูกซ่อน (is_active ไม่เท่ากับ false)
-    const { data } = await supabase
-      .from('tutors')
-      .select('*')
-      .neq('is_active', false) // เพิ่มบรรทัดนี้เพื่อกรองคนถูกซ่อนออก
-      .order('created_at', { ascending: false });
-    
-    setTutors(data || []);
-    setLoading(false);
+    try {
+      // 1. ดึงข้อมูลวิชาจากตาราง subjects เพื่อความซิงค์กับ Admin
+      const { data: subData } = await supabase
+        .from('subjects')
+        .select('name')
+        .order('name');
+      
+      if (subData) {
+        const subList = subData.map(s => s.name);
+        setSubjects(['ทั้งหมด', ...subList]);
+      }
+
+      // 2. ดึงเฉพาะติวเตอร์ที่เปิดใช้งาน (is_active ไม่เท่ากับ false)
+      const { data: tutData } = await supabase
+        .from('tutors')
+        .select('*')
+        .neq('is_active', false)
+        .order('created_at', { ascending: false });
+      
+      setTutors(tutData || []);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ฟังก์ชันกรองติวเตอร์ตามวิชาและช่องค้นหา
@@ -95,7 +113,7 @@ export default function TutorsCatalogPage() {
           </div>
         </header>
 
-        {/* ตัวกรองรายวิชา */}
+        {/* ตัวกรองรายวิชาที่ดึงจาก Database */}
         <div className="flex gap-2 overflow-x-auto pb-6 mb-4 w-full no-scrollbar">
           {subjects.map(sub => (
             <button 
@@ -122,78 +140,94 @@ export default function TutorsCatalogPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
-            {filteredTutors.map(tutor => (
-              <div key={tutor.id} className="bg-white rounded-[3rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col">
-                
-                {/* รูปภาพ และ ปุ่ม Video */}
-                <div className="h-72 bg-gray-100 relative overflow-hidden">
-                  <img src={tutor.image_url || '/default-avatar.png'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  
-                  {/* เลเยอร์ไล่สีดำด้านล่างรูป */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80"></div>
-                  
-                  {tutor.video_url && (
-                    <button 
-                      onClick={() => setSelectedVideo(tutor.video_url)}
-                      className="absolute top-4 right-4 bg-white/90 backdrop-blur text-blue-600 p-3 rounded-full shadow-lg hover:scale-110 hover:bg-blue-600 hover:text-white transition-all z-10"
-                      title="ดูวิดีโอแนะนำตัว"
-                    >
-                      <PlayCircle size={24} />
-                    </button>
-                  )}
+            {filteredTutors.map(tutor => {
+              // แยก Tag ยศ และ Tag วิชา
+              const rankTag = tutor.tags?.find((tag: string) => TUTOR_RANKS.includes(tag));
+              const subjectTags = tutor.tags?.filter((tag: string) => !TUTOR_RANKS.includes(tag)) || [];
 
-                  <div className="absolute bottom-4 left-4 right-4 flex gap-1.5 flex-wrap z-10">
-                    {tutor.tags?.slice(0, 3).map((tag: string) => (
-                      <span key={tag} className={`backdrop-blur-md px-3 py-1.5 rounded-xl text-[9px] font-black uppercase shadow-sm border
-                        ${tag === 'คอร์สพิเศษ' ? 'bg-orange-500/90 text-white border-orange-400' : 'bg-white/90 text-blue-600 border-blue-50'}`}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ข้อมูลติวเตอร์ */}
-                <div className="p-8 flex-1 flex flex-col">
-                  <h3 className="text-2xl font-black mb-2 text-gray-900 group-hover:text-blue-600 transition-colors flex items-center gap-2">
-                    {tutor.name}
-                  </h3>
+              return (
+                <div key={tutor.id} className="bg-white rounded-[3rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col">
                   
-                  {/* ระดับชั้นที่สอน */}
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {tutor.grade_levels?.map((gl: string) => (
-                      <span key={gl} className="text-[9px] font-black bg-gray-50 text-gray-400 px-2 py-1 rounded-md uppercase border border-gray-100">
-                        {gl}
-                      </span>
-                    ))}
-                  </div>
-
-                  <p className="text-gray-500 text-xs font-bold italic line-clamp-3 leading-relaxed mb-6">
-                    "{tutor.bio || 'ติวเตอร์คุณภาพระดับพรีเมียมจาก TC Center พร้อมดูแลการเรียนของน้องๆ อย่างใกล้ชิด'}"
-                  </p>
-                  
-                  <div className="mt-auto pt-4 border-t border-gray-50 grid grid-cols-2 gap-3">
-                    {tutor.video_url ? (
-                      <button 
-                        onClick={() => setSelectedVideo(tutor.video_url)}
-                        className="w-full bg-blue-50 text-blue-600 py-3.5 rounded-2xl font-black text-xs hover:bg-blue-100 transition-all flex items-center justify-center gap-2"
-                      >
-                        <Video size={16}/> ดูวิดีโอ
-                      </button>
-                    ) : (
-                      <div className="w-full bg-gray-50 text-gray-400 py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 cursor-not-allowed">
-                        ไม่มีวิดีโอ
+                  {/* รูปภาพ และ ปุ่ม Video */}
+                  <div className="h-72 bg-gray-100 relative overflow-hidden">
+                    <img src={tutor.image_url || '/default-avatar.png'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={tutor.name} />
+                    
+                    {/* เลเยอร์ไล่สีดำด้านล่างรูป */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80"></div>
+                    
+                    {/* แสดงยศติวเตอร์มุมบนซ้าย */}
+                    {rankTag && (
+                      <div className="absolute top-4 left-4 bg-yellow-400 text-yellow-950 font-black text-[10px] px-3 py-1.5 rounded-xl shadow-md border border-yellow-300 flex items-center gap-1 z-10">
+                        <Star size={12} className="fill-yellow-950" />
+                        {rankTag}
                       </div>
                     )}
-                    <Link 
-                      href="/student/booking-flow"
-                      className="w-full bg-gray-900 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-2 shadow-md"
-                    >
-                      จองคิวเรียน
-                    </Link>
+
+                    {tutor.video_url && (
+                      <button 
+                        onClick={() => setSelectedVideo(tutor.video_url)}
+                        className="absolute top-4 right-4 bg-white/90 backdrop-blur text-blue-600 p-3 rounded-full shadow-lg hover:scale-110 hover:bg-blue-600 hover:text-white transition-all z-10"
+                        title="ดูวิดีโอแนะนำตัว"
+                      >
+                        <PlayCircle size={24} />
+                      </button>
+                    )}
+
+                    {/* แสดงรายวิชาที่สอน */}
+                    <div className="absolute bottom-4 left-4 right-4 flex gap-1.5 flex-wrap z-10">
+                      {subjectTags.slice(0, 3).map((tag: string) => (
+                        <span key={tag} className="backdrop-blur-md px-3 py-1.5 rounded-xl text-[9px] font-black uppercase shadow-sm border bg-white/90 text-blue-600 border-blue-50">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ข้อมูลติวเตอร์ */}
+                  <div className="p-8 flex-1 flex flex-col">
+                    <h3 className="text-2xl font-black mb-2 text-gray-900 group-hover:text-blue-600 transition-colors flex items-center gap-2">
+                      {tutor.name}
+                    </h3>
+                    
+                    {/* ระดับชั้นที่สอน */}
+                    <div className="flex flex-wrap gap-1 mb-4">
+                      {tutor.grade_levels?.map((gl: string) => (
+                        <span key={gl} className="text-[9px] font-black bg-purple-50 text-purple-600 px-2.5 py-1 rounded-md uppercase border border-purple-100">
+                          {gl}
+                        </span>
+                      ))}
+                    </div>
+
+                    <p className="text-gray-500 text-xs font-bold italic line-clamp-3 leading-relaxed mb-6">
+                      "{tutor.bio || 'ติวเตอร์คุณภาพระดับพรีเมียมจาก TC Center พร้อมดูแลการเรียนของน้องๆ อย่างใกล้ชิด'}"
+                    </p>
+                    
+                    <div className="mt-auto pt-4 border-t border-gray-50 grid grid-cols-2 gap-3">
+                      {tutor.video_url ? (
+                        <button 
+                          onClick={() => setSelectedVideo(tutor.video_url)}
+                          className="w-full bg-blue-50 text-blue-600 py-3.5 rounded-2xl font-black text-xs hover:bg-blue-100 transition-all flex items-center justify-center gap-2"
+                        >
+                          <Video size={16}/> ดูวิดีโอ
+                        </button>
+                      ) : (
+                        <div className="w-full bg-gray-50 text-gray-400 py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 cursor-not-allowed">
+                          ไม่มีวิดีโอ
+                        </div>
+                      )}
+
+                      {/* ส่ง ID ติวเตอร์ไปยัง Booking Flow */}
+                      <Link 
+                        href={`/student/booking-flow?tutorId=${tutor.id}`}
+                        className="w-full bg-gray-900 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-blue-600 transition-all flex items-center justify-center gap-2 shadow-md"
+                      >
+                        จองคิวเรียน
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* กรณีค้นหาแล้วไม่เจอ */}
             {!loading && filteredTutors.length === 0 && (

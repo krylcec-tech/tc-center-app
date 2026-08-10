@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, Calendar as CalendarIcon, LayoutList, Clock, 
-  Globe, Loader2, Filter, Trash, MapPin, LogOut, AlertCircle, PlusCircle, CheckCircle2, X 
+  Globe, Loader2, Filter, Trash, MapPin, LogOut, AlertCircle, PlusCircle, CheckCircle2, X, ChevronLeft, ChevronRight, MousePointer2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -21,10 +21,12 @@ export default function ManageSlotsTable() {
   // Add Slots States
   const [selectedTutor, setSelectedTutor] = useState('');
   const [dates, setDates] = useState<string[]>([]);
-  const [tempDate, setTempDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [locationType, setLocationType] = useState('Online');
+
+  // ✨ State สำหรับปฏิทินจิ้มเลือกวัน
+  const [pickerDate, setPickerDate] = useState(new Date());
 
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
@@ -33,6 +35,8 @@ export default function ManageSlotsTable() {
     const hour = i + 8;
     return `${hour.toString().padStart(2, '0')}:00`;
   });
+
+  const monthNamesTh = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
   useEffect(() => {
     fetchInitialData();
@@ -62,7 +66,10 @@ export default function ManageSlotsTable() {
         if (!checkIsAdmin) setFilterTutor(currentUser?.id || tutorsData[0].id);
       }
 
-      let query = supabase.from('slots').select('*, tutors(name), teaching_logs(id), bookings(status, student_verified, is_completed)').order('start_time', { ascending: false });
+      let query = supabase.from('slots')
+        .select('*, tutors(name), teaching_logs(id), bookings(status, student_verified, is_completed)')
+        .order('start_time', { ascending: false })
+        .limit(30000); 
       
       if (!checkIsAdmin && currentUser) query = query.eq('tutor_id', currentUser.id);
       else if (checkIsAdmin && filterTutor !== 'all') query = query.eq('tutor_id', filterTutor);
@@ -73,12 +80,10 @@ export default function ManageSlotsTable() {
       const { data: slotsData } = await query;
       
       if (slotsData) {
-        // 1. หาเวลาที่ถูกจองไปแล้ว
         const bookedKeys = new Set(
           slotsData.filter((s: any) => s.is_booked).map((s: any) => `${s.tutor_id}_${s.start_time}`)
         );
 
-        // 2. กรองซ่อนคิวที่ว่าง แต่เวลาชนกับคิวที่จองแล้ว
         const validSlots = slotsData.filter((s: any) => {
           if (s.is_booked) return true;
           const key = `${s.tutor_id}_${s.start_time}`;
@@ -86,7 +91,6 @@ export default function ManageSlotsTable() {
           return true;
         });
 
-        // 3. จัดกลุ่มเวลาเดียวกันเข้าด้วยกัน
         const groupedMap = new Map();
         validSlots.forEach((slot: any) => {
           const key = `${slot.tutor_id}_${slot.start_time}`;
@@ -121,12 +125,6 @@ export default function ManageSlotsTable() {
     }
   };
 
-  const handleAddDate = () => {
-    if (!tempDate) return;
-    if (!dates.includes(tempDate)) setDates([...dates, tempDate]);
-    setTempDate(''); 
-  };
-
   const removeDate = (d: string) => setDates(dates.filter(date => date !== d));
 
   const addBulkSlots = async () => {
@@ -156,7 +154,6 @@ export default function ManageSlotsTable() {
 
   const toggleSelectAll = () => {
     const availableSlots = slots.filter(s => !s.is_booked); 
-    // ✨ ป้องกัน Error ด้วยการเติม || [s.id]
     const allAvailableIds = availableSlots.flatMap(s => s.ids || [s.id]);
     if (selectedIds.length === allAvailableIds.length && allAvailableIds.length > 0) {
       setSelectedIds([]);
@@ -177,15 +174,78 @@ export default function ManageSlotsTable() {
 
   const deleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`⚠️ ยืนยันลบคิวที่เลือก?\n(คิวที่ถูกลบจะไม่สามารถกู้คืนได้)`)) return;
+    if (!confirm(`⚠️ ยืนยันลบคิวที่เลือกทั้งหมด ${selectedIds.length} รายการ?\n(คิวที่ถูกลบจะไม่สามารถกู้คืนได้)`)) return;
     
-    const { error } = await supabase.from('slots').delete().in('id', selectedIds);
-    if (!error) { 
+    setLoading(true);
+    try {
+      const chunkSize = 100; 
+      for (let i = 0; i < selectedIds.length; i += chunkSize) {
+        const chunk = selectedIds.slice(i, i + chunkSize);
+        const { error } = await supabase.from('slots').delete().in('id', chunk);
+        if (error) throw error;
+      }
+
+      alert(`✅ ลบเรียบร้อย ${selectedIds.length} รายการครับ!`); 
+      setSelectedIds([]);
       fetchInitialData(); 
-      alert("✅ ลบเรียบร้อยครับ!"); 
-    } else {
-      alert("เกิดข้อผิดพลาดในการลบ");
+    } catch (err: any) {
+      console.error("Delete Error:", err);
+      alert("เกิดข้อผิดพลาดในการลบ: " + err.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // ✨ สร้างฟังก์ชันแสดงปฏิทินจิ้มเลือกวัน
+  const renderMiniCalendar = () => {
+    const currentYear = pickerDate.getFullYear();
+    const currentMonth = pickerDate.getMonth();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+
+    const calendarDays = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      calendarDays.push(<div key={`empty-${i}`} className="p-2"></div>);
+    }
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      const isSelected = dates.includes(dateStr);
+      
+      calendarDays.push(
+        <button
+          key={dateStr}
+          type="button"
+          onClick={() => {
+            if (isSelected) setDates(dates.filter(d => d !== dateStr));
+            else setDates([...dates, dateStr].sort());
+          }}
+          className={`aspect-square flex items-center justify-center rounded-xl text-sm font-bold transition-all active:scale-95 ${
+            isSelected ? 'bg-blue-600 text-white shadow-md scale-105' : 'hover:bg-blue-50 text-gray-700 bg-white'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="bg-white border-2 border-gray-100 rounded-2xl p-4 w-full md:w-[320px] shrink-0 shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <button type="button" onClick={() => setPickerDate(new Date(currentYear, currentMonth - 1, 1))} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><ChevronLeft size={18}/></button>
+          <div className="font-black text-blue-600 text-sm tracking-wide">{monthNamesTh[currentMonth]} {currentYear + 543}</div>
+          <button type="button" onClick={() => setPickerDate(new Date(currentYear, currentMonth + 1, 1))} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><ChevronRight size={18}/></button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center mb-2">
+          {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((d, idx) => (
+            <div key={d} className={`text-[10px] font-black ${idx === 0 ? 'text-red-400' : 'text-gray-400'}`}>{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center bg-gray-50 p-2 rounded-2xl border border-gray-100">
+          {calendarDays}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -243,37 +303,34 @@ export default function ManageSlotsTable() {
             </select>
           </div>
 
+          {/* ✨ โซนปฏิทินจิ้มเลือกหลายวัน */}
           <div className="md:col-span-12 flex flex-col gap-2 mt-4">
-             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">เลือกวันที่ต้องการสอน (เพิ่มได้หลายวัน)</label>
-             <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <div className="flex bg-gray-50 rounded-2xl p-1 border-2 border-gray-100 focus-within:border-blue-400 transition-colors w-full md:w-max">
-                  <input 
-                    type="date" 
-                    className="p-3 bg-transparent text-sm font-bold outline-none flex-1 md:w-40 cursor-pointer" 
-                    value={tempDate} 
-                    onChange={(e) => setTempDate(e.target.value)} 
-                  />
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault(); 
-                      handleAddDate();
-                    }} 
-                    type="button"
-                    className="bg-blue-600 text-white px-5 rounded-xl font-black text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-sm flex items-center justify-center min-w-[60px]"
-                  >
-                    <PlusCircle size={20} className="md:hidden" />
-                    <span className="hidden md:inline">เพิ่ม</span>
-                  </button>
-                </div>
+             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">เลือกวันที่ต้องการสอน (จิ้มเลือกหลายวันบนปฏิทินได้เลย)</label>
+             
+             <div className="flex flex-col md:flex-row items-stretch gap-6">
+                
+                {renderMiniCalendar()}
 
-                <div className="flex flex-wrap gap-2 flex-1 w-full p-2 min-h-[48px] bg-white rounded-2xl border border-gray-100 shadow-inner">
-                  {dates.length === 0 && <span className="text-xs text-gray-400 font-bold italic p-2 w-full text-center md:text-left">กรุณาเลือกวันที่และกดเพิ่ม...</span>}
-                  {dates.map(d => (
-                    <div key={d} className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-sm animate-in fade-in zoom-in duration-200">
-                      {new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      <button onClick={() => removeDate(d)} className="text-blue-400 hover:text-red-500 transition-colors p-1"><X size={14}/></button>
-                    </div>
-                  ))}
+                <div className="flex flex-col flex-1 w-full bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200 p-5">
+                   <div className="text-xs font-black text-gray-500 mb-4 flex justify-between items-center">
+                      <span className="flex items-center gap-1.5"><CalendarIcon size={14} className="text-blue-500"/> วันที่เลือกไว้ ({dates.length} วัน)</span>
+                      {dates.length > 0 && <button type="button" onClick={() => setDates([])} className="text-red-500 hover:text-red-600 transition-colors uppercase tracking-widest text-[10px]">ล้างทั้งหมด</button>}
+                   </div>
+                   
+                   <div className="flex flex-wrap gap-2 content-start h-full">
+                     {dates.length === 0 && (
+                       <div className="flex flex-col items-center justify-center w-full h-full text-gray-300 opacity-60 min-h-[150px]">
+                         <MousePointer2 size={32} className="mb-2" />
+                         <span className="text-xs font-bold italic text-center">👈 จิ้มเลือกวันที่บนปฏิทิน<br/>เพื่อเพิ่มเข้าคิวสอน...</span>
+                       </div>
+                     )}
+                     {dates.map(d => (
+                       <div key={d} className="bg-white text-blue-700 border border-blue-100 px-3 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-sm animate-in fade-in zoom-in duration-200">
+                         {new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                         <button onClick={() => removeDate(d)} className="text-blue-300 hover:text-red-500 transition-colors p-1"><X size={14}/></button>
+                       </div>
+                     ))}
+                   </div>
                 </div>
              </div>
           </div>
@@ -316,8 +373,8 @@ export default function ManageSlotsTable() {
              </div>
 
             {selectedIds.length > 0 && (
-              <button onClick={deleteSelected} className="bg-red-50 text-red-600 px-6 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto hover:bg-red-600 hover:text-white transition-colors active:scale-95 shrink-0">
-                <Trash size={18} /> ลบที่เลือก
+              <button onClick={deleteSelected} disabled={loading} className="bg-red-50 text-red-600 px-6 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto hover:bg-red-600 hover:text-white transition-colors active:scale-95 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <Trash size={18} />} ลบที่เลือก
               </button>
             )}
           </div>
@@ -346,7 +403,6 @@ export default function ManageSlotsTable() {
                 <tr><td colSpan={4} className="p-20 text-center font-black text-gray-300 text-xl">ไม่มีคิวว่างในช่วงนี้</td></tr>
               ) : slots.map((slot) => {
                 
-                // ✨ ระบบความปลอดภัย ดักข้อมูลไว้เสมอ
                 const slotIds = slot.ids || [slot.id];
                 const allLocs = slot.all_locations || [slot.location_type];
                 
