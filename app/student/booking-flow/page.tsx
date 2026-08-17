@@ -23,7 +23,6 @@ function BookingContent() {
 
   const [tutorSlots, setTutorSlots] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(''); 
-  // ✨ เปลี่ยนมาใช้ YYYY-MM เพื่อรองรับการจองข้ามปีแบบไม่บัค
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>(`${new Date().getFullYear()}-${new Date().getMonth()}`);
   const [activeSubject, setActiveSubject] = useState('ทั้งหมด'); 
   
@@ -96,7 +95,7 @@ function BookingContent() {
               .from('slots')
               .select('id')
               .eq('tutor_id', tutor.id)
-              .ilike('location_type', currentLoc)
+              .ilike('location_type', `%${currentLoc}%`)
               .eq('is_booked', false)
               .gte('start_time', nowIso)
               .limit(1); 
@@ -126,7 +125,6 @@ function BookingContent() {
     }
   };
 
-  // ✨ ฟังก์ชันที่ 2: ดึงเวลาเมื่อกดจองคิวติวเตอร์คนนั้น (แก้ปัญหาคิวมาไม่ครบด้วย Pagination Loop)
   const fetchTutorSlots = async () => {
     setLoading(true);
     try {
@@ -135,44 +133,37 @@ function BookingContent() {
       safeNow.setHours(safeNow.getHours() - 1);
       const nowIso = safeNow.toISOString();
 
-      let allSlots: any[] = [];
-      let hasMore = true;
-      let from = 0;
-      const stepLimit = 1000;
-
-      // วนลูปดึงทีละ 1000 แถวเพื่อทะลุกำแพง Supabase API Limit
-      while (hasMore) {
-        const { data: availableSlots, error } = await supabase
-          .from('slots')
-          .select('*')
-          .eq('tutor_id', selectedTutor.id)
-          .ilike('location_type', currentLoc)
-          .eq('is_booked', false) 
-          .gte('start_time', nowIso)
-          .order('start_time', { ascending: true })
-          .range(from, from + stepLimit - 1); 
-        
-        if (error) {
-          console.error("Error fetching available slots:", error.message);
-          break;
-        }
-        
-        if (availableSlots && availableSlots.length > 0) {
-          allSlots = [...allSlots, ...availableSlots];
-          from += stepLimit;
-          // ถ้าดึงมาได้น้อยกว่า 1000 แปลว่าหมดแล้ว สั่งจบวงลูป
-          if (availableSlots.length < stepLimit) {
-            hasMore = false;
+      const { data: availableSlots, error } = await supabase
+        .from('slots')
+        .select('*')
+        .eq('tutor_id', selectedTutor.id)
+        .ilike('location_type', `%${currentLoc}%`) 
+        .eq('is_booked', false) 
+        .gte('start_time', nowIso)
+        .order('start_time', { ascending: true })
+        .limit(10000); 
+      
+      if (error) {
+        console.error("Error fetching available slots:", error.message);
+      }
+      
+      let uniqueSlots: any[] = [];
+      if (availableSlots && availableSlots.length > 0) {
+        const seenTimes = new Set();
+        uniqueSlots = availableSlots.filter(slot => {
+          if (seenTimes.has(slot.start_time)) {
+            return false;
+          } else {
+            seenTimes.add(slot.start_time);
+            return true;
           }
-        } else {
-          hasMore = false;
-        }
+        });
       }
 
-      setTutorSlots(allSlots);
+      setTutorSlots(uniqueSlots);
       
-      if (allSlots.length > 0) {
-        const firstSlotDate = new Date(allSlots[0].start_time);
+      if (uniqueSlots.length > 0) {
+        const firstSlotDate = new Date(uniqueSlots[0].start_time);
         setSelectedDate(firstSlotDate.toDateString());
         setSelectedMonthKey(`${firstSlotDate.getFullYear()}-${firstSlotDate.getMonth()}`);
       }
@@ -187,7 +178,6 @@ function BookingContent() {
     activeSubject === 'ทั้งหมด' || t.tags?.includes(activeSubject)
   );
 
-  // ✨ ประมวลผลเดือนให้รองรับการข้ามปี
   const availableMonths = Array.from(new Set(tutorSlots.map(s => {
     const d = new Date(s.start_time);
     return `${d.getFullYear()}-${d.getMonth()}`;
@@ -245,9 +235,20 @@ function BookingContent() {
         await supabase.from('bookings').insert(bookingData);
 
         try {
-          const firstSlot = tutorSlots.find(s => s.id === selectedSlotIds[0]);
+          // ✨ ดึงคิวทั้งหมดที่ถูกเลือก และนำมาเรียงเวลาให้สวยงาม
+          const bookedSlots = tutorSlots
+            .filter(s => selectedSlotIds.includes(s.id))
+            .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+          const firstSlot = bookedSlots[0];
           const displayDate = firstSlot ? new Date(firstSlot.start_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
           
+          // ✨ แปลงเวลาให้เป็น String (เช่น "10:00, 11:00")
+          const timeList = bookedSlots
+            .map(s => new Date(s.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }))
+            .join(', ');
+          
+          // ✨ อัปเดตข้อความ LINE Notify เพิ่ม "เวลา:" ลงไป
           const notifyMessage = `
 🎉 มีรายการจองเรียนใหม่!
 ---------------------------
@@ -256,7 +257,8 @@ function BookingContent() {
 📚 ระดับ: ${tiers.find(t => t.id === gradeLevel)?.title}
 📍 รูปแบบ: ${locationType}
 ⏳ จำนวน: ${requiredHours} ชั่วโมง
-📅 เริ่มวันที่: ${displayDate}
+📅 วันที่: ${displayDate}
+⏰ เวลา: ${timeList} น.
 💬 โน้ต: ${studentNote || '-'}
 ---------------------------
 แอดมินรบกวนแจ้งครู และเตรียมลิงก์ห้องเรียน (ถ้ามี) ด้วยนะครับ! 🚀`;
